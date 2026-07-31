@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.npm-cache/
+data/
+.vercel/
+.agents/
+*.log
+audit.json
+skills-lock.json
+.env*
+!.env.example
+
+# Bancos, sessões e variáveis locais contêm dados privados e nunca são versionados.

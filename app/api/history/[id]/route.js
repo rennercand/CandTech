@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { deleteHistory } from "@/lib/db";
 import { guardMutation } from "@/lib/request-security";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function DELETE(request, { params }) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
+  const limited = await enforceRateLimit(request, { scope: "history-delete", limit: 30 });
+  if (limited) return limited;
   // Confirma a identidade antes de permitir a exclusão.
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

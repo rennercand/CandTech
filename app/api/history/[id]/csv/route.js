@@ -1,18 +1,53 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { findHistoryById, serializeHistory } from "@/lib/db";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-function value(item) {
+const HEADER_LABELS = {
+  period: "Período",
+  date: "Data",
+  flow: "Fluxo",
+  discounted: "Valor presente",
+  accumulated: "Acumulado",
+  openingBalance: "Saldo inicial",
+  payment: "Prestação",
+  interest: "Juros",
+  amortization: "Amortização",
+  balance: "Saldo final",
+};
+
+function excelCell(item) {
   if (item === null || item === undefined) return "";
+  // Números ficam sem aspas e com vírgula decimal para o Excel pt-BR reconhecê-los.
+  if (typeof item === "number" && Number.isFinite(item)) {
+    return String(item).replace(".", ",");
+  }
   let text = String(item);
-  // Evita CSV injection: o Excel não interpreta conteúdo salvo como fórmula.
+  // Evita CSV injection: conteúdo do usuário nunca deve virar fórmula no Excel.
   if (/^[=+\-@]/.test(text)) text = `'${text}`;
-  return text.replaceAll('"', '""');
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function csvLine(cells) {
+  return cells.map(excelCell).join(";");
+}
+
+function tableSection(title, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  const headers = Object.keys(rows[0]);
+  return [
+    [title],
+    headers.map((header) => HEADER_LABELS[header] || header),
+    ...rows.map((row) => headers.map((header) => row[header])),
+    [],
+  ];
 }
 
 export async function GET(request, { params }) {
+  const limited = await enforceRateLimit(request, { scope: "csv", limit: 20 });
+  if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -22,22 +57,27 @@ export async function GET(request, { params }) {
   if (!row) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
 
   const item = serializeHistory(row);
-  const rows = item.payload.table || item.payload.entries || [];
-  const headers = rows.length ? Object.keys(rows[0]) : ["resumo"];
-  // Cada linha é cercada por aspas e usa ponto e vírgula, formato comum no Excel em pt-BR.
-  const csv = [
+  const calculationRows = item.payload.table || item.payload.entries || [];
+  const financing = item.payload.financialTable;
+  const lines = [
     ["Título", item.title],
     ["Tipo", item.calculation_type],
     ["Criado em", item.created_at],
     [],
-    headers,
-    ...rows.map((rowItem) => headers.map((header) => rowItem[header])),
-  ].map((line) => line.map((cell) => `"${value(cell)}"`).join(";")).join("\r\n");
+    ...tableSection("Fluxo e memória do cálculo", calculationRows),
+    ...tableSection(
+      financing ? `Tabela financeira - ${financing.state?.system || ""}` : "",
+      financing?.result?.rows,
+    ),
+  ];
+  // sep=; manda o Excel respeitar o separador mesmo quando o Windows usa outra configuração regional.
+  const csv = ["sep=;", ...lines.map(csvLine)].join("\r\n");
 
   return new NextResponse(`\ufeff${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="historico-${item.id}.csv"`,
+      "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },
   });

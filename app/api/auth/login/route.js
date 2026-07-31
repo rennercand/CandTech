@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { authCookie, createToken } from "@/lib/auth";
 import { findUserByEmail } from "@/lib/db";
-import { allowAuthAttempt } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 
 // Mantém a rota no runtime Node.js, compatível com bcrypt e o banco.
@@ -11,10 +11,9 @@ export const runtime = "nodejs";
 export async function POST(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
-  // Bloqueia abuso básico antes de consultar o banco e comparar a senha.
-  if (!allowAuthAttempt(request)) {
-    return NextResponse.json({ error: "Muitas tentativas. Aguarde um minuto." }, { status: 429 });
-  }
+  // Login possui limite mais restrito para reduzir tentativas automatizadas de senha.
+  const limited = await enforceRateLimit(request, { scope: "auth", limit: 10 });
+  if (limited) return limited;
 
   try {
     const { email, password } = await request.json();

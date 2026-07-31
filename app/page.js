@@ -7,6 +7,7 @@ import {
   ProductPricing,
   parseBankStatementPdf,
 } from "./advanced-tools";
+import { calculateAmortization } from "../lib/finance-calculations";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -223,7 +224,6 @@ function calculate({ investment, investmentDate, rate, periods, flows }) {
       : null,
     roi: initial ? (net / initial) * 100 : 0,
     profitability: initial ? (discounted / initial) * 100 : 0,
-    roe: initial ? (net / initial) * 100 : 0,
     activity: initial ? (totalIn / initial) * 100 : 0,
     totalIn,
     net,
@@ -274,6 +274,8 @@ function normalizeWorkspacePayload(payload = {}) {
   return {
     ...defaults,
     ...payload,
+    // Registros antigos podiam deixar a aba ROI ativa; o ROI continua nos indicadores.
+    calculationType: payload.calculationType === "ROI" ? "VPL" : payload.calculationType || "VPL",
     inputs: {
       ...defaults.inputs,
       ...(payload.inputs || {}),
@@ -510,6 +512,10 @@ export default function Page() {
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
   const result = useMemo(() => calculate(inputs), [inputs]);
+  const financialTableResult = useMemo(
+    () => calculateAmortization({ ...financeState.form, system: financeState.system }),
+    [financeState],
+  );
   const workspacePayload = useMemo(
     () => ({
       inputs,
@@ -657,13 +663,25 @@ export default function Page() {
     if (response.ok) setHistory((await response.json()).items);
   }
   async function saveCalculation() {
+    const hasFinancialTable =
+      Number(financeState.form.principal) > 0 &&
+      Number(financeState.form.periods) > 0;
     const response = await fetch("/api/history", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: saveTitle,
         calculationType,
-        payload: { inputs, result, table: result.table },
+        payload: {
+          inputs,
+          result,
+          table: result.table,
+          // Se a pessoa preencheu a tabela financeira, estado e memória ficam no mesmo histórico.
+          financeState: hasFinancialTable ? financeState : undefined,
+          financialTable: hasFinancialTable
+            ? { state: financeState, result: financialTableResult }
+            : undefined,
+        },
       }),
     });
     const data = await response.json();
@@ -761,7 +779,12 @@ export default function Page() {
       investmentDate: saved.investmentDate || today(),
       flows: (saved.flows || []).map(normalizeProjectionFlow),
     });
-    setCalculationType(item.calculation_type);
+    setCalculationType(item.calculation_type === "ROI" ? "VPL" : item.calculation_type);
+    const savedFinanceState =
+      item.payload.financeState || item.payload.financialTable?.state;
+    if (savedFinanceState) {
+      setFinanceState(normalizeWorkspacePayload({ financeState: savedFinanceState }).financeState);
+    }
     setSaveTitle(item.title);
     setView("calculator");
   }
@@ -998,7 +1021,6 @@ function Dashboard({ result, onOpen }) {
           <span className="eyebrow">INDICADORES</span>
           <h2>Rentabilidade</h2>
           <Indicator label="Rentabilidade" value={result.profitability} />
-          <Indicator label="ROE" value={result.roe} />
           <Indicator label="Atividade" value={result.activity} />
           <div className="callout">
             Dados calculados com base no capital próprio informado e no fluxo
@@ -1037,7 +1059,7 @@ function Calculator({
     <>
       <section className="calculator-toolbar">
         <div className="calculation-tabs">
-          {["VPL", "TIR", "Payback", "ROI"].map((type) => (
+          {["VPL", "TIR", "Payback"].map((type) => (
             <button
               className={calculationType === type ? "active" : ""}
               key={type}
@@ -1166,9 +1188,6 @@ function Calculator({
           <div className="mini-stats">
             <span>
               ROI<strong>{pct(result.roi)}</strong>
-            </span>
-            <span>
-              ROE<strong>{pct(result.roe)}</strong>
             </span>
             <span>
               Atividade<strong>{pct(result.activity)}</strong>
@@ -1523,6 +1542,30 @@ function CashFlow({
     </>
   );
 }
+function ExportOptions({ item }) {
+  function explainDriveSetup() {
+    alert(
+      "O envio ao Google Drive será liberado quando o Client ID e o Client Secret OAuth do Google forem configurados.",
+    );
+  }
+
+  return (
+    <details className="export-options">
+      <summary className="secondary-button">Exportar</summary>
+      <div className="export-options-menu">
+        <a href={`/api/history/${item.id}/csv`}>
+          <strong>Baixar arquivo</strong>
+          <small>CSV preparado para Excel</small>
+        </a>
+        <button type="button" onClick={explainDriveSetup}>
+          <strong>Google Drive</strong>
+          <small>Conectar conta para enviar</small>
+        </button>
+      </div>
+    </details>
+  );
+}
+
 function History({ items, onLoad, onRestore, onDelete, onRefresh }) {
   return (
     <article className="panel history-panel">
@@ -1546,6 +1589,11 @@ function History({ items, onLoad, onRestore, onDelete, onRefresh }) {
             <article className="history-item" key={item.id}>
               <div>
                 <span className="type-badge">{item.calculation_type}</span>
+                {item.payload.financialTable && (
+                  <span className="type-badge attached-table">
+                    + tabela {item.payload.financialTable.state?.system}
+                  </span>
+                )}
                 <h3>{item.title}</h3>
                 <small>Salvo em {formatDate(item.created_at)}</small>
               </div>
@@ -1568,12 +1616,7 @@ function History({ items, onLoad, onRestore, onDelete, onRefresh }) {
                       : "Carregar"}
                   </button>
                 )}
-                <a
-                  className="secondary-button"
-                  href={`/api/history/${item.id}/csv`}
-                >
-                  Exportar CSV
-                </a>
+                <ExportOptions item={item} />
                 <button
                   className="danger-button"
                   onClick={() => onDelete(item.id)}

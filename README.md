@@ -16,7 +16,8 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Importação local de extratos bancários em PDF.
 - Salvamento automático do workspace vinculado à conta.
 - Rascunho automático no histórico quando a pessoa sai sem salvar manualmente.
-- Exportação de registros em CSV.
+- Exportação em CSV com BOM, separador e decimais compatíveis com Excel em pt-BR.
+- Tabela financeira preenchida anexada ao mesmo histórico do cálculo.
 - Interface responsiva para computador e celular.
 
 ## Tecnologias
@@ -40,13 +41,14 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - A sessão usa um JWT assinado, com duração de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Strict` e `Secure` em produção.
 - Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
+- APIs possuem rate limit compartilhado no PostgreSQL/Neon; o IP é armazenado somente como hash e limites excedidos retornam `429`.
 - O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
 - Novas contas exigem senha entre 12 e 128 caracteres; contas antigas continuam podendo entrar com a regra anterior.
 - O extrato PDF é processado no navegador e não é enviado ao servidor pelo importador.
 - `.env.local`, bancos locais, configurações da Vercel, logs e relatórios de segurança são ignorados pelo Git.
 - Segredos de produção ficam nas Environment Variables criptografadas da Vercel.
 
-> Segurança é um processo contínuo. Para alto volume, o limitador de tentativas em memória deve ser substituído por uma solução compartilhada como Redis/Upstash.
+> Segurança é um processo contínuo. O limitador atual é distribuído pelo banco; em volume muito alto, Redis/Upstash pode reduzir a carga adicionada ao PostgreSQL.
 
 ## Situação para uso empresarial
 
@@ -147,6 +149,11 @@ As tabelas são criadas automaticamente na primeira utilização:
 - `users`: nome, e-mail e hash da senha;
 - `histories`: cálculos, organizações e rascunhos salvos por usuário;
 - `workspaces`: estado mais recente da interface, revisão e controle de arquivamento.
+- `rate_limits`: contadores temporários por hash de origem e grupo de rota.
+
+## Google Drive
+
+O menu de exportação já diferencia download local e envio ao Google Drive. O envio fica indisponível até que um cliente OAuth 2.0 do tipo aplicação web seja configurado. As credenciais devem ficar somente nas variáveis de ambiente da Vercel, nunca no repositório.
 
 Em produção, configure `DATABASE_URL` e `JWT_SECRET` nas configurações da Vercel. Não coloque valores reais em `.env.example`.
 

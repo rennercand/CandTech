@@ -6,6 +6,7 @@ import {
   saveWorkspace,
 } from "@/lib/db";
 import { guardMutation } from "@/lib/request-security";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,10 @@ function hasMeaningfulContent(payload) {
   const hasOrganization = (payload?.cashEntries || []).some(
     (entry) => String(entry?.description || "").trim() || Number(entry?.amount) !== 0,
   );
-  return hasCalculation || hasOrganization;
+  const hasFinancialTable =
+    Number(payload?.financeState?.form?.principal) > 0 &&
+    Number(payload?.financeState?.form?.periods) > 0;
+  return hasCalculation || hasOrganization || hasFinancialTable;
 }
 
 function validPayload(payload) {
@@ -39,6 +43,8 @@ function automaticTitle() {
 }
 
 export async function GET(request) {
+  const limited = await enforceRateLimit(request, { scope: "workspace-read", limit: 120 });
+  if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -58,6 +64,9 @@ export async function GET(request) {
 export async function PUT(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
+  // Autosave é frequente, por isso recebe um limite maior que salvamentos manuais.
+  const limited = await enforceRateLimit(request, { scope: "workspace-write", limit: 120 });
+  if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -77,6 +86,8 @@ export async function PUT(request) {
 export async function POST(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
+  const limited = await enforceRateLimit(request, { scope: "workspace-archive", limit: 30 });
+  if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

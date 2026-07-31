@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { authCookie, createToken } from "@/lib/auth";
 import { createUser, isUniqueConstraintError } from "@/lib/db";
-import { allowAuthAttempt } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 
 // Força o uso do runtime Node.js, necessário para bcrypt e para o banco.
@@ -11,10 +11,9 @@ export const runtime = "nodejs";
 export async function POST(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
-  // Limita tentativas repetidas antes de executar operações mais caras.
-  if (!allowAuthAttempt(request)) {
-    return NextResponse.json({ error: "Muitas tentativas. Aguarde um minuto." }, { status: 429 });
-  }
+  // Cadastro compartilha o limite de autenticação entre todas as instâncias.
+  const limited = await enforceRateLimit(request, { scope: "auth", limit: 10 });
+  if (limited) return limited;
 
   try {
     // Normaliza os campos para salvar dados consistentes e validar limites.

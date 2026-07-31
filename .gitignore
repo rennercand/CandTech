@@ -6,6 +6,7 @@ data/
 .agents/
 *.log
 audit.json
+SECURITY_REVIEW.md
 skills-lock.json
 .env*
 !.env.example

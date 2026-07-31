@@ -39,11 +39,27 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - As senhas são transformadas com `bcrypt`, salt automático e custo 12 antes de serem armazenadas. A senha original não é gravada.
 - A sessão usa um JWT assinado, com duração de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Strict` e `Secure` em produção.
 - Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
+- Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
+- O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
+- Novas contas exigem senha entre 12 e 128 caracteres; contas antigas continuam podendo entrar com a regra anterior.
 - O extrato PDF é processado no navegador e não é enviado ao servidor pelo importador.
 - `.env.local`, bancos locais, configurações da Vercel, logs e relatórios de segurança são ignorados pelo Git.
 - Segredos de produção ficam nas Environment Variables criptografadas da Vercel.
 
 > Segurança é um processo contínuo. Para alto volume, o limitador de tentativas em memória deve ser substituído por uma solução compartilhada como Redis/Upstash.
+
+## Situação para uso empresarial
+
+Os controles acima formam uma base de segurança, mas não representam certificação nem deixam o produto automaticamente pronto para empresas. Antes da comercialização, o projeto ainda deve receber:
+
+- modelo multiempresa com `tenant_id`, organizações, papéis e permissões;
+- MFA e, conforme o cliente, SSO/SAML;
+- limitador distribuído, trilha de auditoria imutável e alertas de segurança;
+- cálculos oficiais executados e validados no servidor, com versão da fórmula e testes de referência;
+- políticas LGPD, retenção e exclusão de dados, recuperação de backup e resposta a incidentes;
+- revisão independente, testes de invasão e monitoramento contínuo das dependências.
+
+A TIR é exibida como `N/D` quando o fluxo não possui uma raiz única verificável no intervalo suportado. Isso evita transformar um fluxo ambíguo em uma taxa aparentemente precisa.
 
 ## Salvamento automático
 
@@ -117,6 +133,8 @@ lib/
   auth.js            criação e validação do JWT
   db.js              PostgreSQL/Neon e fallback SQLite
   finance-calculations.js
+  request-security.js valida origem e formato das mutações
+next.config.mjs       cabeçalhos de segurança do navegador
   statement-parser.js
 public/
   pdf.worker.min.mjs

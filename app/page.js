@@ -13,7 +13,7 @@ const money = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 const pct = (number) =>
-  `${Number.isFinite(number) ? number.toFixed(2) : "0.00"}%`;
+  Number.isFinite(number) ? `${number.toFixed(2)}%` : "N/D";
 const formatDate = (value) => {
   if (!value) return "Sem data";
   // Evita que datas no formato AAAA-MM-DD mudem um dia por causa do fuso horário.
@@ -164,26 +164,58 @@ function calculate({ investment, investmentDate, rate, periods, flows }) {
       accumulated,
     });
   });
+  // A TIR só é única em um fluxo convencional (uma única troca de sinal).
+  // Em fluxos ambíguos, devolver N/D evita apresentar uma taxa enganosa à empresa.
+  const signs = [-initial, ...cashFlows.map((flow) => flow.amount)]
+    .filter((value) => value !== 0)
+    .map((value) => Math.sign(value));
+  const signChanges = signs.reduce(
+    (count, sign, index) => count + (index > 0 && sign !== signs[index - 1] ? 1 : 0),
+    0,
+  );
+  const npvAt = (candidateRate) =>
+    -initial +
+    cashFlows.reduce(
+      (sum, flow, index) =>
+        sum + flow.amount / (1 + candidateRate) ** (index + 1),
+      0,
+    );
+  let irr = null;
   let low = -0.9999;
   let high = 10;
-  let irr = 0;
-  for (let attempt = 0; attempt < 150; attempt += 1) {
-    irr = (low + high) / 2;
-    const npvAtRate =
-      -initial +
-      cashFlows.reduce(
-        (sum, flow, index) => sum + flow.amount / (1 + irr) ** (index + 1),
-        0,
-      );
-    if (npvAtRate > 0) low = irr;
-    else high = irr;
+  let lowValue = npvAt(low);
+  let highValue = npvAt(high);
+  if (
+    signChanges === 1 &&
+    Number.isFinite(lowValue) &&
+    Number.isFinite(highValue) &&
+    lowValue * highValue <= 0
+  ) {
+    // Bisseção determinística: mantém sempre um intervalo que contém a raiz.
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      const middle = (low + high) / 2;
+      const middleValue = npvAt(middle);
+      if (Math.abs(middleValue) < 1e-10) {
+        low = middle;
+        high = middle;
+        break;
+      }
+      if (lowValue * middleValue <= 0) {
+        high = middle;
+        highValue = middleValue;
+      } else {
+        low = middle;
+        lowValue = middleValue;
+      }
+    }
+    irr = ((low + high) / 2) * 100;
   }
   const totalIn = cashFlows.reduce((sum, item) => sum + item.amount, 0);
   const net = totalIn - initial;
   return {
     table,
     npv: discounted,
-    irr: irr * 100,
+    irr,
     payback,
     paybackDate,
     paybackDuration: paybackDate
@@ -420,8 +452,11 @@ function AuthScreen({ onAuthenticated }) {
             <input
               required
               type="password"
-              minLength="8"
-              placeholder="Ao menos 8 caracteres"
+              minLength={mode === "register" ? 12 : 8}
+              maxLength="128"
+              placeholder={
+                mode === "register" ? "Ao menos 12 caracteres" : "Sua senha"
+              }
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
@@ -928,8 +963,12 @@ function Dashboard({ result, onOpen }) {
         <StatCard
           label="TIR"
           value={pct(result.irr)}
-          positive={result.irr >= 0}
-          caption="Taxa interna de retorno"
+          positive={Number.isFinite(result.irr) && result.irr >= 0}
+          caption={
+            Number.isFinite(result.irr)
+              ? "Taxa interna de retorno"
+              : "Fluxo sem TIR única no intervalo"
+          }
         />
         <StatCard
           label="Payback"

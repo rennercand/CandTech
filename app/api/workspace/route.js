@@ -5,6 +5,7 @@ import {
   getWorkspace,
   saveWorkspace,
 } from "@/lib/db";
+import { guardMutation } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,8 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
+  const blocked = guardMutation(request);
+  if (blocked) return blocked;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -72,6 +75,8 @@ export async function PUT(request) {
 }
 
 export async function POST(request) {
+  const blocked = guardMutation(request);
+  if (blocked) return blocked;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

@@ -3,11 +3,14 @@ import { NextResponse } from "next/server";
 import { authCookie, createToken } from "@/lib/auth";
 import { createUser, isUniqueConstraintError } from "@/lib/db";
 import { allowAuthAttempt } from "@/lib/rate-limit";
+import { guardMutation } from "@/lib/request-security";
 
 // Força o uso do runtime Node.js, necessário para bcrypt e para o banco.
 export const runtime = "nodejs";
 
 export async function POST(request) {
+  const blocked = guardMutation(request);
+  if (blocked) return blocked;
   // Limita tentativas repetidas antes de executar operações mais caras.
   if (!allowAuthAttempt(request)) {
     return NextResponse.json({ error: "Muitas tentativas. Aguarde um minuto." }, { status: 429 });
@@ -16,17 +19,26 @@ export async function POST(request) {
   try {
     // Normaliza os campos para salvar dados consistentes e validar limites.
     const { name, email, password } = await request.json();
-    const cleanName = String(name || "").trim().slice(0, 80);
+    const rawName = String(name || "");
+    const cleanName = rawName.trim();
     const cleanEmail = String(email || "").trim().toLowerCase();
-    if (cleanName.length < 2 || !/^\S+@\S+\.\S+$/.test(cleanEmail) || String(password || "").length < 8) {
+    const cleanPassword = String(password || "");
+    if (
+      cleanName.length < 2 ||
+      rawName.length > 80 ||
+      cleanEmail.length > 254 ||
+      !/^\S+@\S+\.\S+$/.test(cleanEmail) ||
+      cleanPassword.length < 12 ||
+      cleanPassword.length > 128
+    ) {
       return NextResponse.json(
-        { error: "Informe nome, e-mail válido e senha com ao menos 8 caracteres." },
+        { error: "Informe nome, e-mail válido e senha entre 12 e 128 caracteres." },
         { status: 400 },
       );
     }
 
     // bcrypt adiciona um salt e transforma a senha em um hash irreversível.
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(cleanPassword, 12);
     // A camada de banco escolhe Postgres na Vercel e SQLite no ambiente local.
     const user = await createUser({ name: cleanName, email: cleanEmail, passwordHash });
 

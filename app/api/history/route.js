@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createHistory, listHistories, serializeHistory } from "@/lib/db";
+import { guardMutation } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const blocked = guardMutation(request);
+  if (blocked) return blocked;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

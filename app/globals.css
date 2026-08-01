@@ -1331,6 +1331,29 @@ select:focus {
   margin-left: 6px;
 }
 
+.drive-button {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #3730a3;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.drive-button:hover:not(:disabled) {
+  background: #e0e7ff;
+}
+
+.drive-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.drive-open-link {
+  text-decoration: none;
+}
+
 @media (max-width: 720px) {
   .context-export-actions {
     width: 100%;

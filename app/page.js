@@ -516,6 +516,7 @@ export default function Page() {
     connected: false,
     loading: true,
   });
+  const [driveUpload, setDriveUpload] = useState({ id: null, status: "idle", file: null });
   const [saveTitle, setSaveTitle] = useState("Simulação financeira");
   const [financeState, setFinanceState] = useState(emptyFinanceState);
   const [pricingState, setPricingState] = useState(emptyPricingState);
@@ -829,6 +830,7 @@ export default function Page() {
     window.location.assign(`/api/google-drive/connect?historyId=${encodeURIComponent(item.id)}`);
   }
   async function sendHistoryToDrive(item) {
+    setDriveUpload({ id: item.id, status: "sending", file: null });
     setNotice("Enviando o CSV ao Google Drive…");
     const response = await fetch(`/api/history/${item.id}/drive`, {
       method: "POST",
@@ -837,9 +839,12 @@ export default function Page() {
     });
     const data = await response.json();
     if (response.ok) {
+      // Mantém um comprovante visível no próprio item, incluindo o link devolvido pelo Google.
+      setDriveUpload({ id: item.id, status: "sent", file: data.file });
       setNotice(`Arquivo ${data.file.name} enviado ao seu Google Drive.`);
       return;
     }
+    setDriveUpload({ id: item.id, status: "error", file: null });
     if (data.reconnect) setDriveStatus((current) => ({ ...current, connected: false }));
     setNotice(data.error || "Não foi possível enviar ao Google Drive.");
   }
@@ -1172,6 +1177,7 @@ export default function Page() {
             onConnectDrive={connectGoogleDrive}
             onSendToDrive={sendHistoryToDrive}
             onDisconnectDrive={disconnectGoogleDrive}
+            driveUpload={driveUpload}
           />
         )}
       </section>
@@ -1758,7 +1764,7 @@ function CashFlow({
     </>
   );
 }
-function ExportOptions({ item, driveStatus, onConnectDrive, onSendToDrive }) {
+function ExportOptions({ item }) {
   return (
     <details className="export-options">
       <summary className="secondary-button">Exportar</summary>
@@ -1771,24 +1777,6 @@ function ExportOptions({ item, driveStatus, onConnectDrive, onSendToDrive }) {
           <strong>Baixar PDF</strong>
           <small>Relatório com números, gráfico e tabelas</small>
         </a>
-        <button
-          type="button"
-          disabled={driveStatus.loading || !driveStatus.configured}
-          onClick={() =>
-            driveStatus.connected ? onSendToDrive(item) : onConnectDrive(item)
-          }
-        >
-          <strong>Google Drive</strong>
-          <small>
-            {driveStatus.loading
-              ? "Verificando conexão…"
-              : !driveStatus.configured
-                ? "Integração indisponível"
-                : driveStatus.connected
-                  ? "Enviar para minha conta"
-                  : "Conectar conta para enviar"}
-          </small>
-        </button>
       </div>
     </details>
   );
@@ -1804,6 +1792,7 @@ function History({
   onConnectDrive,
   onSendToDrive,
   onDisconnectDrive,
+  driveUpload,
 }) {
   return (
     <article className="panel history-panel">
@@ -1859,12 +1848,37 @@ function History({
                     Abrir
                   </button>
                 )}
-                <ExportOptions
-                  item={item}
-                  driveStatus={driveStatus}
-                  onConnectDrive={onConnectDrive}
-                  onSendToDrive={onSendToDrive}
-                />
+                <ExportOptions item={item} />
+                <button
+                  type="button"
+                  className="drive-button"
+                  disabled={
+                    driveStatus.loading ||
+                    !driveStatus.configured ||
+                    (driveUpload.id === item.id && driveUpload.status === "sending")
+                  }
+                  onClick={() =>
+                    driveStatus.connected ? onSendToDrive(item) : onConnectDrive(item)
+                  }
+                >
+                  {driveUpload.id === item.id && driveUpload.status === "sending"
+                    ? "Enviando ao Drive…"
+                    : driveUpload.id === item.id && driveUpload.status === "sent"
+                      ? "Enviado ao Drive ✓"
+                      : driveStatus.connected
+                        ? "Enviar ao Google Drive"
+                        : "Conectar Drive e enviar"}
+                </button>
+                {driveUpload.id === item.id && driveUpload.file?.webViewLink ? (
+                  <a
+                    className="secondary-button drive-open-link"
+                    href={driveUpload.file.webViewLink}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Abrir no Drive
+                  </a>
+                ) : null}
                 <button
                   className="danger-button"
                   onClick={() => onDelete(item.id)}

@@ -358,23 +358,30 @@ function CashFlowChart({ rows }) {
               : isIncome
                 ? "Entrada"
                 : "Saída";
-          const tooltip = `${formatDate(row.date)} · ${movement} de ${money.format(Math.abs(row.flow))} · ${isIncome ? "positivo" : "negativo"}`;
+          // Exibe o sinal de forma explícita para que entradas e saídas
+          // possam ser identificadas sem depender apenas da cor do gráfico.
+          const signedValue = `${isIncome ? "+" : "-"}${money.format(Math.abs(row.flow))}`;
+          const tooltipLabel = `${movement}: ${signedValue}, em ${formatDate(row.date)}`;
           return (
             <div
               className="fc-column"
               key={`${row.period}-${row.date}`}
               tabIndex="0"
-              aria-label={tooltip}
+              aria-label={tooltipLabel}
             >
               <div className="fc-track">
-                <span className="fc-tooltip">{tooltip}</span>
+                {/* O valor vem primeiro e a data abaixo para facilitar a leitura. */}
+                <span className="fc-tooltip" aria-hidden="true">
+                  <strong>{signedValue}</strong>
+                  <small>{formatDate(row.date)}</small>
+                </span>
                 <i
                   className={isIncome ? "fc-bar income" : "fc-bar expense"}
                   style={{ height: `${height}px` }}
                 />
               </div>
               <strong className={isIncome ? "positive" : "negative"}>
-                {movement}: {money.format(Math.abs(row.flow))}
+                {movement}: {signedValue}
               </strong>
               <small>{formatDate(row.date)}</small>
             </div>

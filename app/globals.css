@@ -513,16 +513,33 @@ select:focus {
   left: 50%;
   top: 7px;
   transform: translate(-50%, -5px);
+  display: grid;
+  justify-items: center;
+  gap: 3px;
   opacity: 0;
   z-index: 4;
   pointer-events: none;
   color: #fff;
-  background: #272331;
-  border-radius: 6px;
-  padding: 7px 9px;
-  font-size: 9px;
+  /* Fundo escuro translúcido: mantém o contraste sem pesar sobre o gráfico. */
+  background: rgba(17, 20, 27, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(8px);
+  padding: 8px 11px;
   white-space: nowrap;
   transition: 160ms ease;
+}
+.fc-tooltip strong {
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.1;
+}
+.fc-tooltip small {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 9px;
+  line-height: 1.1;
+  padding: 0;
 }
 .fc-column:hover .fc-tooltip,
 .fc-column:focus .fc-tooltip {

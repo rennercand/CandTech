@@ -1,10 +1,12 @@
 {
   "name": "finance-app",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test": "node --test",
     "start": "next start"
   },
   "repository": {

@@ -160,6 +160,10 @@ O menu de exportação diferencia download local e envio ao Google Drive. Cada u
 
 A proposta de categorização de extratos com IA e a futura aba de estoque estão documentadas em [ROADMAP-IA-ESTOQUE.md](./docs/ROADMAP-IA-ESTOQUE.md). Essa anotação é apenas um planejamento: nenhuma API paga foi ativada nesta versão.
 
+O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
+
+As fórmulas, premissas, testes de referência e limitações estão registradas em [AUDITORIA-FINANCEIRA.md](./docs/AUDITORIA-FINANCEIRA.md).
+
 As variáveis `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `DRIVE_TOKEN_ENCRYPTION_KEY` devem ficar somente no `.env.local` e nas variáveis sensíveis da Vercel, nunca no repositório.
 
 Em produção, configure `DATABASE_URL` e `JWT_SECRET` nas configurações da Vercel. Não coloque valores reais em `.env.example`.

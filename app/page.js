@@ -8,6 +8,7 @@ import {
   parseBankStatementPdf,
 } from "./advanced-tools";
 import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations";
+import { calculateInvestment } from "../lib/investment-calculations";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -38,74 +39,6 @@ function projectedDate(index) {
   return target.toISOString().slice(0, 10);
 }
 
-function parseSimpleDate(value) {
-  const [year, month, day] = String(value || "")
-    .slice(0, 10)
-    .split("-")
-    .map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(Date.UTC(year, month - 1, day));
-}
-
-function addCalendarMonths(date, months) {
-  // Preserva o dia quando possível e usa o último dia em meses mais curtos.
-  const target = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1),
-  );
-  const lastDay = new Date(
-    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  target.setUTCDate(Math.min(date.getUTCDate(), lastDay));
-  return target;
-}
-
-function interpolateDate(startValue, endValue, fraction) {
-  // Localiza o dia aproximado dentro do intervalo em que o saldo chega a zero.
-  const start = parseSimpleDate(startValue);
-  const end = parseSimpleDate(endValue);
-  if (!start || !end || end < start) return null;
-  const ratio = Math.min(1, Math.max(0, fraction));
-  return new Date(start.getTime() + (end.getTime() - start.getTime()) * ratio)
-    .toISOString()
-    .slice(0, 10);
-}
-
-function formatDuration(startValue, endValue) {
-  const start = parseSimpleDate(startValue);
-  const end = parseSimpleDate(endValue);
-  if (!start || !end || end < start) return null;
-
-  let cursor = start;
-  let years = end.getUTCFullYear() - cursor.getUTCFullYear();
-  let candidate = addCalendarMonths(cursor, years * 12);
-  if (candidate > end) {
-    years -= 1;
-    candidate = addCalendarMonths(cursor, years * 12);
-  }
-  cursor = candidate;
-
-  let months =
-    (end.getUTCFullYear() - cursor.getUTCFullYear()) * 12 +
-    end.getUTCMonth() -
-    cursor.getUTCMonth();
-  candidate = addCalendarMonths(cursor, months);
-  if (candidate > end) {
-    months -= 1;
-    candidate = addCalendarMonths(cursor, months);
-  }
-  cursor = candidate;
-
-  const days = Math.round((end.getTime() - cursor.getTime()) / 86_400_000);
-  const parts = [];
-  if (years) parts.push(`${years} ${years === 1 ? "ano" : "anos"}`);
-  if (months) parts.push(`${months} ${months === 1 ? "mês" : "meses"}`);
-  if (days || parts.length === 0)
-    parts.push(`${days} ${days === 1 ? "dia" : "dias"}`);
-  return parts.length > 1
-    ? `${parts.slice(0, -1).join(", ")} e ${parts.at(-1)}`
-    : parts[0];
-}
-
 function normalizeProjectionFlow(flow, index) {
   // Cálculos antigos guardavam apenas números; este formato mantém compatibilidade.
   if (flow && typeof flow === "object") {
@@ -115,121 +48,6 @@ function normalizeProjectionFlow(flow, index) {
     };
   }
   return { date: projectedDate(index), amount: flow ?? "" };
-}
-
-function calculate({ investment, investmentDate, rate, periods, flows }) {
-  const initial = Number(investment) || 0;
-  const monthlyRate = (Number(rate) || 0) / 100;
-  // Cada fluxo carrega data e valor; entradas são positivas e saídas negativas.
-  const cashFlows = flows
-    .map((flow, index) => {
-      const normalized = normalizeProjectionFlow(flow, index);
-      return { ...normalized, amount: Number(normalized.amount) || 0 };
-    })
-    .slice(0, Math.max(1, Number(periods) || flows.length));
-  let accumulated = -initial;
-  let payback = null;
-  let paybackDate = null;
-  const table = [
-    {
-      period: 0,
-      date: investmentDate || today(),
-      flow: -initial,
-      discounted: -initial,
-      accumulated,
-    },
-  ];
-  const discounted =
-    -initial +
-    cashFlows.reduce(
-      (sum, flow, index) =>
-        sum + flow.amount / (1 + monthlyRate) ** (index + 1),
-      0,
-    );
-  cashFlows.forEach((cashFlow, index) => {
-    const flow = cashFlow.amount;
-    const previous = accumulated;
-    accumulated += flow;
-    if (payback === null && accumulated >= 0 && flow > 0) {
-      const fraction = Math.abs(previous) / flow;
-      payback = index + fraction;
-      const previousDate =
-        index === 0 ? investmentDate || today() : cashFlows[index - 1].date;
-      paybackDate = interpolateDate(previousDate, cashFlow.date, fraction);
-    }
-    table.push({
-      period: index + 1,
-      date: cashFlow.date,
-      flow,
-      discounted: flow / (1 + monthlyRate) ** (index + 1),
-      accumulated,
-    });
-  });
-  // A TIR só é única em um fluxo convencional (uma única troca de sinal).
-  // Em fluxos ambíguos, devolver N/D evita apresentar uma taxa enganosa à empresa.
-  const signs = [-initial, ...cashFlows.map((flow) => flow.amount)]
-    .filter((value) => value !== 0)
-    .map((value) => Math.sign(value));
-  const signChanges = signs.reduce(
-    (count, sign, index) => count + (index > 0 && sign !== signs[index - 1] ? 1 : 0),
-    0,
-  );
-  const npvAt = (candidateRate) =>
-    -initial +
-    cashFlows.reduce(
-      (sum, flow, index) =>
-        sum + flow.amount / (1 + candidateRate) ** (index + 1),
-      0,
-    );
-  let irr = null;
-  let low = -0.9999;
-  let high = 10;
-  let lowValue = npvAt(low);
-  let highValue = npvAt(high);
-  if (
-    signChanges === 1 &&
-    Number.isFinite(lowValue) &&
-    Number.isFinite(highValue) &&
-    lowValue * highValue <= 0
-  ) {
-    // Bisseção determinística: mantém sempre um intervalo que contém a raiz.
-    for (let attempt = 0; attempt < 150; attempt += 1) {
-      const middle = (low + high) / 2;
-      const middleValue = npvAt(middle);
-      if (Math.abs(middleValue) < 1e-10) {
-        low = middle;
-        high = middle;
-        break;
-      }
-      if (lowValue * middleValue <= 0) {
-        high = middle;
-        highValue = middleValue;
-      } else {
-        low = middle;
-        lowValue = middleValue;
-      }
-    }
-    irr = ((low + high) / 2) * 100;
-  }
-  const totalIn = cashFlows.reduce((sum, item) => sum + item.amount, 0);
-  const net = totalIn - initial;
-  return {
-    table,
-    npv: discounted,
-    irr,
-    payback,
-    paybackDate,
-    paybackDuration: paybackDate
-      ? formatDuration(investmentDate || today(), paybackDate)
-      : null,
-    roi: initial ? (net / initial) * 100 : 0,
-    profitability: initial ? (discounted / initial) * 100 : 0,
-    activity: initial ? (totalIn / initial) * 100 : 0,
-    totalIn,
-    net,
-    initial,
-    rate: monthlyRate * 100,
-  };
 }
 
 const blankCashRow = () => ({
@@ -508,7 +326,7 @@ export default function Page() {
   const [pricingState, setPricingState] = useState(emptyPricingState);
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
-  const result = useMemo(() => calculate(inputs), [inputs]);
+  const result = useMemo(() => calculateInvestment(inputs), [inputs]);
   const financialTableResult = useMemo(
     () => calculateAmortization({ ...financeState.form, system: financeState.system }),
     [financeState],
@@ -976,9 +794,9 @@ export default function Page() {
 
   function downloadCurrentCsv() {
     const reports = {
-      dashboard: { filename: "visao-geral.csv", title: "Visão geral", rows: result.table },
-      calculator: { filename: "calculadora.csv", title: saveTitle, rows: result.table },
-      financing: { filename: `tabela-${financeState.system.toLowerCase()}.csv`, title: `Tabela ${financeState.system}`, rows: financialTableResult.rows },
+      dashboard: { filename: "visao-geral.csv", title: "Visão geral", rows: result.table, totalSpent: result.totalOutflows },
+      calculator: { filename: "calculadora.csv", title: saveTitle, rows: result.table, totalSpent: result.totalOutflows },
+      financing: { filename: `tabela-${financeState.system.toLowerCase()}.csv`, title: `Tabela ${financeState.system}`, rows: financialTableResult.rows, totalSpent: financialTableResult.totalPaid },
       pricing: {
         filename: "preco-produto.csv", title: "Preço do produto",
         rows: [
@@ -986,9 +804,17 @@ export default function Page() {
           { item: "Custo unitário", valor: pricingResult.unitCost },
           { item: "Preço unitário", valor: pricingResult.unitPrice },
           { item: "Lucro unitário", valor: pricingResult.unitProfit },
-        ],
+        ], totalSpent: pricingResult.totalCost,
       },
-      cashflow: { filename: "organizacao-financeira.csv", title: organizationName, rows: cashEntries },
+      cashflow: {
+        filename: "organizacao-financeira.csv",
+        title: organizationName,
+        rows: cashEntries,
+        totalSpent: cashEntries.reduce(
+          (sum, entry) => sum + (entry.type === "saida" ? Number(entry.amount) || 0 : 0),
+          0,
+        ),
+      },
     };
     const report = reports[view];
     if (!report) return;
@@ -1004,6 +830,8 @@ export default function Page() {
       "",
       headers.map(safeCell).join(";"),
       ...report.rows.map((row) => headers.map((key) => safeCell(row[key])).join(";")),
+      "",
+      ["Total gasto", report.totalSpent].map(safeCell).join(";"),
     ].join("\r\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
@@ -1364,23 +1192,31 @@ function Dashboard({ result, onOpen }) {
         </article>
         <article className="panel indicator-panel">
           <span className="eyebrow">INDICADORES</span>
-          <h2>Rentabilidade</h2>
-          <Indicator label="Rentabilidade" value={result.profitability} />
-          <Indicator label="Atividade" value={result.activity} />
+          <h2>Retorno do projeto</h2>
+          <Indicator label="ROI do projeto" value={result.roi ?? 0} />
+          <Indicator
+            label="Índice de lucratividade"
+            value={(result.profitabilityIndex ?? 0) * 100}
+            display={
+              Number.isFinite(result.profitabilityIndex)
+                ? `${result.profitabilityIndex.toFixed(3)}×`
+                : "N/D"
+            }
+          />
           <div className="callout">
-            Dados calculados com base no capital próprio informado e no fluxo
-            projetado.
+            O ROE não é calculado aqui: ele exige lucro líquido contábil e
+            patrimônio líquido médio, dados diferentes do fluxo do projeto.
           </div>
         </article>
       </section>
     </>
   );
 }
-function Indicator({ label, value }) {
+function Indicator({ label, value, display }) {
   return (
     <div className="indicator">
       <span>{label}</span>
-      <strong>{pct(value)}</strong>
+      <strong>{display ?? pct(value)}</strong>
       <div>
         <i style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
       </div>
@@ -1457,7 +1293,7 @@ function Calculator({
               />
             </label>
             <label>
-              Taxa por período (%)
+              Taxa mensal (%)
               <input
                 type="number"
                 step="0.01"
@@ -1477,14 +1313,11 @@ function Calculator({
                 onChange={(e) => updatePeriods(e.target.value)}
               />
             </label>
-            <label>
-              Período
-              <select>
-                <option>Mensal</option>
-                <option>Anual</option>
-              </select>
-            </label>
           </div>
+          <p className="field-note">
+            VPL e TIR usam períodos mensais igualmente espaçados. As datas
+            identificam os fluxos e estimam a data do payback.
+          </p>
           <div className="cash-inputs">
             <div className="panel-heading">
               <h3>Fluxo de caixa projetado</h3>
@@ -1539,7 +1372,12 @@ function Calculator({
               ROI<strong>{pct(result.roi)}</strong>
             </span>
             <span>
-              Atividade<strong>{pct(result.activity)}</strong>
+              Índice de lucratividade
+              <strong>
+                {Number.isFinite(result.profitabilityIndex)
+                  ? `${result.profitabilityIndex.toFixed(3)}×`
+                  : "N/D"}
+              </strong>
             </span>
           </div>
           <h3>Fluxo de caixa</h3>

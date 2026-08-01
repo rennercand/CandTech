@@ -20,7 +20,7 @@ export const emptyInventoryState = () => ({
 });
 export const emptyCommerceOrder = () => ({
   id: "", type: "venda", number: "", partner: "", contact: "", date: "",
-  dueDate: "", amount: "", status: "rascunho",
+  dueDate: "", amount: "", sku: "", quantity: "", status: "rascunho",
 });
 
 function Summary({ items }) {
@@ -33,12 +33,12 @@ function Field({ label, children }) {
   return <label className="operation-field"><span>{label}</span>{children}</label>;
 }
 
-export function FinancialCommitments({ accounts, setAccounts }) {
+export function FinancialCommitments({ accounts, setAccounts, onStatusChange, onScanRequest }) {
   const summary = useMemo(() => summarizeAccounts(accounts), [accounts]);
   const update = (index, field, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   const remove = (index) => setAccounts((current) => current.filter((_, rowIndex) => rowIndex !== index));
   return <section className="panel operations-panel">
-    <div className="panel-heading"><div><span className="eyebrow">COMPROMISSOS</span><h2>Contas a pagar e receber</h2><p>Acompanhe vencimentos sem misturar valores previstos com o caixa já realizado.</p></div><button className="primary-button" onClick={() => setAccounts((current) => [...current, { ...emptyFinancialAccount(), id: newId() }])}>+ Nova conta</button></div>
+    <div className="panel-heading"><div><span className="eyebrow">COMPROMISSOS</span><h2>Contas a pagar e receber</h2><p>Acompanhe vencimentos e dê baixa diretamente no fluxo de caixa.</p></div><div className="module-actions"><label className="secondary-button file-button">Digitalizar conta<input type="file" accept="image/*" capture="environment" onChange={(event) => onScanRequest?.(event.target.files?.[0])} /></label><button className="primary-button" onClick={() => setAccounts((current) => [...current, { ...emptyFinancialAccount(), id: newId() }])}>+ Nova conta</button></div></div>
     <Summary items={[
       { label: "A receber", value: money.format(summary.receivable), caption: "Valores ainda pendentes" },
       { label: "A pagar", value: money.format(summary.payable), caption: "Obrigações ainda pendentes" },
@@ -51,11 +51,11 @@ export function FinancialCommitments({ accounts, setAccounts }) {
       <Field label="Categoria"><input value={account.category} onChange={(e) => update(index, "category", e.target.value)} /></Field>
       <Field label="Vencimento"><input type="date" value={account.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field>
       <Field label="Valor"><input type="number" min="0" step="0.01" value={account.amount} onChange={(e) => update(index, "amount", e.target.value)} placeholder="0,00" /></Field>
-      <Field label="Status"><select value={account.status} onChange={(e) => update(index, "status", e.target.value)}><option value="pendente">Pendente</option><option value={account.type === "pagar" ? "pago" : "recebido"}>{account.type === "pagar" ? "Pago" : "Recebido"}</option></select></Field>
+      <Field label="Status"><select value={account.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="pendente">Pendente</option><option value={account.type === "pagar" ? "pago" : "recebido"}>{account.type === "pagar" ? "Pago" : "Recebido"}</option></select></Field>
       <button className="remove-row" onClick={() => remove(index)} aria-label="Excluir conta">×</button>
     </article>)}</div>
     {!accounts.length && <p className="empty-state">Nenhuma conta cadastrada. Use “Nova conta” para começar.</p>}
-    <p className="responsibility-note">Marcar uma conta como paga ou recebida não cria um movimento no fluxo de caixa automaticamente. Isso evita lançamentos duplicados e mantém a conciliação sob seu controle.</p>
+    <p className="responsibility-note">Ao marcar como paga ou recebida, o movimento é lançado no caixa. Se houver um registro parecido, o sistema avisa e só continua com sua confirmação.</p>
   </section>;
 }
 
@@ -84,7 +84,7 @@ export function InventoryLogistics({ state, setState }) {
   </div>;
 }
 
-export function SalesPurchases({ orders, setOrders }) {
+export function SalesPurchases({ orders, setOrders, onStatusChange, onTestInvoice }) {
   const summary = useMemo(() => summarizeOrders(orders), [orders]);
   const update = (index, field, value) => setOrders((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   return <div className="business-stack"><Summary items={[
@@ -95,9 +95,9 @@ export function SalesPurchases({ orders, setOrders }) {
   ]} />
   <section className="panel operations-panel"><div className="panel-heading"><div><span className="eyebrow">COMERCIAL</span><h2>Pedidos, clientes e fornecedores</h2><p>Contato e situação do pedido ficam juntos para facilitar o acompanhamento.</p></div><button className="primary-button" onClick={() => setOrders((current) => [...current, { ...emptyCommerceOrder(), id: newId() }])}>+ Novo pedido</button></div>
     <div className="operation-list">{orders.map((order, index) => <article className="operation-row order-row" key={order.id || `order-${index}`}>
-      <Field label="Tipo"><select value={order.type} onChange={(e) => update(index, "type", e.target.value)}><option value="venda">Venda</option><option value="compra">Compra</option></select></Field><Field label="Pedido"><input value={order.number} onChange={(e) => update(index, "number", e.target.value)} placeholder="Nº ou referência" /></Field><Field label={order.type === "compra" ? "Fornecedor" : "Cliente"}><input value={order.partner} onChange={(e) => update(index, "partner", e.target.value)} /></Field><Field label="Contato"><input value={order.contact} onChange={(e) => update(index, "contact", e.target.value)} placeholder="E-mail ou telefone" /></Field><Field label="Data"><input type="date" value={order.date} onChange={(e) => update(index, "date", e.target.value)} /></Field><Field label="Prazo"><input type="date" value={order.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field><Field label="Valor"><input type="number" min="0" step="0.01" value={order.amount} onChange={(e) => update(index, "amount", e.target.value)} /></Field><Field label="Status"><select value={order.status} onChange={(e) => update(index, "status", e.target.value)}><option value="rascunho">Rascunho</option><option value="confirmado">Confirmado</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></Field><button className="remove-row" onClick={() => setOrders((current) => current.filter((_, rowIndex) => rowIndex !== index))} aria-label="Excluir pedido">×</button>
+      <Field label="Tipo"><select value={order.type} onChange={(e) => update(index, "type", e.target.value)}><option value="venda">Venda</option><option value="compra">Compra</option></select></Field><Field label="Pedido"><input value={order.number} onChange={(e) => update(index, "number", e.target.value)} placeholder="Nº ou referência" /></Field><Field label={order.type === "compra" ? "Fornecedor" : "Cliente"}><input value={order.partner} onChange={(e) => update(index, "partner", e.target.value)} /></Field><Field label="Contato"><input value={order.contact} onChange={(e) => update(index, "contact", e.target.value)} placeholder="E-mail ou telefone" /></Field><Field label="SKU"><input value={order.sku || ""} onChange={(e) => update(index, "sku", e.target.value)} placeholder="Código do produto" /></Field><Field label="Quantidade"><input type="number" min="0" value={order.quantity || ""} onChange={(e) => update(index, "quantity", e.target.value)} /></Field><Field label="Data"><input type="date" value={order.date} onChange={(e) => update(index, "date", e.target.value)} /></Field><Field label="Prazo"><input type="date" value={order.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field><Field label="Valor"><input type="number" min="0" step="0.01" value={order.amount} onChange={(e) => update(index, "amount", e.target.value)} /></Field><Field label="Status"><select value={order.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="rascunho">Rascunho</option><option value="confirmado">Confirmado</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></Field><div className="row-actions"><button className="secondary-button compact" onClick={() => onTestInvoice?.(order)}>Documento teste</button><button className="remove-row" onClick={() => setOrders((current) => current.filter((_, rowIndex) => rowIndex !== index))} aria-label="Excluir pedido">×</button></div>
     </article>)}</div>
     {!orders.length && <p className="empty-state">Nenhum pedido cadastrado.</p>}
-    <p className="responsibility-note">Os totais representam pedidos registrados, não faturamento realizado. Movimentos reais devem ser conciliados no módulo Financeiro.</p>
+    <p className="responsibility-note">Ao concluir um pedido com SKU e quantidade, o sistema pede confirmação antes de dar entrada ou saída no estoque. “Documento teste” não possui validade fiscal.</p>
   </section></div>;
 }

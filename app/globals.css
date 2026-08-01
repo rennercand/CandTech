@@ -1929,10 +1929,12 @@ select:focus {
 }
 .operation-row.product-row { grid-template-columns: 1.5fr 1fr .75fr .8fr 1fr 1fr auto; }
 .operation-row.delivery-row { grid-template-columns: .8fr 1.4fr 1.2fr 1fr 1fr 1fr auto; }
-.operation-row.order-row { grid-template-columns: .7fr .8fr 1.2fr 1.2fr 1fr 1fr 1fr 1fr auto; }
+.operation-row.order-row { grid-template-columns: .65fr .75fr 1fr 1fr .8fr .7fr .85fr .85fr .85fr .9fr auto; }
 .operation-field { display: grid; gap: 6px; min-width: 0; }
 .operation-field span { color: var(--muted); font-size: 12px; font-weight: 700; }
 .operation-field input, .operation-field select { width: 100%; min-width: 0; }
+.row-actions { display: flex; align-items: center; gap: 6px; }
+.row-actions .compact { white-space: nowrap; }
 .responsibility-note {
   margin: 0;
   padding: 12px 14px;

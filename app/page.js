@@ -615,6 +615,109 @@ export default function Page() {
     setNotice("");
     setView(type);
   }
+
+  function changeAccountStatus(index, nextStatus) {
+    const account = financialAccounts[index];
+    if (!account) return;
+    const settled = nextStatus === "pago" || nextStatus === "recebido";
+    if (!settled) {
+      setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus } : item));
+      return;
+    }
+    if (!(Number(account.amount) > 0)) {
+      setNotice("Informe um valor maior que zero antes de dar baixa na conta.");
+      return;
+    }
+    const cashType = account.type === "pagar" ? "saida" : "entrada";
+    const similar = cashEntries.some((entry) =>
+      entry.type === cashType && Math.abs(Number(entry.amount) - Number(account.amount)) < 0.01 &&
+      (!account.dueDate || !entry.date || entry.date === account.dueDate),
+    );
+    const similarAccount = financialAccounts.some((item, itemIndex) =>
+      itemIndex !== index && item.type === account.type &&
+      Math.abs(Number(item.amount) - Number(account.amount)) < 0.01 &&
+      (!account.dueDate || !item.dueDate || item.dueDate === account.dueDate),
+    );
+    if ((similar || similarAccount) && !confirm("Já existe uma conta ou lançamento de tipo, valor e data parecidos. Deseja lançar mesmo assim?")) return;
+    setCashEntries((current) => [...current, {
+      ...blankCashRow(),
+      date: account.dueDate || today(),
+      category: account.category || "Geral",
+      description: account.description || account.party || "Baixa de conta",
+      type: cashType,
+      amount: account.amount,
+    }]);
+    setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus, postedAt: new Date().toISOString() } : item));
+    setNotice(account.type === "pagar" ? "Conta paga e saída lançada no caixa." : "Conta recebida e entrada lançada no caixa.");
+  }
+
+  async function scanBillImage(file) {
+    if (!file) return;
+    // TextDetector mantém a imagem no aparelho; quando indisponível, nenhuma leitura é inventada.
+    if (!("TextDetector" in window)) {
+      setNotice("A câmera foi reconhecida, mas este navegador não oferece OCR seguro. Para leitura automática será necessário conectar Google Vision, Azure Document Intelligence ou outro provedor de OCR.");
+      return;
+    }
+    setNotice("Lendo a imagem…");
+    try {
+      const bitmap = await createImageBitmap(file);
+      const blocks = await new window.TextDetector().detect(bitmap);
+      const text = blocks.map((block) => block.rawValue).join("\n");
+      const values = [...text.matchAll(/(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2})/g)]
+        .map((match) => Number(match[1].replaceAll(".", "").replace(",", ".")))
+        .filter(Number.isFinite);
+      const amount = values.length ? Math.max(...values) : "";
+      const description = text.split("\n").find((line) => line.trim().length > 2)?.trim() || "Conta digitalizada";
+      if (!confirm(`Leitura sugerida: ${description}${amount ? ` · ${money.format(amount)}` : ""}. Criar conta a pagar para revisão?`)) return;
+      setFinancialAccounts((current) => [...current, { ...emptyFinancialAccount(), id: `${Date.now()}`, description, amount }]);
+      setNotice("Pré-cadastro criado. Confira fornecedor, vencimento e valor antes de dar baixa.");
+    } catch {
+      setNotice("Não foi possível ler esta imagem. Nenhum lançamento foi criado.");
+    }
+  }
+
+  function changeOrderStatus(index, nextStatus) {
+    const order = commerceOrders[index];
+    if (!order || nextStatus !== "concluido" || order.status === "concluido") {
+      setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus } : item));
+      return;
+    }
+    const quantity = Number(order.quantity);
+    const productIndex = inventoryState.products.findIndex((product) => product.sku && product.sku.trim().toLowerCase() === String(order.sku || "").trim().toLowerCase());
+    if (!(quantity > 0) || productIndex < 0) {
+      if (!confirm("SKU ou quantidade não corresponde ao estoque. Concluir o pedido sem alterar o estoque?")) return;
+    } else {
+      const product = inventoryState.products[productIndex];
+      const currentQuantity = Number(product.quantity) || 0;
+      const nextQuantity = order.type === "venda" ? currentQuantity - quantity : currentQuantity + quantity;
+      if (nextQuantity < 0) {
+        setNotice("Estoque insuficiente. O pedido não foi concluído nem alterou o estoque.");
+        return;
+      }
+      const verb = order.type === "venda" ? "retirar" : "adicionar";
+      if (!confirm(`Concluir o pedido e ${verb} ${quantity} unidade(s) do estoque de ${product.name || product.sku}?`)) return;
+      setInventoryState((current) => ({ ...current, products: current.products.map((item, itemIndex) => itemIndex === productIndex ? { ...item, quantity: String(nextQuantity) } : item) }));
+    }
+    setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus, stockUpdatedAt: new Date().toISOString() } : item));
+    setNotice("Pedido concluído com a atualização confirmada.");
+  }
+
+  async function downloadTestInvoice(order) {
+    if (!order?.partner || !(Number(order.amount) > 0)) {
+      setNotice("Informe cliente/fornecedor e valor para gerar o documento de teste.");
+      return;
+    }
+    const response = await fetch("/api/export/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      title: "DOCUMENTO DE TESTE — SEM VALOR FISCAL",
+      calculationType: "documento-sem-valor-fiscal",
+      payload: { table: [{ pedido: order.number || "Sem número", tipo: order.type, clienteFornecedor: order.partner, data: order.date || today(), sku: order.sku, quantidade: order.quantity, valor: Number(order.amount), observacao: "NÃO É NOTA FISCAL" }] },
+    }) });
+    if (!response.ok) return setNotice("Não foi possível gerar o documento de teste.");
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a"); link.href = url; link.download = `documento-teste-${order.number || "pedido"}.pdf`; link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    setNotice("Documento de teste baixado. Ele não possui validade fiscal.");
+  }
   async function saveCalculation() {
     const hasFinancialTable =
       Number(financeState.form.principal) > 0 &&
@@ -1256,7 +1359,8 @@ export default function Page() {
         )}
         {view === "cashflow" && (
           <div className="business-stack">
-            <FinancialCommitments accounts={financialAccounts} setAccounts={setFinancialAccounts} />
+            <FinancialCommitments accounts={financialAccounts} setAccounts={setFinancialAccounts}
+              onStatusChange={changeAccountStatus} onScanRequest={scanBillImage} />
             <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}
               entries={cashEntries} filteredEntries={filteredCashEntries} filters={cashFilters}
               setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals}
@@ -1264,7 +1368,8 @@ export default function Page() {
           </div>
         )}
         {view === "inventory" && <InventoryLogistics state={inventoryState} setState={setInventoryState} />}
-        {view === "commerce" && <SalesPurchases orders={commerceOrders} setOrders={setCommerceOrders} />}
+        {view === "commerce" && <SalesPurchases orders={commerceOrders} setOrders={setCommerceOrders}
+          onStatusChange={changeOrderStatus} onTestInvoice={downloadTestInvoice} />}
         {view === "history" && (
           <History
             items={history}

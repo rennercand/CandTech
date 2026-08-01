@@ -232,6 +232,21 @@ function AuthScreen({ onAuthenticated }) {
         <small className="auth-footnote">Seus dados pertencem à sua conta.</small>
       </section>
       <section className="auth-card">
+        <div className="auth-product-visual" aria-hidden="true">
+          <div className="product-visual-top"><span /><span /><span /><b>CandTech workspace</b></div>
+          <div className="product-visual-body">
+            <div className="product-visual-nav"><i /><i /><i /><i /></div>
+            <div className="product-visual-content">
+              <div className="product-visual-heading"><b /><span /></div>
+              <div className="product-visual-stats"><i /><i /><i /></div>
+              <div className="product-visual-chart">
+                <span style={{ height: "38%" }} /><span style={{ height: "68%" }} />
+                <span style={{ height: "49%" }} /><span style={{ height: "84%" }} />
+                <span style={{ height: "61%" }} /><span style={{ height: "94%" }} />
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="auth-mobile-brand brand"><i>CT</i> CandTech</div>
         <p className="eyebrow">{mode === "login" ? "BEM-VINDO DE VOLTA" : "COMECE AGORA"}</p>
         <h2>{mode === "login" ? "Entre no seu espaço" : "Crie seu espaço financeiro"}</h2>

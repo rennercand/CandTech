@@ -7,6 +7,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 ## Funcionalidades
 
 - Cadastro e login com sessão individual.
+- Central inicial com documentos recentes e modelos para novos trabalhos.
 - Dashboard financeiro por usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
 - Fluxos de caixa com datas, entradas, saídas e detalhes interativos.

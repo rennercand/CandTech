@@ -216,20 +216,30 @@ function AuthScreen({ onAuthenticated }) {
         <div className="brand">
           <i>CT</i> CandTech
         </div>
-        <h1>Suas decisões financeiras, em uma só visão.</h1>
+        <div className="auth-message">
+          <span className="auth-badge">FINANÇAS CLARAS, DECISÕES MELHORES</span>
+          <h1>Seu espaço financeiro, organizado do seu jeito.</h1>
+        </div>
         <p>
-          Calcule, organize fluxos e mantenha dados salvos de forma privada por
-          conta.
+          Crie análises, acompanhe números e encontre seus documentos sempre
+          que precisar — tudo em uma única conta.
         </p>
         <div className="auth-points">
-          <span>✓ Histórico por conta</span>
-          <span>✓ CSV compatível com Excel</span>
-          <span>✓ Senhas com hash seguro</span>
+          <span><i>01</i><b>Documentos organizados</b><small>Histórico privado e salvamento automático.</small></span>
+          <span><i>02</i><b>Análises confiáveis</b><small>Cálculos auditados e memória detalhada.</small></span>
+          <span><i>03</i><b>Exporte como preferir</b><small>Excel, CSV, PDF ou Google Drive.</small></span>
         </div>
+        <small className="auth-footnote">Seus dados pertencem à sua conta.</small>
       </section>
       <section className="auth-card">
-        <p className="eyebrow">BEM-VINDO</p>
-        <h2>{mode === "login" ? "Acesse sua conta" : "Crie sua conta"}</h2>
+        <div className="auth-mobile-brand brand"><i>CT</i> CandTech</div>
+        <p className="eyebrow">{mode === "login" ? "BEM-VINDO DE VOLTA" : "COMECE AGORA"}</p>
+        <h2>{mode === "login" ? "Entre no seu espaço" : "Crie seu espaço financeiro"}</h2>
+        <p className="auth-subtitle">
+          {mode === "login"
+            ? "Continue de onde parou e acesse seus documentos."
+            : "Organize suas decisões financeiras em poucos minutos."}
+        </p>
         <form onSubmit={submit}>
           {mode === "register" && (
             <label>
@@ -300,7 +310,7 @@ export default function Page() {
   const [checking, setChecking] = useState(true);
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [saveStatus, setSaveStatus] = useState("loading");
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState("home");
   const [calculationType, setCalculationType] = useState("VPL");
   // Os campos começam vazios; as linhas do fluxo serão criadas pela quantidade de períodos.
   const [inputs, setInputs] = useState(emptyInputs);
@@ -312,6 +322,7 @@ export default function Page() {
   });
   const [organizationName, setOrganizationName] = useState("Minha organização");
   const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [driveStatus, setDriveStatus] = useState({
     configured: false,
@@ -475,7 +486,7 @@ export default function Page() {
   }, [user?.id, workspaceReady, workspacePayload]);
 
   useEffect(() => {
-    if (user && view === "history") loadHistory();
+    if (user && (view === "home" || view === "history")) loadHistory();
   }, [user, view]);
 
   function applyWorkspace(payload) {
@@ -517,10 +528,35 @@ export default function Page() {
     return response.ok;
   }
   async function loadHistory(type) {
-    const response = await fetch(
-      `/api/history${type ? `?type=${encodeURIComponent(type)}` : ""}`,
-    );
-    if (response.ok) setHistory((await response.json()).items);
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(
+        `/api/history${type ? `?type=${encodeURIComponent(type)}` : ""}`,
+      );
+      if (response.ok) setHistory((await response.json()).items);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function startNewDocument(type) {
+    // Antes de limpar a área atual, preserva sua última revisão no histórico da conta.
+    await archiveCurrentWorkspace();
+    // Cada atalho inicia um documento realmente vazio no módulo correspondente.
+    if (type === "calculator") {
+      setInputs(emptyInputs());
+      setSaveTitle("Nova simulação financeira");
+    } else if (type === "financing") {
+      setFinanceState(emptyFinanceState());
+    } else if (type === "pricing") {
+      setPricingState(emptyPricingState());
+    } else if (type === "cashflow") {
+      setCashEntries([blankCashRow()]);
+      setOrganizationName("Nova organização financeira");
+      setCashFilters({ month: "", type: "todos", category: "todos" });
+    }
+    setNotice("");
+    setView(type);
   }
   async function saveCalculation() {
     const hasFinancialTable =
@@ -720,7 +756,7 @@ export default function Page() {
     setNotice("");
     setWorkspaceReady(false);
     setUser(null);
-    setView("dashboard");
+    setView("home");
   }
   function updateFlow(index, field, value) {
     // Atualiza data ou valor da linha; useMemo recalcula tabela e gráfico imediatamente.
@@ -971,6 +1007,7 @@ export default function Page() {
         <div className="workspace">Gestão pessoal</div>
         <nav aria-label="Navegação principal">
           {[
+            ["home", "Início", "⌂"],
             ["dashboard", "Visão geral", "◈"],
             ["calculator", "Calculadoras", "⌁"],
             ["financing", "Tabela financeira", "▦"],
@@ -1013,9 +1050,13 @@ export default function Page() {
       <section className="content">
         <header>
           <div>
-            <p className="eyebrow">PAINEL FINANCEIRO</p>
+            <p className="eyebrow">
+              {view === "home" ? "ESPAÇO DE TRABALHO" : "PAINEL FINANCEIRO"}
+            </p>
             <h1>
-              {view === "dashboard"
+              {view === "home"
+                ? "Seus documentos"
+                : view === "dashboard"
                 ? "Visão geral"
                 : view === "calculator"
                   ? "Calculadoras"
@@ -1045,7 +1086,7 @@ export default function Page() {
                 year: "numeric",
               })}
             </span>
-            {view !== "history" && (
+            {view !== "history" && view !== "home" && (
               <div className="context-export-actions" aria-label="Exportar aba atual">
                 <button className="secondary-button compact" onClick={downloadCurrentCsv}>
                   CSV
@@ -1066,6 +1107,17 @@ export default function Page() {
             {notice}
             <button onClick={() => setNotice("")}>×</button>
           </div>
+        )}
+        {view === "home" && (
+          <DocumentHome
+            user={user}
+            items={history}
+            loading={historyLoading}
+            onNew={startNewDocument}
+            onOpen={loadHistoryItem}
+            onRestore={restoreAutomaticDraft}
+            onViewAll={() => setView("history")}
+          />
         )}
         {view === "dashboard" && (
           <Dashboard result={result} onOpen={() => setView("calculator")} />
@@ -1137,6 +1189,113 @@ export default function Page() {
         )}
       </section>
     </main>
+  );
+}
+
+const DOCUMENT_TYPES = {
+  VPL: { label: "Análise de investimento", icon: "↗", tone: "violet" },
+  TIR: { label: "Análise de investimento", icon: "↗", tone: "violet" },
+  Payback: { label: "Análise de investimento", icon: "↗", tone: "violet" },
+  "tabela-financeira": { label: "Tabela financeira", icon: "▦", tone: "blue" },
+  "preco-produto": { label: "Preço do produto", icon: "◇", tone: "orange" },
+  "organizacao-financeira": { label: "Organização financeira", icon: "◫", tone: "green" },
+  "rascunho-automatico": { label: "Rascunho automático", icon: "✎", tone: "gray" },
+};
+
+const DOCUMENT_TEMPLATES = [
+  { id: "calculator", title: "Análise de investimento", text: "VPL, TIR, ROI e payback", icon: "↗", tone: "violet" },
+  { id: "financing", title: "Tabela financeira", text: "PRICE, SAF, SAC ou SAA", icon: "▦", tone: "blue" },
+  { id: "pricing", title: "Preço do produto", text: "Custos, margem e preço unitário", icon: "◇", tone: "orange" },
+  { id: "cashflow", title: "Organização financeira", text: "Extratos, lançamentos e categorias", icon: "◫", tone: "green" },
+];
+
+function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll }) {
+  const recentItems = items.slice(0, 6);
+
+  return (
+    <div className="document-home">
+      <section className="home-welcome">
+        <div>
+          <span className="eyebrow">OLÁ, {user.name.split(" ")[0].toUpperCase()}</span>
+          <h2>O que você quer organizar hoje?</h2>
+          <p>Comece um documento novo ou continue trabalhando em um arquivo salvo.</p>
+        </div>
+        <button
+          className="primary-button new-document-button"
+          onClick={() => {
+            const models = document.getElementById("document-templates");
+            models?.scrollIntoView({ behavior: "smooth", block: "center" });
+            models?.querySelector("button")?.focus({ preventScroll: true });
+          }}
+        >
+          <span>＋</span> Novo documento
+        </button>
+      </section>
+
+      <section className="home-section" id="document-templates">
+        <div className="home-section-heading">
+          <div>
+            <span className="eyebrow">COMEÇAR</span>
+            <h2>Escolha um modelo</h2>
+          </div>
+        </div>
+        <div className="template-grid">
+          {DOCUMENT_TEMPLATES.map((template) => (
+            <button className="template-card" key={template.id} onClick={() => onNew(template.id)}>
+              <span className={`document-icon ${template.tone}`}>{template.icon}</span>
+              <span>
+                <strong>{template.title}</strong>
+                <small>{template.text}</small>
+              </span>
+              <i>→</i>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-section recent-section">
+        <div className="home-section-heading">
+          <div>
+            <span className="eyebrow">SUA CONTA</span>
+            <h2>Documentos recentes</h2>
+          </div>
+          {items.length > 0 && (
+            <button className="text-link-button" onClick={onViewAll}>Ver todos →</button>
+          )}
+        </div>
+        {loading ? (
+          <div className="home-empty">Carregando seus documentos…</div>
+        ) : recentItems.length === 0 ? (
+          <div className="home-empty">
+            <span>□</span>
+            <strong>Seu espaço ainda está vazio</strong>
+            <p>Escolha um modelo acima para criar seu primeiro documento.</p>
+          </div>
+        ) : (
+          <div className="document-grid">
+            {recentItems.map((item) => {
+              const type = DOCUMENT_TYPES[item.calculation_type] || DOCUMENT_TYPES.VPL;
+              const isDraft = item.calculation_type === "rascunho-automatico";
+              return (
+                <button
+                  className="document-card"
+                  key={item.id}
+                  onClick={() => (isDraft ? onRestore(item) : onOpen(item))}
+                >
+                  <span className={`document-icon ${type.tone}`}>{type.icon}</span>
+                  <span className="document-card-copy">
+                    <small>{type.label}</small>
+                    <strong>{item.title}</strong>
+                    <time>Salvo em {formatDate(item.created_at)}</time>
+                  </span>
+                  <i>•••</i>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 

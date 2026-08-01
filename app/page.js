@@ -518,6 +518,7 @@ export default function Page() {
   });
   const [driveUpload, setDriveUpload] = useState({ id: null, status: "idle", file: null });
   const [fileDownload, setFileDownload] = useState({ id: null, format: null });
+  const [currentPdfLoading, setCurrentPdfLoading] = useState(false);
   const [saveTitle, setSaveTitle] = useState("Simulação financeira");
   const [financeState, setFinanceState] = useState(emptyFinanceState);
   const [pricingState, setPricingState] = useState(emptyPricingState);
@@ -898,7 +899,8 @@ export default function Page() {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(link.href);
+      const objectUrl = link.href;
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
       setNotice(`${format.toUpperCase()} baixado com sucesso.`);
     } catch (error) {
       setNotice(error.message || "Não foi possível baixar o arquivo.");
@@ -1023,15 +1025,99 @@ export default function Page() {
     link.href = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
     link.download = report.filename;
     link.click();
-    URL.revokeObjectURL(link.href);
+    const objectUrl = link.href;
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
   }
 
-  function printCurrentView() {
-    // O navegador gera o PDF da aba atual e mantém gráficos vetoriais nítidos.
-    const originalTitle = document.title;
-    document.title = `FinSight - ${view}`;
-    window.print();
-    document.title = originalTitle;
+  async function downloadCurrentPdf() {
+    const meaningfulFlows = result.table.filter((row) => Number(row.flow) !== 0);
+    const meaningfulEntries = cashEntries.filter(
+      (entry) => entry.description || Number(entry.amount) > 0,
+    );
+    const reports = {
+      dashboard: meaningfulFlows.length
+        ? {
+            title: "Visão geral financeira",
+            calculationType: "visao-geral",
+            payload: { inputs, result, table: result.table },
+          }
+        : null,
+      calculator: meaningfulFlows.length
+        ? {
+            title: saveTitle || "Cálculo financeiro",
+            calculationType,
+            payload: { inputs, result, table: result.table },
+          }
+        : null,
+      financing: financialTableResult.rows.length
+        ? {
+            title: `Tabela ${financeState.system}`,
+            calculationType: "tabela-financeira",
+            payload: {
+              table: financialTableResult.rows,
+              financialTable: { state: financeState, result: financialTableResult },
+            },
+          }
+        : null,
+      pricing:
+        pricingResult.totalCost > 0 && Number(pricingState.units) > 0
+          ? {
+              title: "Preço do produto",
+              calculationType: "preco-produto",
+              payload: { pricingState, pricingResult },
+            }
+          : null,
+      cashflow: meaningfulEntries.length
+        ? {
+            title: organizationName || "Organização financeira",
+            calculationType: "organizacao-financeira",
+            payload: {
+              entries: meaningfulEntries,
+              table: meaningfulEntries,
+              summary: [
+                { label: "Entradas", value: cashTotals.income, format: "currency" },
+                { label: "Saídas", value: cashTotals.expense, format: "currency" },
+                {
+                  label: "Saldo",
+                  value: cashTotals.income - cashTotals.expense,
+                  format: "currency",
+                },
+              ],
+            },
+          }
+        : null,
+    };
+    const report = reports[view];
+    if (!report) {
+      setNotice("Preencha e calcule os dados desta aba antes de gerar o PDF.");
+      return;
+    }
+    setCurrentPdfLoading(true);
+    setNotice("Gerando relatório PDF…");
+    try {
+      const response = await fetch("/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(report),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Não foi possível gerar o PDF.");
+      }
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `finsight-${view}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      setNotice("PDF baixado com sucesso.");
+    } catch (error) {
+      setNotice(error.message || "Não foi possível baixar o PDF.");
+    } finally {
+      setCurrentPdfLoading(false);
+    }
   }
   function restoreAutomaticDraft(item) {
     const restored = normalizeWorkspacePayload(item.payload);
@@ -1152,8 +1238,12 @@ export default function Page() {
                 <button className="secondary-button compact" onClick={downloadCurrentCsv}>
                   CSV
                 </button>
-                <button className="secondary-button compact" onClick={printCurrentView}>
-                  PDF
+                <button
+                  className="secondary-button compact"
+                  onClick={downloadCurrentPdf}
+                  disabled={currentPdfLoading}
+                >
+                  {currentPdfLoading ? "Gerando PDF…" : "PDF"}
                 </button>
               </div>
             )}

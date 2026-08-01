@@ -172,6 +172,12 @@ select:focus {
   color: #bd2744;
   font-size: 13px;
 }
+.password-hint {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.45;
+}
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar) 1fr;

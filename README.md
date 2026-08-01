@@ -43,7 +43,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
 - APIs possuem rate limit compartilhado no PostgreSQL/Neon; o IP é armazenado somente como hash e limites excedidos retornam `429`.
 - O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
-- Novas contas exigem senha entre 12 e 128 caracteres; contas antigas continuam podendo entrar com a regra anterior.
+- Contas aceitam senha entre 8 e 128 caracteres; a interface recomenda frases com 15 ou mais caracteres para maior segurança.
 - O extrato PDF é processado no navegador e não é enviado ao servidor pelo importador.
 - `.env.local`, bancos locais, configurações da Vercel, logs e relatórios de segurança são ignorados pelo Git.
 - Segredos de produção ficam nas Environment Variables criptografadas da Vercel.

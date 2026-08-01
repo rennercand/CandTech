@@ -27,11 +27,11 @@ export async function POST(request) {
       rawName.length > 80 ||
       cleanEmail.length > 254 ||
       !/^\S+@\S+\.\S+$/.test(cleanEmail) ||
-      cleanPassword.length < 12 ||
+      cleanPassword.length < 8 ||
       cleanPassword.length > 128
     ) {
       return NextResponse.json(
-        { error: "Informe nome, e-mail válido e senha entre 12 e 128 caracteres." },
+        { error: "Informe nome, e-mail válido e senha entre 8 e 128 caracteres." },
         { status: 400 },
       );
     }

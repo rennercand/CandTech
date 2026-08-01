@@ -454,14 +454,19 @@ function AuthScreen({ onAuthenticated }) {
             <input
               required
               type="password"
-              minLength={mode === "register" ? 12 : 8}
+              minLength="8"
               maxLength="128"
               placeholder={
-                mode === "register" ? "Ao menos 12 caracteres" : "Sua senha"
+                mode === "register" ? "Ao menos 8 caracteres" : "Sua senha"
               }
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
+            {mode === "register" && (
+              <small className="password-hint">
+                Mínimo 8. Para maior segurança, prefira uma frase com 15 ou mais caracteres.
+              </small>
+            )}
           </label>
           {error && <p className="form-error">{error}</p>}
           <button className="primary-button" disabled={loading}>

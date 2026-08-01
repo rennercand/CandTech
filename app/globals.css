@@ -1327,25 +1327,19 @@ select:focus {
   gap: 8px;
 }
 
-.module-save {
-  margin-left: 6px;
+.module-toolbar,
+.module-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.drive-button {
-  border: 1px solid #c7d2fe;
-  background: #eef2ff;
-  color: #3730a3;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 700;
-  cursor: pointer;
+.module-toolbar {
+  justify-content: flex-end;
 }
 
-.drive-button:hover:not(:disabled) {
-  background: #e0e7ff;
-}
-
-.drive-button:disabled {
+.drive-action:disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -1361,9 +1355,12 @@ select:focus {
   .context-export-actions button {
     flex: 1;
   }
-  .module-save {
+  .module-toolbar,
+  .module-actions {
     width: 100%;
-    margin-left: 0;
+  }
+  .module-actions button {
+    flex: 1;
   }
 }
 

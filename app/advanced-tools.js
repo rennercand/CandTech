@@ -59,22 +59,26 @@ export function FinanceTables({ state, setState, onSave, onExportDrive }) {
             <h2>Tabela financeira</h2>
             <p>{systemText}</p>
           </div>
-          <div className="system-tabs" aria-label="Sistema de amortização">
-            {FINANCIAL_SYSTEMS.map((item) => (
-              <button
-                key={item}
-                className={system === item ? "active" : ""}
-                onClick={() => setSystem(item)}
-              >
-                {item}
+          <div className="module-toolbar">
+            <div className="system-tabs" aria-label="Sistema de amortização">
+              {FINANCIAL_SYSTEMS.map((item) => (
+                <button
+                  key={item}
+                  className={system === item ? "active" : ""}
+                  onClick={() => setSystem(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div className="module-actions">
+              <button className="primary-button compact" onClick={onSave}>
+                Salvar no histórico
               </button>
-            ))}
-            <button className="primary-button compact module-save" onClick={onSave}>
-              Salvar no histórico
-            </button>
-            <button className="secondary-button compact" onClick={onExportDrive}>
-              Exportar para o Drive
-            </button>
+              <button className="secondary-button compact" onClick={onExportDrive}>
+                Exportar para o Drive
+              </button>
+            </div>
           </div>
         </div>
       </article>

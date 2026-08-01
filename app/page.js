@@ -517,6 +517,7 @@ export default function Page() {
     loading: true,
   });
   const [driveUpload, setDriveUpload] = useState({ id: null, status: "idle", file: null });
+  const [fileDownload, setFileDownload] = useState({ id: null, format: null });
   const [saveTitle, setSaveTitle] = useState("Simulação financeira");
   const [financeState, setFinanceState] = useState(emptyFinanceState);
   const [pricingState, setPricingState] = useState(emptyPricingState);
@@ -879,6 +880,32 @@ export default function Page() {
       setNotice("Google Drive desconectado desta conta.");
     }
   }
+  async function downloadHistoryFile(item, format) {
+    setFileDownload({ id: item.id, format });
+    setNotice(`Preparando arquivo ${format.toUpperCase()}…`);
+    try {
+      const response = await fetch(`/api/history/${item.id}/${format}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || `Falha ao gerar ${format.toUpperCase()}.`);
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const serverName = disposition.match(/filename="([^"]+)"/)?.[1];
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = serverName || `historico-${item.id}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      setNotice(`${format.toUpperCase()} baixado com sucesso.`);
+    } catch (error) {
+      setNotice(error.message || "Não foi possível baixar o arquivo.");
+    } finally {
+      setFileDownload({ id: null, format: null });
+    }
+  }
   async function logout() {
     // Arquiva a última revisão antes de destruir a sessão da conta.
     await archiveCurrentWorkspace();
@@ -1202,6 +1229,8 @@ export default function Page() {
             onSendToDrive={sendHistoryToDrive}
             onDisconnectDrive={disconnectGoogleDrive}
             driveUpload={driveUpload}
+            fileDownload={fileDownload}
+            onDownload={downloadHistoryFile}
           />
         )}
       </section>
@@ -1788,23 +1817,24 @@ function CashFlow({
     </>
   );
 }
-function ExportOptions({ item }) {
+function ExportOptions({ item, fileDownload, onDownload }) {
+  const loading = fileDownload.id === item.id ? fileDownload.format : null;
   return (
     <details className="export-options">
       <summary className="secondary-button">Exportar</summary>
       <div className="export-options-menu">
-        <a href={`/api/history/${item.id}/xlsx`}>
+        <button type="button" onClick={() => onDownload(item, "xlsx")} disabled={Boolean(loading)}>
           <strong>Baixar Excel (.xlsx)</strong>
-          <small>Planilha formatada recomendada</small>
-        </a>
-        <a href={`/api/history/${item.id}/csv`}>
+          <small>{loading === "xlsx" ? "Gerando…" : "Planilha formatada recomendada"}</small>
+        </button>
+        <button type="button" onClick={() => onDownload(item, "csv")} disabled={Boolean(loading)}>
           <strong>Baixar CSV</strong>
-          <small>Formato simples e compatível</small>
-        </a>
-        <a href={`/api/history/${item.id}/pdf`}>
+          <small>{loading === "csv" ? "Gerando…" : "Formato simples e compatível"}</small>
+        </button>
+        <button type="button" onClick={() => onDownload(item, "pdf")} disabled={Boolean(loading)}>
           <strong>Baixar PDF</strong>
-          <small>Relatório com números, gráfico e tabelas</small>
-        </a>
+          <small>{loading === "pdf" ? "Gerando…" : "Relatório com números, gráfico e tabelas"}</small>
+        </button>
       </div>
     </details>
   );
@@ -1821,6 +1851,8 @@ function History({
   onSendToDrive,
   onDisconnectDrive,
   driveUpload,
+  fileDownload,
+  onDownload,
 }) {
   return (
     <article className="panel history-panel">
@@ -1876,10 +1908,14 @@ function History({
                     Abrir
                   </button>
                 )}
-                <ExportOptions item={item} />
+                <ExportOptions
+                  item={item}
+                  fileDownload={fileDownload}
+                  onDownload={onDownload}
+                />
                 <button
                   type="button"
-                  className="drive-button"
+                  className="secondary-button drive-action"
                   disabled={
                     driveStatus.loading ||
                     !driveStatus.configured ||

@@ -32,7 +32,13 @@ const securityHeaders = [
 const nextConfig = {
   async headers() {
     // Os cabeçalhos são aplicados a páginas, APIs e arquivos servidos pelo Next.js.
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      {
+        source: "/",
+        headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }],
+      },
+      { source: "/(.*)", headers: securityHeaders },
+    ];
   },
 };
 

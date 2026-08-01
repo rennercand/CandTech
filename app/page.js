@@ -1821,7 +1821,7 @@ function ExportOptions({ item, fileDownload, onDownload }) {
   const loading = fileDownload.id === item.id ? fileDownload.format : null;
   return (
     <details className="export-options">
-      <summary className="secondary-button">Exportar</summary>
+      <summary className="secondary-button">Outros formatos</summary>
       <div className="export-options-menu">
         <button type="button" onClick={() => onDownload(item, "xlsx")} disabled={Boolean(loading)}>
           <strong>Baixar Excel (.xlsx)</strong>
@@ -1830,10 +1830,6 @@ function ExportOptions({ item, fileDownload, onDownload }) {
         <button type="button" onClick={() => onDownload(item, "csv")} disabled={Boolean(loading)}>
           <strong>Baixar CSV</strong>
           <small>{loading === "csv" ? "Gerando…" : "Formato simples e compatível"}</small>
-        </button>
-        <button type="button" onClick={() => onDownload(item, "pdf")} disabled={Boolean(loading)}>
-          <strong>Baixar PDF</strong>
-          <small>{loading === "pdf" ? "Gerando…" : "Relatório com números, gráfico e tabelas"}</small>
         </button>
       </div>
     </details>
@@ -1913,6 +1909,16 @@ function History({
                   fileDownload={fileDownload}
                   onDownload={onDownload}
                 />
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={fileDownload.id === item.id}
+                  onClick={() => onDownload(item, "pdf")}
+                >
+                  {fileDownload.id === item.id && fileDownload.format === "pdf"
+                    ? "Gerando PDF…"
+                    : "Baixar PDF"}
+                </button>
                 <button
                   type="button"
                   className="secondary-button drive-action"

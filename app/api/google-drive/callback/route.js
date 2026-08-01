@@ -1,4 +1,3 @@
-import { getSession } from "@/lib/auth";
 import { saveGoogleDriveConnection } from "@/lib/db";
 import {
   encryptDriveToken,
@@ -20,9 +19,6 @@ function finish(request, status, historyId = null) {
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "drive-callback", limit: 20 });
   if (limited) return limited;
-  const user = await getSession(request);
-  if (!user) return finish(request, "session-error");
-
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -31,7 +27,9 @@ export async function GET(request) {
   try {
     const verified = await verifyDriveState(state);
     const callbackUri = `${url.origin}${url.pathname}`;
-    if (verified.userId !== user.id || verified.redirectUri !== callbackUri) {
+    // O state foi assinado pelo servidor, expira em 10 minutos e contém o usuário.
+    // Assim o retorno OAuth não depende de cookies bloqueados na navegação do Google.
+    if (verified.redirectUri !== callbackUri) {
       return finish(request, "state-error");
     }
     const refreshToken = await exchangeAuthorizationCode({
@@ -39,7 +37,7 @@ export async function GET(request) {
       redirectUri: verified.redirectUri,
     });
     // Somente a versão cifrada do token persistente entra no banco de dados.
-    await saveGoogleDriveConnection(user.id, encryptDriveToken(refreshToken));
+    await saveGoogleDriveConnection(verified.userId, encryptDriveToken(refreshToken));
     return finish(request, "connected", verified.historyId);
   } catch (error) {
     console.error("Falha no callback do Google Drive", error);

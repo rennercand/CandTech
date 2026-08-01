@@ -1193,7 +1193,6 @@ function Dashboard({ result, onOpen }) {
         <article className="panel indicator-panel">
           <span className="eyebrow">INDICADORES</span>
           <h2>Retorno do projeto</h2>
-          <Indicator label="ROI do projeto" value={result.roi ?? 0} />
           <Indicator
             label="Índice de lucratividade"
             value={(result.profitabilityIndex ?? 0) * 100}
@@ -1203,6 +1202,18 @@ function Dashboard({ result, onOpen }) {
                 : "N/D"
             }
           />
+          <div className="mini-stats">
+            <span>
+              Capital desembolsado
+              <strong>{money.format(result.totalOutflows)}</strong>
+            </span>
+            <span>
+              Resultado líquido
+              <strong className={result.net >= 0 ? "positive" : "negative"}>
+                {money.format(result.net)}
+              </strong>
+            </span>
+          </div>
           <div className="callout">
             O ROE não é calculado aqui: ele exige lucro líquido contábil e
             patrimônio líquido médio, dados diferentes do fluxo do projeto.

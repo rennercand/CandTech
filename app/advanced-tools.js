@@ -30,7 +30,7 @@ function SummaryCard({ label, value, tone = "default" }) {
   );
 }
 
-export function FinanceTables({ state, setState, onSave }) {
+export function FinanceTables({ state, setState, onSave, onExportDrive }) {
   // O estado vem da página para poder ser salvo no workspace da conta.
   const { system, form } = state;
   const setSystem = (systemValue) =>
@@ -71,6 +71,9 @@ export function FinanceTables({ state, setState, onSave }) {
             ))}
             <button className="primary-button compact module-save" onClick={onSave}>
               Salvar no histórico
+            </button>
+            <button className="secondary-button compact" onClick={onExportDrive}>
+              Exportar para o Drive
             </button>
           </div>
         </div>

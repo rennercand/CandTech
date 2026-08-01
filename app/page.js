@@ -750,7 +750,7 @@ export default function Page() {
       setView("history");
     }
   }
-  async function createModuleHistory({ title, calculationType, payload, success }) {
+  async function createModuleHistory({ title, calculationType, payload, success, navigate = true }) {
     // Todos os módulos usam a mesma rota para manter validação, limite e vínculo com a conta.
     const response = await fetch("/api/history", {
       method: "POST",
@@ -761,8 +761,10 @@ export default function Page() {
     setNotice(response.ok ? success : data.error || "Não foi possível salvar no histórico.");
     if (response.ok) {
       await persistWorkspace(workspacePayload, true);
-      setView("history");
+      if (navigate) setView("history");
+      return data.item;
     }
+    return null;
   }
   async function saveFinancialTable() {
     if (!financialTableResult.rows.length) {
@@ -779,6 +781,27 @@ export default function Page() {
       },
       success: "Tabela financeira salva no histórico da sua conta.",
     });
+  }
+  async function exportFinancialTableToDrive() {
+    if (!financialTableResult.rows.length) {
+      setNotice("Preencha o valor financiado e a quantidade de parcelas antes de exportar.");
+      return;
+    }
+    const item = await createModuleHistory({
+      title: `Tabela ${financeState.system}`,
+      calculationType: "tabela-financeira",
+      payload: {
+        financeState,
+        financialTable: { state: financeState, result: financialTableResult },
+        table: financialTableResult.rows,
+      },
+      success: "Tabela salva. Preparando o envio ao Google Drive…",
+      navigate: false,
+    });
+    if (!item) return;
+    // Se ainda não houver conexão, o OAuth guarda este ID e retoma o envio no retorno.
+    if (driveStatus.connected) await sendHistoryToDrive(item);
+    else connectGoogleDrive(item);
   }
   async function savePricing() {
     if (!(Number(pricingState.units) > 0) || !(pricingResult.totalCost > 0)) {
@@ -831,7 +854,7 @@ export default function Page() {
   }
   async function sendHistoryToDrive(item) {
     setDriveUpload({ id: item.id, status: "sending", file: null });
-    setNotice("Enviando o CSV ao Google Drive…");
+    setNotice("Enviando a planilha Excel ao Google Drive…");
     const response = await fetch(`/api/history/${item.id}/drive`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1144,6 +1167,7 @@ export default function Page() {
             state={financeState}
             setState={setFinanceState}
             onSave={saveFinancialTable}
+            onExportDrive={exportFinancialTableToDrive}
           />
         )}
         {view === "pricing" && (
@@ -1769,9 +1793,13 @@ function ExportOptions({ item }) {
     <details className="export-options">
       <summary className="secondary-button">Exportar</summary>
       <div className="export-options-menu">
+        <a href={`/api/history/${item.id}/xlsx`}>
+          <strong>Baixar Excel (.xlsx)</strong>
+          <small>Planilha formatada recomendada</small>
+        </a>
         <a href={`/api/history/${item.id}/csv`}>
-          <strong>Baixar arquivo</strong>
-          <small>CSV preparado para Excel</small>
+          <strong>Baixar CSV</strong>
+          <small>Formato simples e compatível</small>
         </a>
         <a href={`/api/history/${item.id}/pdf`}>
           <strong>Baixar PDF</strong>

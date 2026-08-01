@@ -3,9 +3,9 @@ import { findHistoryById, getGoogleDriveConnection, serializeHistory } from "@/l
 import {
   decryptDriveToken,
   refreshDriveAccessToken,
-  uploadCsvToDrive,
+  uploadFileToDrive,
 } from "@/lib/google-drive";
-import { historyCsv, historyCsvFilename } from "@/lib/history-csv";
+import { historyXlsx, historyXlsxFilename } from "@/lib/history-xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 
@@ -31,10 +31,11 @@ export async function POST(request, { params }) {
     const item = serializeHistory(row);
     const refreshToken = decryptDriveToken(connection.encrypted_refresh_token);
     const accessToken = await refreshDriveAccessToken(refreshToken);
-    const file = await uploadCsvToDrive({
+    const file = await uploadFileToDrive({
       accessToken,
-      filename: historyCsvFilename(item),
-      csv: historyCsv(item),
+      filename: historyXlsxFilename(item),
+      content: historyXlsx(item),
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     return Response.json({ file });
   } catch (error) {

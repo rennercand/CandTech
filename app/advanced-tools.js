@@ -30,7 +30,7 @@ function SummaryCard({ label, value, tone = "default" }) {
   );
 }
 
-export function FinanceTables({ state, setState }) {
+export function FinanceTables({ state, setState, onSave }) {
   // O estado vem da página para poder ser salvo no workspace da conta.
   const { system, form } = state;
   const setSystem = (systemValue) =>
@@ -69,6 +69,9 @@ export function FinanceTables({ state, setState }) {
                 {item}
               </button>
             ))}
+            <button className="primary-button compact module-save" onClick={onSave}>
+              Salvar no histórico
+            </button>
           </div>
         </div>
       </article>
@@ -222,7 +225,7 @@ export function FinanceTables({ state, setState }) {
 
 const blankExpense = () => ({ name: "", amount: "" });
 
-export function ProductPricing({ state, setState }) {
+export function ProductPricing({ state, setState, onSave }) {
   // Manter estes campos no componente pai permite restaurá-los após um novo login.
   const { expenses, units, margin } = state;
   const setExpenses = (value) =>
@@ -329,7 +332,12 @@ export function ProductPricing({ state, setState }) {
       </article>
 
       <article className="panel pricing-result">
-        <span className="eyebrow">PREÇO SUGERIDO</span>
+        <div className="panel-heading">
+          <span className="eyebrow">PREÇO SUGERIDO</span>
+          <button className="primary-button compact" onClick={onSave}>
+            Salvar no histórico
+          </button>
+        </div>
         <div className="unit-price">
           <span>Valor unitário do produto</span>
           <strong>{money.format(result.unitPrice)}</strong>

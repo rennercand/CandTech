@@ -7,7 +7,7 @@ import {
   ProductPricing,
   parseBankStatementPdf,
 } from "./advanced-tools";
-import { calculateAmortization } from "../lib/finance-calculations";
+import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -526,6 +526,10 @@ export default function Page() {
     () => calculateAmortization({ ...financeState.form, system: financeState.system }),
     [financeState],
   );
+  const pricingResult = useMemo(
+    () => calculateProductPrice(pricingState),
+    [pricingState],
+  );
   const workspacePayload = useMemo(
     () => ({
       inputs,
@@ -745,6 +749,48 @@ export default function Page() {
       setView("history");
     }
   }
+  async function createModuleHistory({ title, calculationType, payload, success }) {
+    // Todos os módulos usam a mesma rota para manter validação, limite e vínculo com a conta.
+    const response = await fetch("/api/history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, calculationType, payload }),
+    });
+    const data = await response.json();
+    setNotice(response.ok ? success : data.error || "Não foi possível salvar no histórico.");
+    if (response.ok) {
+      await persistWorkspace(workspacePayload, true);
+      setView("history");
+    }
+  }
+  async function saveFinancialTable() {
+    if (!financialTableResult.rows.length) {
+      setNotice("Preencha o valor financiado e a quantidade de parcelas antes de salvar.");
+      return;
+    }
+    await createModuleHistory({
+      title: `Tabela ${financeState.system}`,
+      calculationType: "tabela-financeira",
+      payload: {
+        financeState,
+        financialTable: { state: financeState, result: financialTableResult },
+        table: financialTableResult.rows,
+      },
+      success: "Tabela financeira salva no histórico da sua conta.",
+    });
+  }
+  async function savePricing() {
+    if (!(Number(pricingState.units) > 0) || !(pricingResult.totalCost > 0)) {
+      setNotice("Adicione despesas e uma quantidade de unidades antes de salvar.");
+      return;
+    }
+    await createModuleHistory({
+      title: "Preço do produto",
+      calculationType: "preco-produto",
+      payload: { pricingState, pricingResult },
+      success: "Precificação salva no histórico da sua conta.",
+    });
+  }
   async function saveCashFlow() {
     const normalized = cashEntries.map((entry) => ({
       ...entry,
@@ -866,6 +912,72 @@ export default function Page() {
     setSaveTitle(item.title);
     setView("calculator");
   }
+  function loadHistoryItem(item) {
+    // Cada tipo volta para a aba em que foi criado, sem misturar módulos diferentes.
+    if (item.payload.financialTable && !item.payload.inputs) {
+      setFinanceState(normalizeWorkspacePayload({ financeState: item.payload.financialTable.state }).financeState);
+      setView("financing");
+      return;
+    }
+    if (item.payload.pricingState) {
+      setPricingState(normalizeWorkspacePayload({ pricingState: item.payload.pricingState }).pricingState);
+      setView("pricing");
+      return;
+    }
+    if (item.payload.entries) {
+      setCashEntries(item.payload.entries);
+      setOrganizationName(item.payload.organizationName || item.title);
+      setView("cashflow");
+      return;
+    }
+    if (item.payload.inputs) loadCalculation(item);
+  }
+
+  function downloadCurrentCsv() {
+    const reports = {
+      dashboard: { filename: "visao-geral.csv", title: "Visão geral", rows: result.table },
+      calculator: { filename: "calculadora.csv", title: saveTitle, rows: result.table },
+      financing: { filename: `tabela-${financeState.system.toLowerCase()}.csv`, title: `Tabela ${financeState.system}`, rows: financialTableResult.rows },
+      pricing: {
+        filename: "preco-produto.csv", title: "Preço do produto",
+        rows: [
+          ...pricingState.expenses.map((expense) => ({ item: expense.name, valor: Number(expense.amount) || 0 })),
+          { item: "Custo unitário", valor: pricingResult.unitCost },
+          { item: "Preço unitário", valor: pricingResult.unitPrice },
+          { item: "Lucro unitário", valor: pricingResult.unitProfit },
+        ],
+      },
+      cashflow: { filename: "organizacao-financeira.csv", title: organizationName, rows: cashEntries },
+    };
+    const report = reports[view];
+    if (!report) return;
+    const headers = report.rows.length ? Object.keys(report.rows[0]) : ["informação"];
+    const safeCell = (value) => {
+      const text = String(value ?? "");
+      const protectedText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+      return `"${protectedText.replaceAll('"', '""')}"`;
+    };
+    const csv = [
+      "sep=;",
+      ["Relatório", report.title].map(safeCell).join(";"),
+      "",
+      headers.map(safeCell).join(";"),
+      ...report.rows.map((row) => headers.map((key) => safeCell(row[key])).join(";")),
+    ].join("\r\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
+    link.download = report.filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  function printCurrentView() {
+    // O navegador gera o PDF da aba atual e mantém gráficos vetoriais nítidos.
+    const originalTitle = document.title;
+    document.title = `FinSight - ${view}`;
+    window.print();
+    document.title = originalTitle;
+  }
   function restoreAutomaticDraft(item) {
     const restored = normalizeWorkspacePayload(item.payload);
     applyWorkspace(restored);
@@ -980,12 +1092,16 @@ export default function Page() {
                 year: "numeric",
               })}
             </span>
-            <button
-              className="primary-button compact"
-              onClick={() => setView("calculator")}
-            >
-              + Novo cálculo
-            </button>
+            {view !== "history" && (
+              <div className="context-export-actions" aria-label="Exportar aba atual">
+                <button className="secondary-button compact" onClick={downloadCurrentCsv}>
+                  CSV
+                </button>
+                <button className="secondary-button compact" onClick={printCurrentView}>
+                  PDF
+                </button>
+              </div>
+            )}
           </div>
         </header>
         {notice && (
@@ -1010,13 +1126,27 @@ export default function Page() {
             saveTitle={saveTitle}
             setSaveTitle={setSaveTitle}
             onSave={saveCalculation}
+            onNew={() => {
+              if (confirm("Limpar os campos e iniciar um novo cálculo?")) {
+                setInputs(emptyInputs());
+                setSaveTitle("Simulação financeira");
+              }
+            }}
           />
         )}
         {view === "financing" && (
-          <FinanceTables state={financeState} setState={setFinanceState} />
+          <FinanceTables
+            state={financeState}
+            setState={setFinanceState}
+            onSave={saveFinancialTable}
+          />
         )}
         {view === "pricing" && (
-          <ProductPricing state={pricingState} setState={setPricingState} />
+          <ProductPricing
+            state={pricingState}
+            setState={setPricingState}
+            onSave={savePricing}
+          />
         )}
         {view === "cashflow" && (
           <CashFlow
@@ -1034,7 +1164,7 @@ export default function Page() {
         {view === "history" && (
           <History
             items={history}
-            onLoad={loadCalculation}
+            onLoad={loadHistoryItem}
             onRestore={restoreAutomaticDraft}
             onDelete={deleteHistory}
             onRefresh={loadHistory}
@@ -1136,6 +1266,7 @@ function Calculator({
   saveTitle,
   setSaveTitle,
   onSave,
+  onNew,
 }) {
   return (
     <>
@@ -1159,6 +1290,9 @@ function Calculator({
           />
           <button className="primary-button compact" onClick={onSave}>
             Salvar no histórico
+          </button>
+          <button className="secondary-button compact" onClick={onNew}>
+            Limpar cálculo
           </button>
         </div>
       </section>
@@ -1633,6 +1767,10 @@ function ExportOptions({ item, driveStatus, onConnectDrive, onSendToDrive }) {
           <strong>Baixar arquivo</strong>
           <small>CSV preparado para Excel</small>
         </a>
+        <a href={`/api/history/${item.id}/pdf`}>
+          <strong>Baixar PDF</strong>
+          <small>Relatório com números, gráfico e tabelas</small>
+        </a>
         <button
           type="button"
           disabled={driveStatus.loading || !driveStatus.configured}
@@ -1713,14 +1851,12 @@ function History({
                     Restaurar rascunho
                   </button>
                 )}
-                {item.payload.inputs && (
+                {item.calculation_type !== "rascunho-automatico" && (
                   <button
                     className="secondary-button"
                     onClick={() => onLoad(item)}
                   >
-                    {item.calculation_type === "rascunho-automatico"
-                      ? "Abrir cálculo"
-                      : "Carregar"}
+                    Abrir
                   </button>
                 )}
                 <ExportOptions

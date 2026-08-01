@@ -9,9 +9,11 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-function finish(request, status) {
+function finish(request, status, historyId = null) {
   const url = new URL("/", request.url);
   url.searchParams.set("drive", status);
+  // A página retoma a exportação; a API ainda verifica se o histórico pertence ao usuário.
+  if (historyId) url.searchParams.set("export", String(historyId));
   return Response.redirect(url, 302);
 }
 
@@ -38,7 +40,7 @@ export async function GET(request) {
     });
     // Somente a versão cifrada do token persistente entra no banco de dados.
     await saveGoogleDriveConnection(user.id, encryptDriveToken(refreshToken));
-    return finish(request, "connected");
+    return finish(request, "connected", verified.historyId);
   } catch (error) {
     console.error("Falha no callback do Google Drive", error);
     return finish(request, "error");

@@ -569,7 +569,13 @@ export default function Page() {
       "state-error": "A resposta do Google não passou na validação de segurança.",
       error: "Não foi possível concluir a conexão com o Google Drive.",
     };
-    setNotice(messages[driveResult] || "O Google Drive respondeu à solicitação.");
+    const pendingHistoryId = Number(params.get("export"));
+    if (driveResult === "connected" && Number.isInteger(pendingHistoryId) && pendingHistoryId > 0) {
+      // Continua automaticamente o envio iniciado antes da autorização do Google.
+      sendHistoryToDrive({ id: pendingHistoryId });
+    } else {
+      setNotice(messages[driveResult] || "O Google Drive respondeu à solicitação.");
+    }
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
@@ -772,8 +778,9 @@ export default function Page() {
     const response = await fetch(`/api/history/${id}`, { method: "DELETE" });
     if (response.ok) setHistory(history.filter((item) => item.id !== id));
   }
-  function connectGoogleDrive() {
-    window.location.assign("/api/google-drive/connect");
+  function connectGoogleDrive(item) {
+    // Guarda no fluxo OAuth qual arquivo deve ser enviado após a conexão.
+    window.location.assign(`/api/google-drive/connect?historyId=${encodeURIComponent(item.id)}`);
   }
   async function sendHistoryToDrive(item) {
     setNotice("Enviando o CSV ao Google Drive…");
@@ -1630,7 +1637,7 @@ function ExportOptions({ item, driveStatus, onConnectDrive, onSendToDrive }) {
           type="button"
           disabled={driveStatus.loading || !driveStatus.configured}
           onClick={() =>
-            driveStatus.connected ? onSendToDrive(item) : onConnectDrive()
+            driveStatus.connected ? onSendToDrive(item) : onConnectDrive(item)
           }
         >
           <strong>Google Drive</strong>

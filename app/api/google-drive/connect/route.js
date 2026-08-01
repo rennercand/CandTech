@@ -14,8 +14,19 @@ export async function GET(request) {
   }
 
   try {
-    const redirectUri = `${new URL(request.url).origin}/api/google-drive/callback`;
-    const authorizationUrl = await googleAuthorizationUrl({ userId: user.id, redirectUri });
+    const requestUrl = new URL(request.url);
+    const historyId = Number(requestUrl.searchParams.get("historyId"));
+    if (!Number.isInteger(historyId) || historyId <= 0) {
+      return Response.json({ error: "Histórico inválido para exportação." }, { status: 400 });
+    }
+
+    const redirectUri = `${requestUrl.origin}/api/google-drive/callback`;
+    // O histórico segue dentro do state assinado e será validado novamente no upload.
+    const authorizationUrl = await googleAuthorizationUrl({
+      userId: user.id,
+      redirectUri,
+      historyId,
+    });
     return Response.redirect(authorizationUrl, 302);
   } catch (error) {
     console.error("Falha ao iniciar OAuth do Google Drive", error);

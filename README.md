@@ -150,10 +150,13 @@ As tabelas são criadas automaticamente na primeira utilização:
 - `histories`: cálculos, organizações e rascunhos salvos por usuário;
 - `workspaces`: estado mais recente da interface, revisão e controle de arquivamento.
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
+- `google_drive_connections`: refresh token cifrado e vinculado ao usuário.
 
 ## Google Drive
 
-O menu de exportação já diferencia download local e envio ao Google Drive. O envio fica indisponível até que um cliente OAuth 2.0 do tipo aplicação web seja configurado. As credenciais devem ficar somente nas variáveis de ambiente da Vercel, nunca no repositório.
+O menu de exportação diferencia download local e envio ao Google Drive. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida do FinSight.
+
+As variáveis `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `DRIVE_TOKEN_ENCRYPTION_KEY` devem ficar somente no `.env.local` e nas variáveis sensíveis da Vercel, nunca no repositório.
 
 Em produção, configure `DATABASE_URL` e `JWT_SECRET` nas configurações da Vercel. Não coloque valores reais em `.env.example`.
 

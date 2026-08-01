@@ -12,5 +12,6 @@ skills-lock.json
 !.env.example
 client_secret*.json
 credentials*.json
+/finsight-secrets/
 
 # Bancos, sessões e variáveis locais contêm dados privados e nunca são versionados.

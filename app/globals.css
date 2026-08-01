@@ -1050,6 +1050,13 @@ select:focus {
   gap: 7px;
   align-items: center;
 }
+.history-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .export-options {
   position: relative;
 }
@@ -1089,6 +1096,10 @@ select:focus {
 .export-options-menu a:hover,
 .export-options-menu button:hover {
   background: #f7f6ff;
+}
+.export-options-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 .export-options-menu strong {
   font-size: 11px;

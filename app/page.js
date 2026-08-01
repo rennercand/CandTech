@@ -506,6 +506,11 @@ export default function Page() {
   const [organizationName, setOrganizationName] = useState("Minha organização");
   const [history, setHistory] = useState([]);
   const [notice, setNotice] = useState("");
+  const [driveStatus, setDriveStatus] = useState({
+    configured: false,
+    connected: false,
+    loading: true,
+  });
   const [saveTitle, setSaveTitle] = useState("Simulação financeira");
   const [financeState, setFinanceState] = useState(emptyFinanceState);
   const [pricingState, setPricingState] = useState(emptyPricingState);
@@ -546,6 +551,41 @@ export default function Page() {
       })
       .finally(() => setChecking(false));
   }, []);
+
+  useEffect(() => {
+    // O callback OAuth volta para a página inicial com um estado curto e sem tokens na URL.
+    const params = new URLSearchParams(window.location.search);
+    const driveResult = params.get("drive");
+    if (!driveResult) return;
+    const messages = {
+      connected: "Google Drive conectado à sua conta.",
+      denied: "A conexão com o Google Drive foi cancelada.",
+      "session-error": "Sua sessão expirou durante a conexão com o Google.",
+      "state-error": "A resposta do Google não passou na validação de segurança.",
+      error: "Não foi possível concluir a conexão com o Google Drive.",
+    };
+    setNotice(messages[driveResult] || "O Google Drive respondeu à solicitação.");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setDriveStatus({ configured: false, connected: false, loading: false });
+      return;
+    }
+    let active = true;
+    fetch("/api/google-drive/status")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((status) => {
+        if (active && status) setDriveStatus({ ...status, loading: false });
+      })
+      .catch(() => {
+        if (active) setDriveStatus({ configured: false, connected: false, loading: false });
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) {
@@ -726,6 +766,32 @@ export default function Page() {
     if (!confirm("Excluir este registro salvo?")) return;
     const response = await fetch(`/api/history/${id}`, { method: "DELETE" });
     if (response.ok) setHistory(history.filter((item) => item.id !== id));
+  }
+  function connectGoogleDrive() {
+    window.location.assign("/api/google-drive/connect");
+  }
+  async function sendHistoryToDrive(item) {
+    setNotice("Enviando o CSV ao Google Drive…");
+    const response = await fetch(`/api/history/${item.id}/drive`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const data = await response.json();
+    if (response.ok) {
+      setNotice(`Arquivo ${data.file.name} enviado ao seu Google Drive.`);
+      return;
+    }
+    if (data.reconnect) setDriveStatus((current) => ({ ...current, connected: false }));
+    setNotice(data.error || "Não foi possível enviar ao Google Drive.");
+  }
+  async function disconnectGoogleDrive() {
+    if (!confirm("Desconectar o Google Drive desta conta?")) return;
+    const response = await fetch("/api/google-drive/status", { method: "DELETE" });
+    if (response.ok) {
+      setDriveStatus((current) => ({ ...current, connected: false }));
+      setNotice("Google Drive desconectado desta conta.");
+    }
   }
   async function logout() {
     // Arquiva a última revisão antes de destruir a sessão da conta.
@@ -960,6 +1026,10 @@ export default function Page() {
             onRestore={restoreAutomaticDraft}
             onDelete={deleteHistory}
             onRefresh={loadHistory}
+            driveStatus={driveStatus}
+            onConnectDrive={connectGoogleDrive}
+            onSendToDrive={sendHistoryToDrive}
+            onDisconnectDrive={disconnectGoogleDrive}
           />
         )}
       </section>
@@ -1542,13 +1612,7 @@ function CashFlow({
     </>
   );
 }
-function ExportOptions({ item }) {
-  function explainDriveSetup() {
-    alert(
-      "O envio ao Google Drive será liberado quando o Client ID e o Client Secret OAuth do Google forem configurados.",
-    );
-  }
-
+function ExportOptions({ item, driveStatus, onConnectDrive, onSendToDrive }) {
   return (
     <details className="export-options">
       <summary className="secondary-button">Exportar</summary>
@@ -1557,16 +1621,40 @@ function ExportOptions({ item }) {
           <strong>Baixar arquivo</strong>
           <small>CSV preparado para Excel</small>
         </a>
-        <button type="button" onClick={explainDriveSetup}>
+        <button
+          type="button"
+          disabled={driveStatus.loading || !driveStatus.configured}
+          onClick={() =>
+            driveStatus.connected ? onSendToDrive(item) : onConnectDrive()
+          }
+        >
           <strong>Google Drive</strong>
-          <small>Conectar conta para enviar</small>
+          <small>
+            {driveStatus.loading
+              ? "Verificando conexão…"
+              : !driveStatus.configured
+                ? "Integração indisponível"
+                : driveStatus.connected
+                  ? "Enviar para minha conta"
+                  : "Conectar conta para enviar"}
+          </small>
         </button>
       </div>
     </details>
   );
 }
 
-function History({ items, onLoad, onRestore, onDelete, onRefresh }) {
+function History({
+  items,
+  onLoad,
+  onRestore,
+  onDelete,
+  onRefresh,
+  driveStatus,
+  onConnectDrive,
+  onSendToDrive,
+  onDisconnectDrive,
+}) {
   return (
     <article className="panel history-panel">
       <div className="panel-heading">
@@ -1574,9 +1662,16 @@ function History({ items, onLoad, onRestore, onDelete, onRefresh }) {
           <span className="eyebrow">ARQUIVO DA CONTA</span>
           <h2>Histórico de cálculos e fluxos</h2>
         </div>
-        <button className="secondary-button" onClick={() => onRefresh()}>
-          ↻ Atualizar
-        </button>
+        <div className="history-heading-actions">
+          {driveStatus.connected && (
+            <button className="secondary-button" onClick={onDisconnectDrive}>
+              Drive conectado · Desconectar
+            </button>
+          )}
+          <button className="secondary-button" onClick={() => onRefresh()}>
+            ↻ Atualizar
+          </button>
+        </div>
       </div>
       {items.length === 0 ? (
         <div className="empty-state">
@@ -1616,7 +1711,12 @@ function History({ items, onLoad, onRestore, onDelete, onRefresh }) {
                       : "Carregar"}
                   </button>
                 )}
-                <ExportOptions item={item} />
+                <ExportOptions
+                  item={item}
+                  driveStatus={driveStatus}
+                  onConnectDrive={onConnectDrive}
+                  onSendToDrive={onSendToDrive}
+                />
                 <button
                   className="danger-button"
                   onClick={() => onDelete(item.id)}

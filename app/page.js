@@ -318,33 +318,10 @@ function StatCard({ label, value, positive = true, caption }) {
 function CashFlowChart({ rows }) {
   const maxValue = Math.max(...rows.map((row) => Math.abs(row.flow)), 1);
   const chartWidth = Math.max(600, rows.length * 126);
-  const points = rows.map((row, index) => ({
-    x: ((index + 0.5) / rows.length) * chartWidth,
-    y: 95 - (row.flow / maxValue) * 68,
-  }));
 
   return (
     <div className="fc-chart-scroll" aria-label="Gráfico do fluxo de caixa">
       <div className="fc-chart" style={{ width: `${chartWidth}px` }}>
-        <svg
-          className="fc-line"
-          viewBox={`0 0 ${chartWidth} 190`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <polyline
-            points={points.map((point) => `${point.x},${point.y}`).join(" ")}
-          />
-          {points.map((point, index) => (
-            <circle
-              key={`${rows[index].period}-${rows[index].date}`}
-              cx={point.x}
-              cy={point.y}
-              r="4"
-              className={rows[index].flow >= 0 ? "income" : "expense"}
-            />
-          ))}
-        </svg>
         {rows.map((row) => {
           // A altura é proporcional ao maior fluxo; o sinal define acima ou abaixo do eixo.
           const height =
@@ -419,7 +396,7 @@ function AuthScreen({ onAuthenticated }) {
     <main className="auth-layout">
       <section className="auth-aside">
         <div className="brand">
-          <i>F</i> FinSight
+          <i>CT</i> CandTech
         </div>
         <h1>Suas decisões financeiras, em uma só visão.</h1>
         <p>
@@ -1161,7 +1138,7 @@ export default function Page() {
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <i>F</i> FinSight
+          <i>CT</i> CandTech
         </div>
         <div className="workspace">Gestão pessoal</div>
         <nav aria-label="Navegação principal">

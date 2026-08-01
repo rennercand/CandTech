@@ -18,7 +18,7 @@ export async function POST(request) {
   }
   try {
     const { title, calculationType, payload } = await request.json();
-    const safeTitle = String(title || "Relatório FinSight").trim().slice(0, 100);
+    const safeTitle = String(title || "Relatório CandTech").trim().slice(0, 100);
     if (!payload || JSON.stringify(payload).length > 500_000) {
       return NextResponse.json({ error: "Não há dados calculados para o PDF." }, { status: 400 });
     }

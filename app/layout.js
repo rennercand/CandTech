@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "FinSight | Gestão financeira",
+  title: "CandTech | Gestão financeira",
   description: "Calculadoras financeiras, fluxo de caixa e histórico por conta.",
 };
 

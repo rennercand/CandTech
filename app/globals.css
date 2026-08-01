@@ -66,13 +66,14 @@ select:focus {
 .brand i {
   display: grid;
   place-items: center;
-  width: 25px;
-  height: 25px;
+  width: 30px;
+  height: 30px;
   color: #fff;
   font-style: normal;
   border-radius: 50%;
   background: linear-gradient(135deg, #8c76ff, var(--violet));
-  font-size: 15px;
+  font-size: 11px;
+  letter-spacing: -0.4px;
 }
 .auth-layout {
   min-height: 100vh;
@@ -460,33 +461,6 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   position: relative;
-}
-.fc-line {
-  position: absolute;
-  inset: 0 0 auto;
-  width: 100%;
-  height: 190px;
-  z-index: 2;
-  pointer-events: none;
-}
-.fc-line polyline {
-  fill: none;
-  stroke: #6f61bd;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-.fc-line circle {
-  stroke: #fff;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-.fc-line circle.income {
-  fill: var(--green);
-}
-.fc-line circle.expense {
-  fill: var(--red);
 }
 .fc-column {
   display: grid;

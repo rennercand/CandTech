@@ -1,6 +1,6 @@
-# FinSight
+# CandTech
 
-Aplicação web para análise e organização financeira, construída com Next.js. O FinSight reúne calculadoras de investimentos, sistemas de amortização, formação de preço, organização de custos, importação de extratos bancários em PDF e histórico privado por conta.
+Aplicação web para análise e organização financeira, construída com Next.js. A CandTech reúne calculadoras de investimentos, sistemas de amortização, formação de preço, organização de custos, importação de extratos bancários em PDF e histórico privado por conta.
 
 **Produção:** [finance-app-indol-alpha.vercel.app](https://finance-app-indol-alpha.vercel.app/)
 
@@ -9,7 +9,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Cadastro e login com sessão individual.
 - Dashboard financeiro por usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
-- Fluxos de caixa com datas, entradas, saídas, linha de evolução e detalhes interativos.
+- Fluxos de caixa com datas, entradas, saídas e detalhes interativos.
 - Tabelas de amortização PRICE, SAF, SAA e SAC com memória de cálculo.
 - Formação de preço unitário a partir de despesas, unidades e margem de lucro.
 - Organização financeira com categorias e gráfico de distribuição de custos.
@@ -154,7 +154,11 @@ As tabelas são criadas automaticamente na primeira utilização:
 
 ## Google Drive
 
-O menu de exportação diferencia download local e envio ao Google Drive. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida do FinSight.
+O menu de exportação diferencia download local e envio ao Google Drive. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech.
+
+## Ideias planejadas
+
+A proposta de categorização de extratos com IA e a futura aba de estoque estão documentadas em [ROADMAP-IA-ESTOQUE.md](./docs/ROADMAP-IA-ESTOQUE.md). Essa anotação é apenas um planejamento: nenhuma API paga foi ativada nesta versão.
 
 As variáveis `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `DRIVE_TOKEN_ENCRYPTION_KEY` devem ficar somente no `.env.local` e nas variáveis sensíveis da Vercel, nunca no repositório.
 

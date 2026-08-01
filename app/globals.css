@@ -1909,3 +1909,54 @@ select:focus {
     filter: none;
   }
 }
+
+/* Módulos operacionais: cada registro vira um cartão legível também no celular. */
+.business-stack { display: grid; gap: 20px; }
+.operations-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.operations-panel { display: grid; gap: 18px; }
+.operations-panel .panel-heading { align-items: flex-start; }
+.operations-panel .panel-heading p { color: var(--muted); margin: 6px 0 0; }
+.operation-list { display: grid; gap: 10px; }
+.operation-row {
+  display: grid;
+  grid-template-columns: .8fr 1.4fr 1.2fr 1fr 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid #e4e5ec;
+  border-radius: 14px;
+  background: #fbfcff;
+}
+.operation-row.product-row { grid-template-columns: 1.5fr 1fr .75fr .8fr 1fr 1fr auto; }
+.operation-row.delivery-row { grid-template-columns: .8fr 1.4fr 1.2fr 1fr 1fr 1fr auto; }
+.operation-row.order-row { grid-template-columns: .7fr .8fr 1.2fr 1.2fr 1fr 1fr 1fr 1fr auto; }
+.operation-field { display: grid; gap: 6px; min-width: 0; }
+.operation-field span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.operation-field input, .operation-field select { width: 100%; min-width: 0; }
+.responsibility-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f4f1ff;
+  color: #574d79;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.empty-state { color: var(--muted); text-align: center; padding: 24px; }
+
+@media (max-width: 1100px) {
+  .operations-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .operation-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .operation-row .remove-row { grid-column: 1 / -1; justify-self: end; }
+}
+
+@media (max-width: 600px) {
+  .operations-summary { grid-template-columns: 1fr; }
+  .operations-panel .panel-heading { display: grid; gap: 14px; }
+  .operations-panel .panel-heading button { width: 100%; }
+  .operation-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
+    grid-template-columns: 1fr;
+  }
+}

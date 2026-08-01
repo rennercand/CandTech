@@ -26,7 +26,18 @@ function hasMeaningfulContent(payload) {
   const hasFinancialTable =
     Number(payload?.financeState?.form?.principal) > 0 &&
     Number(payload?.financeState?.form?.periods) > 0;
-  return hasCalculation || hasOrganization || hasFinancialTable;
+  const hasAccounts = (payload?.financialAccounts || []).some(
+    (item) => String(item?.description || item?.party || "").trim() || Number(item?.amount) !== 0,
+  );
+  const hasInventory = (payload?.inventoryState?.products || []).some(
+    (item) => String(item?.name || item?.sku || "").trim() || Number(item?.quantity) !== 0,
+  ) || (payload?.inventoryState?.deliveries || []).some(
+    (item) => String(item?.description || item?.tracking || "").trim(),
+  );
+  const hasCommerce = (payload?.commerceOrders || []).some(
+    (item) => String(item?.number || item?.partner || "").trim() || Number(item?.amount) !== 0,
+  );
+  return hasCalculation || hasOrganization || hasFinancialTable || hasAccounts || hasInventory || hasCommerce;
 }
 
 function validPayload(payload) {

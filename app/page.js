@@ -9,6 +9,14 @@ import {
 } from "./advanced-tools";
 import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations";
 import { calculateInvestment } from "../lib/investment-calculations";
+import {
+  FinancialCommitments,
+  InventoryLogistics,
+  SalesPurchases,
+  emptyCommerceOrder,
+  emptyFinancialAccount,
+  emptyInventoryState,
+} from "./business-tools";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -88,6 +96,9 @@ function normalizeWorkspacePayload(payload = {}) {
     saveTitle: "Simulação financeira",
     financeState: emptyFinanceState(),
     pricingState: emptyPricingState(),
+    financialAccounts: [emptyFinancialAccount()],
+    inventoryState: emptyInventoryState(),
+    commerceOrders: [emptyCommerceOrder()],
   };
   return {
     ...defaults,
@@ -120,6 +131,20 @@ function normalizeWorkspacePayload(payload = {}) {
           ? payload.pricingState.expenses
           : defaults.pricingState.expenses,
     },
+    financialAccounts: Array.isArray(payload.financialAccounts)
+      ? payload.financialAccounts
+      : defaults.financialAccounts,
+    inventoryState: {
+      products: Array.isArray(payload.inventoryState?.products)
+        ? payload.inventoryState.products
+        : defaults.inventoryState.products,
+      deliveries: Array.isArray(payload.inventoryState?.deliveries)
+        ? payload.inventoryState.deliveries
+        : defaults.inventoryState.deliveries,
+    },
+    commerceOrders: Array.isArray(payload.commerceOrders)
+      ? payload.commerceOrders
+      : defaults.commerceOrders,
   };
 }
 
@@ -350,6 +375,9 @@ export default function Page() {
   const [saveTitle, setSaveTitle] = useState("Simulação financeira");
   const [financeState, setFinanceState] = useState(emptyFinanceState);
   const [pricingState, setPricingState] = useState(emptyPricingState);
+  const [financialAccounts, setFinancialAccounts] = useState([emptyFinancialAccount()]);
+  const [inventoryState, setInventoryState] = useState(emptyInventoryState);
+  const [commerceOrders, setCommerceOrders] = useState([emptyCommerceOrder()]);
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
   const result = useMemo(() => calculateInvestment(inputs), [inputs]);
@@ -371,6 +399,9 @@ export default function Page() {
       saveTitle,
       financeState,
       pricingState,
+      financialAccounts,
+      inventoryState,
+      commerceOrders,
     }),
     [
       inputs,
@@ -381,6 +412,9 @@ export default function Page() {
       saveTitle,
       financeState,
       pricingState,
+      financialAccounts,
+      inventoryState,
+      commerceOrders,
     ],
   );
   useEffect(() => {
@@ -513,6 +547,9 @@ export default function Page() {
     setSaveTitle(payload.saveTitle);
     setFinanceState(payload.financeState);
     setPricingState(payload.pricingState);
+    setFinancialAccounts(payload.financialAccounts);
+    setInventoryState(payload.inventoryState);
+    setCommerceOrders(payload.commerceOrders);
   }
 
   async function persistWorkspace(payload = workspacePayload, markSaved = false) {
@@ -567,8 +604,13 @@ export default function Page() {
       setPricingState(emptyPricingState());
     } else if (type === "cashflow") {
       setCashEntries([blankCashRow()]);
+      setFinancialAccounts([emptyFinancialAccount()]);
       setOrganizationName("Nova organização financeira");
       setCashFilters({ month: "", type: "todos", category: "todos" });
+    } else if (type === "inventory") {
+      setInventoryState(emptyInventoryState());
+    } else if (type === "commerce") {
+      setCommerceOrders([emptyCommerceOrder()]);
     }
     setNotice("");
     setView(type);
@@ -860,11 +902,28 @@ export default function Page() {
       cashflow: {
         filename: "organizacao-financeira.csv",
         title: organizationName,
-        rows: cashEntries,
+        rows: [
+          ...financialAccounts.map((item) => ({ registro: "Conta", tipo: item.type, descricao: item.description, parceiro: item.party, data: item.dueDate, valor: item.amount, status: item.status })),
+          ...cashEntries.map((item) => ({ registro: "Caixa", tipo: item.type, descricao: item.description, parceiro: item.category, data: item.date, valor: item.amount, status: "realizado" })),
+        ],
         totalSpent: cashEntries.reduce(
           (sum, entry) => sum + (entry.type === "saida" ? Number(entry.amount) || 0 : 0),
           0,
         ),
+      },
+      inventory: {
+        filename: "estoque-logistica.csv", title: "Estoque e logÃ­stica",
+        rows: [
+          ...inventoryState.products.map((item) => ({ registro: "Produto", nome: item.name, codigo: item.sku, quantidade: item.quantity, referencia: item.minimum, valor: item.unitCost, status: item.location })),
+          ...inventoryState.deliveries.map((item) => ({ registro: "Entrega", nome: item.description, codigo: item.tracking, quantidade: "", referencia: item.partner, valor: "", status: item.status })),
+        ],
+        totalSpent: inventoryState.products.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitCost) || 0), 0),
+        summaryLabel: "Valor estimado do estoque",
+      },
+      commerce: {
+        filename: "vendas-compras.csv", title: "Vendas e compras", rows: commerceOrders,
+        totalSpent: commerceOrders.reduce((sum, item) => sum + (item.type === "compra" && item.status !== "cancelado" ? Number(item.amount) || 0 : 0), 0),
+        summaryLabel: "Total dos pedidos de compra",
       },
     };
     const report = reports[view];
@@ -882,7 +941,7 @@ export default function Page() {
       headers.map(safeCell).join(";"),
       ...report.rows.map((row) => headers.map((key) => safeCell(row[key])).join(";")),
       "",
-      ["Total gasto", report.totalSpent].map(safeCell).join(";"),
+      [report.summaryLabel || "Total gasto", report.totalSpent].map(safeCell).join(";"),
     ].join("\r\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
@@ -896,6 +955,9 @@ export default function Page() {
     const meaningfulFlows = result.table.filter((row) => Number(row.flow) !== 0);
     const meaningfulEntries = cashEntries.filter(
       (entry) => entry.description || Number(entry.amount) > 0,
+    );
+    const meaningfulAccounts = financialAccounts.filter(
+      (account) => account.description || account.party || Number(account.amount) > 0,
     );
     const reports = {
       dashboard: meaningfulFlows.length
@@ -930,13 +992,17 @@ export default function Page() {
               payload: { pricingState, pricingResult },
             }
           : null,
-      cashflow: meaningfulEntries.length
+      cashflow: meaningfulEntries.length || meaningfulAccounts.length
         ? {
             title: organizationName || "Organização financeira",
             calculationType: "organizacao-financeira",
             payload: {
               entries: meaningfulEntries,
-              table: meaningfulEntries,
+              accounts: meaningfulAccounts,
+              table: [
+                ...meaningfulAccounts.map((item) => ({ registro: "Conta", tipo: item.type, descricao: item.description, data: item.dueDate, valor: item.amount, status: item.status })),
+                ...meaningfulEntries.map((item) => ({ registro: "Caixa", tipo: item.type, descricao: item.description, data: item.date, valor: item.amount, status: "realizado" })),
+              ],
               summary: [
                 { label: "Entradas", value: cashTotals.income, format: "currency" },
                 { label: "Saídas", value: cashTotals.expense, format: "currency" },
@@ -948,6 +1014,15 @@ export default function Page() {
               ],
             },
           }
+        : null,
+      inventory: [...inventoryState.products, ...inventoryState.deliveries].some((item) => item.name || item.description || item.sku)
+        ? { title: "Estoque e logÃ­stica", calculationType: "estoque-logistica", payload: { table: [
+            ...inventoryState.products.map((item) => ({ tipo: "Produto", nome: item.name, codigo: item.sku, quantidade: item.quantity, minimo: item.minimum, custoUnitario: item.unitCost, localizacao: item.location })),
+            ...inventoryState.deliveries.map((item) => ({ tipo: "Entrega", nome: item.description, codigo: item.tracking, quantidade: "", minimo: "", custoUnitario: "", localizacao: `${item.partner} · ${item.status}` })),
+          ] } }
+        : null,
+      commerce: commerceOrders.some((item) => item.number || item.partner || Number(item.amount))
+        ? { title: "Vendas e compras", calculationType: "vendas-compras", payload: { table: commerceOrders } }
         : null,
     };
     const report = reports[view];
@@ -1027,7 +1102,9 @@ export default function Page() {
             ["calculator", "Calculadoras", "⌁"],
             ["financing", "Tabela financeira", "▦"],
             ["pricing", "Preço do produto", "◇"],
-            ["cashflow", "Organização financeira", "▤"],
+            ["cashflow", "Financeiro", "▤"],
+            ["inventory", "Estoque e logística", "▣"],
+            ["commerce", "Vendas e compras", "⇄"],
             ["history", "Histórico", "◷"],
           ].map(([id, label, icon]) => (
             <button
@@ -1080,7 +1157,11 @@ export default function Page() {
                     : view === "pricing"
                       ? "Preço do produto"
                       : view === "cashflow"
-                        ? "Organização financeira"
+                        ? "Financeiro"
+                        : view === "inventory"
+                          ? "Estoque e logística"
+                          : view === "commerce"
+                            ? "Vendas e compras"
                         : "Histórico salvo"}
             </h1>
           </div>
@@ -1174,18 +1255,16 @@ export default function Page() {
           />
         )}
         {view === "cashflow" && (
-          <CashFlow
-            organizationName={organizationName}
-            setOrganizationName={setOrganizationName}
-            entries={cashEntries}
-            filteredEntries={filteredCashEntries}
-            filters={cashFilters}
-            setFilters={setCashFilters}
-            setEntries={setCashEntries}
-            totals={cashTotals}
-            onSave={saveCashFlow}
-          />
+          <div className="business-stack">
+            <FinancialCommitments accounts={financialAccounts} setAccounts={setFinancialAccounts} />
+            <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}
+              entries={cashEntries} filteredEntries={filteredCashEntries} filters={cashFilters}
+              setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals}
+              onSave={saveCashFlow} />
+          </div>
         )}
+        {view === "inventory" && <InventoryLogistics state={inventoryState} setState={setInventoryState} />}
+        {view === "commerce" && <SalesPurchases orders={commerceOrders} setOrders={setCommerceOrders} />}
         {view === "history" && (
           <History
             items={history}
@@ -1213,7 +1292,7 @@ const DOCUMENT_TYPES = {
   Payback: { label: "Análise de investimento", icon: "↗", tone: "violet" },
   "tabela-financeira": { label: "Tabela financeira", icon: "▦", tone: "blue" },
   "preco-produto": { label: "Preço do produto", icon: "◇", tone: "orange" },
-  "organizacao-financeira": { label: "Organização financeira", icon: "◫", tone: "green" },
+  "organizacao-financeira": { label: "Financeiro", icon: "◫", tone: "green" },
   "rascunho-automatico": { label: "Rascunho automático", icon: "✎", tone: "gray" },
 };
 
@@ -1221,7 +1300,9 @@ const DOCUMENT_TEMPLATES = [
   { id: "calculator", title: "Análise de investimento", text: "VPL, TIR, ROI e payback", icon: "↗", tone: "violet" },
   { id: "financing", title: "Tabela financeira", text: "PRICE, SAF, SAC ou SAA", icon: "▦", tone: "blue" },
   { id: "pricing", title: "Preço do produto", text: "Custos, margem e preço unitário", icon: "◇", tone: "orange" },
-  { id: "cashflow", title: "Organização financeira", text: "Extratos, lançamentos e categorias", icon: "◫", tone: "green" },
+  { id: "cashflow", title: "Financeiro", text: "Contas, extratos e fluxo de caixa", icon: "◫", tone: "green" },
+  { id: "inventory", title: "Estoque e logística", text: "Produtos, quantidades e entregas", icon: "▣", tone: "blue" },
+  { id: "commerce", title: "Vendas e compras", text: "Pedidos, clientes e fornecedores", icon: "⇄", tone: "orange" },
 ];
 
 function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll }) {

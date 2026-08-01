@@ -1619,6 +1619,28 @@ function CashFlow({
     setFilters({ month: "", type: "todos", category: "todos" });
     setEntries((current) => [...current, blankCashRow()]);
   }
+  function removeEntry(index) {
+    const entry = entries[index];
+    const label = entry?.description || entry?.category || "este lançamento";
+    if (!confirm(`Excluir ${label}? Esta ação remove somente esta linha.`)) return;
+    // Mantém uma linha vazia quando a última movimentação é excluída.
+    setEntries((current) => {
+      const remaining = current.filter((_, position) => position !== index);
+      return remaining.length ? remaining : [blankCashRow()];
+    });
+  }
+  function clearOrganization() {
+    if (
+      !confirm(
+        "Limpar a organização atual? O extrato, os lançamentos e os gráficos atuais serão removidos. Registros já salvos no Histórico não serão apagados.",
+      )
+    ) return;
+    // O autosave do workspace persistirá este estado limpo na conta do usuário.
+    setEntries([blankCashRow()]);
+    setFilters({ month: "", type: "todos", category: "todos" });
+    setOrganizationName("Minha organização");
+    setPdfState({ loading: false, message: "Organização atual limpa." });
+  }
   async function importPdf(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -1734,6 +1756,9 @@ function CashFlow({
             <button className="secondary-button" onClick={addEntry}>
               + Lançamento
             </button>
+            <button className="danger-button" onClick={clearOrganization}>
+              Limpar organização
+            </button>
             <button className="primary-button compact" onClick={onSave}>
               Salvar organização
             </button>
@@ -1827,6 +1852,7 @@ function CashFlow({
                 <th>Tipo</th>
                 <th>Valor</th>
                 <th>Saldo acumulado</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -1886,6 +1912,16 @@ function CashFlow({
                     }
                   >
                     {money.format(entry.runningBalance)}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="danger-button compact"
+                      onClick={() => removeEntry(entry.originalIndex)}
+                      aria-label={`Excluir lançamento ${entry.description || entry.originalIndex + 1}`}
+                    >
+                      Excluir
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -10,5 +10,7 @@ SECURITY_REVIEW.md
 skills-lock.json
 .env*
 !.env.example
+client_secret*.json
+credentials*.json
 
 # Bancos, sessões e variáveis locais contêm dados privados e nunca são versionados.

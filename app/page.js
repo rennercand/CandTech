@@ -11,6 +11,7 @@ import { calculateAmortization, calculateProductPrice } from "../lib/finance-cal
 import { calculateInvestment } from "../lib/investment-calculations";
 import {
   FinancialCommitments,
+  AdminOverview,
   InventoryLogistics,
   SalesPurchases,
   emptyCommerceOrder,
@@ -378,6 +379,10 @@ export default function Page() {
   const [financialAccounts, setFinancialAccounts] = useState([emptyFinancialAccount()]);
   const [inventoryState, setInventoryState] = useState(emptyInventoryState);
   const [commerceOrders, setCommerceOrders] = useState([emptyCommerceOrder()]);
+  const [adminOverview, setAdminOverview] = useState(null);
+  const [isAdministrator, setIsAdministrator] = useState(false);
+  const [showExportCenter, setShowExportCenter] = useState(false);
+  const [exportSections, setExportSections] = useState({ calculations: true, finance: true, inventory: true, commerce: true });
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
   const result = useMemo(() => calculateInvestment(inputs), [inputs]);
@@ -465,6 +470,21 @@ export default function Page() {
     return () => {
       active = false;
     };
+  }, [user?.id]);
+
+  async function loadAdminOverview() {
+    const response = await fetch("/api/admin/overview");
+    if (response.ok) {
+      setIsAdministrator(true);
+      setAdminOverview(await response.json());
+    } else if (response.status === 403) {
+      setIsAdministrator(false);
+      if (view === "admin") setView("home");
+    }
+  }
+
+  useEffect(() => {
+    if (user) loadAdminOverview();
   }, [user?.id]);
 
   useEffect(() => {
@@ -690,12 +710,9 @@ export default function Page() {
       const product = inventoryState.products[productIndex];
       const currentQuantity = Number(product.quantity) || 0;
       const nextQuantity = order.type === "venda" ? currentQuantity - quantity : currentQuantity + quantity;
-      if (nextQuantity < 0) {
-        setNotice("Estoque insuficiente. O pedido não foi concluído nem alterou o estoque.");
-        return;
-      }
       const verb = order.type === "venda" ? "retirar" : "adicionar";
-      if (!confirm(`Concluir o pedido e ${verb} ${quantity} unidade(s) do estoque de ${product.name || product.sku}?`)) return;
+      const negativeWarning = nextQuantity < 0 ? ` Isso deixará o estoque em ${nextQuantity}.` : "";
+      if (!confirm(`Concluir o pedido e ${verb} ${quantity} unidade(s) do estoque de ${product.name || product.sku}?${negativeWarning}`)) return;
       setInventoryState((current) => ({ ...current, products: current.products.map((item, itemIndex) => itemIndex === productIndex ? { ...item, quantity: String(nextQuantity) } : item) }));
     }
     setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus, stockUpdatedAt: new Date().toISOString() } : item));
@@ -717,6 +734,46 @@ export default function Page() {
     const link = document.createElement("a"); link.href = url; link.download = `documento-teste-${order.number || "pedido"}.pdf`; link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     setNotice("Documento de teste baixado. Ele não possui validade fiscal.");
+  }
+
+  function selectedExportRows() {
+    const rows = [];
+    if (exportSections.calculations) {
+      result.table.filter((item) => Number(item.flow)).forEach((item) => rows.push({ secao: "Cálculos", descricao: `Período ${item.period}`, data: item.date, valor: item.flow, status: calculationType }));
+      financialTableResult.rows.forEach((item) => rows.push({ secao: "Tabela financeira", descricao: `Parcela ${item.period}`, data: item.date, valor: item.payment, status: financeState.system }));
+    }
+    if (exportSections.finance) {
+      financialAccounts.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Contas e cobranças", descricao: item.description || item.party, data: item.dueDate, valor: item.amount, status: item.status }));
+      cashEntries.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Fluxo de caixa", descricao: item.description, data: item.date, valor: item.type === "saida" ? -Number(item.amount) : Number(item.amount), status: item.category }));
+    }
+    if (exportSections.inventory) {
+      inventoryState.products.filter((item) => item.name || item.sku).forEach((item) => rows.push({ secao: "Estoque", descricao: `${item.name} · SKU ${item.sku}`, data: "", valor: item.quantity, status: item.location }));
+      inventoryState.deliveries.filter((item) => item.description).forEach((item) => rows.push({ secao: "Logística", descricao: item.description, data: item.date, valor: "", status: item.status }));
+    }
+    if (exportSections.commerce) commerceOrders.filter((item) => item.number || item.partner || Number(item.amount)).forEach((item) => rows.push({ secao: item.type === "venda" ? "Vendas" : "Compras", descricao: `${item.number || "Pedido"} · ${item.partner}`, data: item.date, valor: item.amount, status: item.status }));
+    return rows;
+  }
+
+  async function exportSelected(format) {
+    const rows = selectedExportRows();
+    if (!rows.length) return setNotice("As seções selecionadas ainda não possuem dados para exportar.");
+    const report = { title: "Relatório operacional selecionado", calculationType: "exportacao-selecionada", payload: { table: rows } };
+    if (format === "drive") {
+      const item = await createModuleHistory({ ...report, success: "Seleção preparada para o Google Drive.", navigate: false });
+      if (!item) return;
+      if (driveStatus.connected) await sendHistoryToDrive(item); else connectGoogleDrive(item);
+      return;
+    }
+    if (format === "pdf") {
+      const response = await fetch("/api/export/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(report) });
+      if (!response.ok) return setNotice("Não foi possível gerar o PDF selecionado.");
+      const url = URL.createObjectURL(await response.blob()); const link = document.createElement("a"); link.href = url; link.download = "relatorio-selecionado.pdf"; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      return setNotice("PDF das seções selecionadas baixado.");
+    }
+    const safe = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const csv = ["sep=;", Object.keys(rows[0]).map(safe).join(";"), ...rows.map((row) => Object.values(row).map(safe).join(";"))].join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "relatorio-selecionado.csv"; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    setNotice("CSV das seções selecionadas baixado.");
   }
   async function saveCalculation() {
     const hasFinancialTable =
@@ -1208,6 +1265,7 @@ export default function Page() {
             ["cashflow", "Financeiro", "▤"],
             ["inventory", "Estoque e logística", "▣"],
             ["commerce", "Vendas e compras", "⇄"],
+            ...(isAdministrator ? [["admin", "Moderação", "◉"]] : []),
             ["history", "Histórico", "◷"],
           ].map(([id, label, icon]) => (
             <button
@@ -1265,7 +1323,9 @@ export default function Page() {
                           ? "Estoque e logística"
                           : view === "commerce"
                             ? "Vendas e compras"
-                        : "Histórico salvo"}
+                            : view === "admin"
+                              ? "Moderação do sistema"
+                            : "Histórico salvo"}
             </h1>
           </div>
           <div className="header-actions">
@@ -1287,6 +1347,9 @@ export default function Page() {
             </span>
             {view !== "history" && view !== "home" && (
               <div className="context-export-actions" aria-label="Exportar aba atual">
+                <button className="secondary-button compact" onClick={() => setShowExportCenter((current) => !current)}>
+                  Exportar seleção
+                </button>
                 <button className="secondary-button compact" onClick={downloadCurrentCsv}>
                   CSV
                 </button>
@@ -1306,6 +1369,15 @@ export default function Page() {
             {notice}
             <button onClick={() => setNotice("")}>×</button>
           </div>
+        )}
+        {showExportCenter && (
+          <section className="panel export-center" aria-label="Selecionar conteúdo da exportação">
+            <div><span className="eyebrow">EXPORTAÇÃO PERSONALIZADA</span><h2>O que deseja incluir?</h2><p>Somente as seções marcadas e com dados preenchidos serão incluídas.</p></div>
+            <div className="export-checks">
+              {[["calculations", "Cálculos e tabelas"], ["finance", "Contas, cobranças e caixa"], ["inventory", "Estoque e logística"], ["commerce", "Vendas e compras"]].map(([id, label]) => <label key={id}><input type="checkbox" checked={exportSections[id]} onChange={(event) => setExportSections((current) => ({ ...current, [id]: event.target.checked }))} /> {label}</label>)}
+            </div>
+            <div className="module-actions"><button className="secondary-button" onClick={() => exportSelected("csv")}>Baixar CSV</button><button className="secondary-button" onClick={() => exportSelected("pdf")}>Baixar PDF</button><button className="primary-button" onClick={() => exportSelected("drive")}>Enviar ao Drive</button></div>
+          </section>
         )}
         {view === "home" && (
           <DocumentHome
@@ -1370,6 +1442,7 @@ export default function Page() {
         {view === "inventory" && <InventoryLogistics state={inventoryState} setState={setInventoryState} />}
         {view === "commerce" && <SalesPurchases orders={commerceOrders} setOrders={setCommerceOrders}
           onStatusChange={changeOrderStatus} onTestInvoice={downloadTestInvoice} />}
+        {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
         {view === "history" && (
           <History
             items={history}

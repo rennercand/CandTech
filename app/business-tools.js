@@ -38,7 +38,7 @@ export function FinancialCommitments({ accounts, setAccounts, onStatusChange, on
   const update = (index, field, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   const remove = (index) => setAccounts((current) => current.filter((_, rowIndex) => rowIndex !== index));
   return <section className="panel operations-panel">
-    <div className="panel-heading"><div><span className="eyebrow">COMPROMISSOS</span><h2>Contas a pagar e receber</h2><p>Acompanhe vencimentos e dê baixa diretamente no fluxo de caixa.</p></div><div className="module-actions"><label className="secondary-button file-button">Digitalizar conta<input type="file" accept="image/*" capture="environment" onChange={(event) => onScanRequest?.(event.target.files?.[0])} /></label><button className="primary-button" onClick={() => setAccounts((current) => [...current, { ...emptyFinancialAccount(), id: newId() }])}>+ Nova conta</button></div></div>
+    <div className="panel-heading"><div><span className="eyebrow">CONTAS E COBRANÇAS</span><h2>Controle de pagamentos e recebimentos</h2><p>Acompanhe vencimentos e dê baixa diretamente no fluxo de caixa.</p></div><div className="module-actions"><label className="secondary-button file-button">Digitalizar conta<input type="file" accept="image/*" capture="environment" onChange={(event) => onScanRequest?.(event.target.files?.[0])} /></label><button className="primary-button" onClick={() => setAccounts((current) => [...current, { ...emptyFinancialAccount(), id: newId() }])}>+ Nova conta</button></div></div>
     <Summary items={[
       { label: "A receber", value: money.format(summary.receivable), caption: "Valores ainda pendentes" },
       { label: "A pagar", value: money.format(summary.payable), caption: "Obrigações ainda pendentes" },
@@ -100,4 +100,21 @@ export function SalesPurchases({ orders, setOrders, onStatusChange, onTestInvoic
     {!orders.length && <p className="empty-state">Nenhum pedido cadastrado.</p>}
     <p className="responsibility-note">Ao concluir um pedido com SKU e quantidade, o sistema pede confirmação antes de dar entrada ou saída no estoque. “Documento teste” não possui validade fiscal.</p>
   </section></div>;
+}
+
+export function AdminOverview({ overview, onRefresh }) {
+  if (!overview) return <section className="panel"><p>Carregando métricas agregadas…</p></section>;
+  const { metrics, health } = overview;
+  return <div className="business-stack">
+    <Summary items={[
+      { label: "Contas cadastradas", value: metrics.users, caption: "Somente quantidade" },
+      { label: "Espaços ativos", value: metrics.workspaces, caption: "Usuários com workspace" },
+      { label: "Requisições em 24 h", value: metrics.requests_day, caption: `${metrics.requests_ten_minutes} nos últimos 10 min` },
+      { label: "Pico por origem", value: metrics.peak_per_identity, caption: "Por janela de um minuto" },
+    ]} />
+    <section className="panel operations-panel"><div className="panel-heading"><div><span className="eyebrow">ACESSO DO MODERADOR</span><h2>Saúde e segurança</h2><p>Visão agregada, sem nomes, e-mails ou informações financeiras de terceiros.</p></div><button className="secondary-button" onClick={onRefresh}>Atualizar</button></div>
+      <div className="health-grid"><div><span>Servidor</span><strong className="positive">{health.server === "online" ? "Online" : "Indisponível"}</strong></div><div><span>Banco de dados</span><strong className="positive">{health.database === "online" ? "Online" : "Indisponível"}</strong></div><div><span>Tráfego</span><strong className={health.trafficLevel === "normal" ? "positive" : "negative"}>{health.trafficLevel === "normal" ? "Normal" : health.trafficLevel === "attention" ? "Atenção" : "Crítico"}</strong></div><div><span>Atualizado</span><strong>{new Date(health.checkedAt).toLocaleString("pt-BR")}</strong></div></div>
+      <p className="responsibility-note">Este painel indica pressão nos limites do aplicativo. Para investigação técnica detalhada, use os Runtime Logs e a área de Observability da Vercel.</p>
+    </section>
+  </div>;
 }

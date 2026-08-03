@@ -159,7 +159,7 @@ O menu de exportação diferencia download local e envio ao Google Drive. Cada u
 
 ## Ideias planejadas
 
-A proposta de categorização de extratos com IA e a futura aba de estoque estão documentadas em [ROADMAP-IA-ESTOQUE.md](./docs/ROADMAP-IA-ESTOQUE.md). Essa anotação é apenas um planejamento: nenhuma API paga foi ativada nesta versão.
+A evolução comercial — conciliação, IA de categorização, estoque, rastreamento, Reforma Tributária e split payment — está organizada em [ROADMAP-IA-ESTOQUE.md](./docs/ROADMAP-IA-ESTOQUE.md). O plano de proteção contra abuso, exaustão de recursos, roubo de sessão e acesso indevido está separado em [ROADMAP-SEGURANCA.md](./docs/ROADMAP-SEGURANCA.md). Esses documentos são planejamento: não indicam que as funções ou controles já foram implementados.
 
 O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
 

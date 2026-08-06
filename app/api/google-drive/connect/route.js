@@ -26,6 +26,7 @@ export async function GET(request) {
       userId: user.id,
       redirectUri,
       historyId,
+      sessionHash: user.sessionHash,
     });
     return Response.redirect(authorizationUrl, 302);
   } catch (error) {

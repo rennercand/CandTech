@@ -8,6 +8,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 - Cadastro e login com sessão individual.
 - Central inicial com documentos recentes e modelos para novos trabalhos.
+- Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Dashboard financeiro por usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
 - Fluxos de caixa com datas, entradas, saídas e detalhes interativos.
@@ -18,8 +19,16 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Salvamento automático do workspace vinculado à conta.
 - Rascunho automático no histórico quando a pessoa sai sem salvar manualmente.
 - Exportação em CSV com BOM, separador e decimais compatíveis com Excel em pt-BR.
+- Exportação XLSX com itens de estoque, múltiplos financiamentos por finalidade, memória de juros e resumo final de gastos.
 - Tabela financeira preenchida anexada ao mesmo histórico do cálculo.
 - Interface responsiva para computador e celular.
+- Valores de entrada exibidos com sinal positivo e verde; saídas e gastos com sinal negativo e vermelho.
+- Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
+- Cadastro diferenciado para pessoa física e empresa.
+- Página de futura assinatura em `/assinar`, sem preços ou cobrança ativa.
+- Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
+- Estoque com busca, filtros, ordenação, alertas e ajustes rápidos de quantidade.
+- Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 
 ## Tecnologias
 
@@ -74,7 +83,7 @@ Cada usuário possui um workspace próprio no banco. Após uma pequena pausa na 
 - despesas e parâmetros de formação de preço;
 - filtros e nomes utilizados na organização.
 
-Ao entrar novamente, o workspace é restaurado. Se a pessoa sair com uma revisão que não foi salva manualmente, o sistema cria um item do tipo `rascunho-automatico` no histórico. Revisões já arquivadas não são duplicadas.
+Ao entrar novamente, o workspace e o documento ativo são restaurados. Salvar atualiza esse documento em vez de criar uma cópia. Somente a ação “Novo documento” limpa o vínculo atual; o servidor limita cada conta a 10 documentos manuais. Se a pessoa sair com uma revisão que não foi salva manualmente, o sistema cria ou atualiza um único item do tipo `rascunho-automatico`, que não entra nessa cota. Revisões já arquivadas não são duplicadas.
 
 ## Executar localmente
 
@@ -153,13 +162,26 @@ As tabelas são criadas automaticamente na primeira utilização:
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
 - `google_drive_connections`: refresh token cifrado e vinculado ao usuário.
 
+### Como o banco atual funciona
+
+- Na Vercel, o backend usa PostgreSQL Serverless do Neon por meio de `DATABASE_URL`.
+- Somente Route Handlers e bibliotecas executadas no servidor acessam essa variável; ela não entra no JavaScript do navegador nem nos payloads da API.
+- `lib/db.js` inicializa a conexão de forma tardia e reutiliza a mesma Promise durante a vida da instância serverless.
+- As consultas usam parâmetros do driver Neon e os registros privados sempre incluem o `user_id` obtido da sessão.
+- Em desenvolvimento local, quando `DATABASE_URL` não existe, o sistema usa `data/finsight.sqlite`. Esse arquivo é apenas um fallback local e não deve ser usado na Vercel.
+- As credenciais de conexão de Production e Preview ficam como variáveis `Sensitive` na Vercel. Dados de usuários, extratos e payloads ficam no banco, nunca em variáveis de ambiente.
+
+Desde 5 de agosto de 2026, os ambientes estão separados: Production usa a branch principal do Neon, Preview usa a branch `preview-test` criada somente com o schema, e Development não recebe credenciais PostgreSQL da Vercel. Assim, o desenvolvimento local cai no SQLite quando não houver uma `DATABASE_URL` local explícita. As duas URLs implantadas ficam como variáveis `Sensitive` e nunca entram no repositório.
+
 ## Google Drive
 
 O menu de exportação diferencia download local e envio ao Google Drive. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech.
 
 ## Ideias planejadas
 
-A evolução comercial — conciliação, IA de categorização, estoque, rastreamento, Reforma Tributária e split payment — está organizada em [ROADMAP-IA-ESTOQUE.md](./docs/ROADMAP-IA-ESTOQUE.md). O plano de proteção contra abuso, exaustão de recursos, roubo de sessão e acesso indevido está separado em [ROADMAP-SEGURANCA.md](./docs/ROADMAP-SEGURANCA.md). Esses documentos são planejamento: não indicam que as funções ou controles já foram implementados.
+A evolução comercial — conciliação por regras, estoque, rastreamento, Reforma Tributária e split payment — está organizada em [ROADMAP-PRODUTO.md](./docs/ROADMAP-PRODUTO.md). A inteligência artificial foi retirada do escopo atual. O plano conceitual de proteção está em [ROADMAP-SEGURANCA.md](./docs/ROADMAP-SEGURANCA.md), enquanto os achados verificados no código ficam em [ROADMAP-CORRECOES-SEGURANCA.md](./docs/ROADMAP-CORRECOES-SEGURANCA.md). Esses documentos são planejamento: não indicam que as funções ou controles já foram implementados.
+
+As pendências operacionais e externas anteriores à cobrança estão em [CHECKLIST-ANTES-DE-VENDER.md](./docs/CHECKLIST-ANTES-DE-VENDER.md).
 
 O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
 

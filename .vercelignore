@@ -3,3 +3,8 @@ node_modules
 data
 .env*
 *.log
+audit.json
+SECURITY_REVIEW.md
+client_secret*.json
+credentials*.json
+finsight-secrets/

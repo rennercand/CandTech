@@ -79,7 +79,7 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 - cadastro separado do login;
 - rotas autenticadas por user_id e tenant_id;
 - endpoints caros com limites próprios;
-- limite mensal para uso de IA;
+- limites específicos para automações e endpoints caros;
 - bloqueio progressivo e temporário após falhas;
 - proteção contra enumeração de contas.
 
@@ -163,6 +163,34 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 
 ## Fase 6 — Banco, segredos e disponibilidade
 
+### Estado atual verificado em 5 de agosto de 2026
+
+- PostgreSQL/Neon é usado na Vercel; SQLite é somente fallback local.
+- As credenciais críticas de Production e Preview estão marcadas como `Sensitive` na Vercel.
+- O navegador não recebe `DATABASE_URL`, senhas do PostgreSQL, `JWT_SECRET` ou chaves do Google Drive.
+- Production usa a branch principal do Neon; Preview usa a branch isolada `preview-test`, criada somente com o schema; Development não recebe credenciais PostgreSQL da Vercel.
+- A `DATABASE_URL` de Production e a de Preview são entradas distintas e `Sensitive`. O redeploy de Preview foi validado com conexão e as cinco tabelas esperadas.
+
+### Isolamento de ambientes
+
+- manter a branch principal do Neon exclusiva para Production;
+- habilitar uma branch Neon isolada para cada Preview Deployment ou, no mínimo, uma branch permanente de staging para a branch Git `test`;
+- preferir branch de Preview sem dados pessoais reais; quando necessário, copiar somente o schema e dados fictícios;
+- configurar `DATABASE_URL` e demais credenciais de Preview com a URL da branch isolada;
+- manter todas as credenciais de Production e Preview como `Sensitive`;
+- validar cadastro, login, workspace, histórico, rate limit e Google Drive no Preview antes de qualquer troca em Production;
+- impedir que migrations de Preview sejam executadas na branch de Production;
+- remover branches efêmeras quando o Preview deixar de existir para controlar custo e retenção de dados.
+
+#### Critérios de aceite do isolamento
+
+- criar um usuário ou lançamento no Preview não altera Production;
+- alterar o schema no Preview não modifica nem bloqueia Production;
+- o Preview não recebe dados pessoais reais por padrão;
+- cada deployment recebe somente a credencial correspondente ao seu ambiente;
+- rollback da aplicação não exige copiar segredos para o repositório;
+- restauração e rotação de credenciais são testadas e documentadas.
+
 - usar migrations versionadas;
 - aplicar princípio do menor privilégio no usuário do banco;
 - revisar índices e timeouts de consultas;
@@ -188,19 +216,16 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 - procedimento para revogar chaves e sessões;
 - comunicação de incidente revisada juridicamente.
 
-## Fase 8 — Segurança de IA e módulos tributários
+## Fase 8 — Segurança de automações e módulos tributários
 
-### IA
+### Automações determinísticas
 
-- chave somente no servidor;
-- enviar o mínimo de dados;
-- não incluir segredos ou documentos completos sem necessidade;
-- validar a saída contra schema;
-- tratar conteúdo do extrato como dado não confiável, não como instrução;
-- impedir que a IA execute ações financeiras;
-- registrar modelo, versão e confiança;
-- limitar custo por empresa;
-- permitir revisão humana.
+- tratar conteúdo de extratos e documentos como dado não confiável;
+- validar toda saída contra schema;
+- impedir ações financeiras silenciosas;
+- registrar regra, versão e resultado;
+- limitar custo e frequência por empresa;
+- permitir revisão humana e reversão.
 
 ### Tributação e split payment
 
@@ -209,7 +234,7 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 - testes de referência;
 - memória de cálculo;
 - separação entre simulação e apuração oficial;
-- nenhuma decisão de alíquota ou crédito feita livremente pela IA;
+- nenhuma decisão de alíquota ou crédito feita por regra não versionada;
 - validação por contador ou especialista;
 - controle de integridade entre pedido, documento, pagamento e imposto.
 

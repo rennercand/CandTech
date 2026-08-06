@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { historyPdf } from "@/lib/history-pdf";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { guardMutation } from "@/lib/request-security";
+import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,9 @@ export async function POST(request) {
     return NextResponse.json({ error: "Relatório muito grande" }, { status: 413 });
   }
   try {
-    const { title, calculationType, payload } = await request.json();
+    const { title, calculationType, payload } = await readLimitedJson(request, {
+      maxBytes: 512_000, maxDepth: 12, maxNodes: 8_000, maxStringLength: 20_000,
+    });
     const safeTitle = String(title || "Relatório CandTech").trim().slice(0, 100);
     if (!payload || JSON.stringify(payload).length > 500_000) {
       return NextResponse.json({ error: "Não há dados calculados para o PDF." }, { status: 400 });
@@ -39,6 +41,8 @@ export async function POST(request) {
       },
     });
   } catch (error) {
+    const bodyError = requestBodyErrorResponse(error);
+    if (bodyError) return bodyError;
     console.error("Falha ao gerar PDF da aba", error);
     return NextResponse.json({ error: "Não foi possível gerar o PDF." }, { status: 500 });
   }

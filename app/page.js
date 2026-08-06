@@ -9,6 +9,7 @@ import {
 } from "./advanced-tools";
 import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations";
 import { calculateInvestment } from "../lib/investment-calculations";
+import { ordersFromCashEntries } from "../lib/business-calculations";
 import {
   FinancialCommitments,
   AdminOverview,
@@ -25,6 +26,10 @@ const money = new Intl.NumberFormat("pt-BR", {
 });
 const pct = (number) =>
   Number.isFinite(number) ? `${number.toFixed(2)}%` : "N/D";
+const signedMoney = (value, type) => {
+  const number = Math.abs(Number(value) || 0);
+  return `${type === "entrada" ? "+" : "-"}${money.format(number)}`;
+};
 const formatDate = (value) => {
   if (!value) return "Sem data";
   // Evita que datas no formato AAAA-MM-DD mudem um dia por causa do fuso horário.
@@ -77,13 +82,22 @@ const emptyInputs = () => ({
 
 const emptyFinanceState = () => ({
   system: "PRICE",
-  form: { principal: "", rate: "", periods: "", startDate: today() },
+  form: { description: "", principal: "", rate: "", periods: "", startDate: today() },
 });
 
 const emptyPricingState = () => ({
   expenses: [{ name: "", amount: "" }],
   units: "",
   margin: "",
+});
+
+const emptyInvoiceIssuer = () => ({
+  legalName: "",
+  document: "",
+  stateRegistration: "",
+  address: "",
+  city: "",
+  state: "",
 });
 
 function normalizeWorkspacePayload(payload = {}) {
@@ -100,6 +114,9 @@ function normalizeWorkspacePayload(payload = {}) {
     financialAccounts: [emptyFinancialAccount()],
     inventoryState: emptyInventoryState(),
     commerceOrders: [emptyCommerceOrder()],
+    activeDocumentId: null,
+    savedFinancings: [],
+    invoiceIssuer: emptyInvoiceIssuer(),
   };
   return {
     ...defaults,
@@ -146,6 +163,13 @@ function normalizeWorkspacePayload(payload = {}) {
     commerceOrders: Array.isArray(payload.commerceOrders)
       ? payload.commerceOrders
       : defaults.commerceOrders,
+    activeDocumentId: Number.isInteger(Number(payload.activeDocumentId)) && Number(payload.activeDocumentId) > 0
+      ? Number(payload.activeDocumentId)
+      : null,
+    savedFinancings: Array.isArray(payload.savedFinancings)
+      ? payload.savedFinancings
+      : defaults.savedFinancings,
+    invoiceIssuer: { ...defaults.invoiceIssuer, ...(payload.invoiceIssuer || {}) },
   };
 }
 
@@ -215,9 +239,12 @@ function CashFlowChart({ rows }) {
 
 function AuthScreen({ onAuthenticated }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
+  }, []);
   async function submit(event) {
     event.preventDefault();
     setLoading(true);
@@ -283,15 +310,24 @@ function AuthScreen({ onAuthenticated }) {
         </p>
         <form onSubmit={submit}>
           {mode === "register" && (
-            <label>
-              Nome
-              <input
-                required
-                minLength="2"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </label>
+            <>
+              <div className="account-type-field">
+                <span>Como você vai usar?</span>
+                <div className="account-type-toggle" role="group" aria-label="Tipo de cadastro">
+                  <button type="button" className={form.accountType === "person" ? "active" : ""} onClick={() => setForm({ ...form, accountType: "person" })}>Pessoa física</button>
+                  <button type="button" className={form.accountType === "company" ? "active" : ""} onClick={() => setForm({ ...form, accountType: "company" })}>Empresa</button>
+                </div>
+              </div>
+              <label>
+                {form.accountType === "person" ? "Nome completo" : "Responsável pela empresa"}
+                <input
+                  required
+                  minLength="2"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              </label>
+            </>
           )}
           <label>
             E-mail
@@ -330,17 +366,11 @@ function AuthScreen({ onAuthenticated }) {
                 : "Criar conta"}
           </button>
         </form>
-        <button
-          className="text-button"
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError("");
-          }}
-        >
-          {mode === "login"
-            ? "Ainda não possui conta? Criar agora"
-            : "Já possui conta? Entrar"}
-        </button>
+        {mode === "login" ? (
+          <div className="auth-subscribe-link"><span>Não é assinante?</span><a href="/assinar">Assine agora</a></div>
+        ) : (
+          <button className="text-button" onClick={() => { setMode("login"); setError(""); }}>Já possui conta? Entrar</button>
+        )}
       </section>
     </main>
   );
@@ -379,6 +409,9 @@ export default function Page() {
   const [financialAccounts, setFinancialAccounts] = useState([emptyFinancialAccount()]);
   const [inventoryState, setInventoryState] = useState(emptyInventoryState);
   const [commerceOrders, setCommerceOrders] = useState([emptyCommerceOrder()]);
+  const [activeDocumentId, setActiveDocumentId] = useState(null);
+  const [savedFinancings, setSavedFinancings] = useState([]);
+  const [invoiceIssuer, setInvoiceIssuer] = useState(emptyInvoiceIssuer);
   const [adminOverview, setAdminOverview] = useState(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
   const [showExportCenter, setShowExportCenter] = useState(false);
@@ -407,6 +440,9 @@ export default function Page() {
       financialAccounts,
       inventoryState,
       commerceOrders,
+      activeDocumentId,
+      savedFinancings,
+      invoiceIssuer,
     }),
     [
       inputs,
@@ -420,6 +456,9 @@ export default function Page() {
       financialAccounts,
       inventoryState,
       commerceOrders,
+      activeDocumentId,
+      savedFinancings,
+      invoiceIssuer,
     ],
   );
   useEffect(() => {
@@ -570,6 +609,9 @@ export default function Page() {
     setFinancialAccounts(payload.financialAccounts);
     setInventoryState(payload.inventoryState);
     setCommerceOrders(payload.commerceOrders);
+    setActiveDocumentId(payload.activeDocumentId);
+    setSavedFinancings(payload.savedFinancings);
+    setInvoiceIssuer(payload.invoiceIssuer);
   }
 
   async function persistWorkspace(payload = workspacePayload, markSaved = false) {
@@ -612,25 +654,20 @@ export default function Page() {
   }
 
   async function startNewDocument(type) {
+    const documentCount = history.filter((item) => item.calculation_type !== "rascunho-automatico").length;
+    if (documentCount >= 10) {
+      setNotice("Você atingiu o limite de 10 documentos. Exclua um documento antigo antes de criar outro.");
+      setView("history");
+      return;
+    }
     // Antes de limpar a área atual, preserva sua última revisão no histórico da conta.
     await archiveCurrentWorkspace();
-    // Cada atalho inicia um documento realmente vazio no módulo correspondente.
+    // "Novo documento" limpa todo o workspace e é a única ação que remove o ID ativo.
+    applyWorkspace(normalizeWorkspacePayload());
     if (type === "calculator") {
-      setInputs(emptyInputs());
       setSaveTitle("Nova simulação financeira");
-    } else if (type === "financing") {
-      setFinanceState(emptyFinanceState());
-    } else if (type === "pricing") {
-      setPricingState(emptyPricingState());
     } else if (type === "cashflow") {
-      setCashEntries([blankCashRow()]);
-      setFinancialAccounts([emptyFinancialAccount()]);
       setOrganizationName("Nova organização financeira");
-      setCashFilters({ month: "", type: "todos", category: "todos" });
-    } else if (type === "inventory") {
-      setInventoryState(emptyInventoryState());
-    } else if (type === "commerce") {
-      setCommerceOrders([emptyCommerceOrder()]);
     }
     setNotice("");
     setView(type);
@@ -720,37 +757,68 @@ export default function Page() {
   }
 
   async function downloadTestInvoice(order) {
-    if (!order?.partner || !(Number(order.amount) > 0)) {
-      setNotice("Informe cliente/fornecedor e valor para gerar o documento de teste.");
+    if (order?.type !== "venda") {
+      setNotice("O documento comercial de produto é emitido para pedidos de venda.");
       return;
     }
+    if (!invoiceIssuer.legalName || !invoiceIssuer.document || !order.partner || !order.document || !(Number(order.amount) > 0) || !(Number(order.quantity) > 0)) {
+      setNotice("Preencha emitente, CPF/CNPJ do cliente, quantidade e valor antes de gerar o PDF.");
+      return;
+    }
+    const product = inventoryState.products.find((item) =>
+      item.sku && item.sku.trim().toLowerCase() === String(order.sku || "").trim().toLowerCase(),
+    );
     const response = await fetch("/api/export/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      title: "DOCUMENTO DE TESTE — SEM VALOR FISCAL",
-      calculationType: "documento-sem-valor-fiscal",
-      payload: { table: [{ pedido: order.number || "Sem número", tipo: order.type, clienteFornecedor: order.partner, data: order.date || today(), sku: order.sku, quantidade: order.quantity, valor: Number(order.amount), observacao: "NÃO É NOTA FISCAL" }] },
+      title: `Pré-nota ${order.number || "sem número"}`,
+      calculationType: "pre-nota-produto",
+      payload: { commercialDocument: {
+        issuer: invoiceIssuer,
+        customer: { name: order.partner, document: order.document, contact: order.contact },
+        orderNumber: order.number || "Sem número",
+        issueDate: order.date || today(),
+        items: [{
+          sku: order.sku || "",
+          description: product?.name || order.description || "Produto",
+          quantity: Number(order.quantity),
+          unitPrice: Number(order.amount) / Number(order.quantity),
+          total: Number(order.amount),
+        }],
+        total: Number(order.amount),
+        disclaimer: "PRÉ-NOTA / DOCUMENTO COMERCIAL - SEM VALIDADE FISCAL",
+      } },
     }) });
-    if (!response.ok) return setNotice("Não foi possível gerar o documento de teste.");
+    if (!response.ok) return setNotice("Não foi possível gerar a pré-nota em PDF.");
     const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a"); link.href = url; link.download = `documento-teste-${order.number || "pedido"}.pdf`; link.click();
+    const link = document.createElement("a"); link.href = url; link.download = `pre-nota-${order.number || "pedido"}.pdf`; link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    setNotice("Documento de teste baixado. Ele não possui validade fiscal.");
+    setNotice("Pré-nota em PDF baixada. Ela não substitui XML autorizado nem DANFE fiscal.");
+  }
+
+  function suggestOrdersFromCash() {
+    const suggestions = ordersFromCashEntries(cashEntries, commerceOrders);
+    if (!suggestions.length) {
+      setNotice("Não há novos lançamentos do extrato para transformar em pedidos.");
+      return;
+    }
+    setCommerceOrders((current) => [...current, ...suggestions]);
+    setNotice(`${suggestions.length} pedido(s) criado(s) como rascunho. Revise e edite antes de confirmar.`);
   }
 
   function selectedExportRows() {
     const rows = [];
     if (exportSections.calculations) {
       result.table.filter((item) => Number(item.flow)).forEach((item) => rows.push({ secao: "Cálculos", descricao: `Período ${item.period}`, data: item.date, valor: item.flow, status: calculationType }));
-      financialTableResult.rows.forEach((item) => rows.push({ secao: "Tabela financeira", descricao: `Parcela ${item.period}`, data: item.date, valor: item.payment, status: financeState.system }));
+      financialTableResult.rows.forEach((item) => rows.push({ secao: "Tabela financeira", descricao: `Parcela ${item.period}`, data: item.date, valor: -Math.abs(Number(item.payment) || 0), status: financeState.system }));
     }
     if (exportSections.finance) {
-      financialAccounts.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Contas e cobranças", descricao: item.description || item.party, data: item.dueDate, valor: item.amount, status: item.status }));
+      financialAccounts.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Contas e cobranças", descricao: item.description || item.party, data: item.dueDate, valor: item.type === "pagar" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: item.status }));
       cashEntries.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Fluxo de caixa", descricao: item.description, data: item.date, valor: item.type === "saida" ? -Number(item.amount) : Number(item.amount), status: item.category }));
     }
     if (exportSections.inventory) {
       inventoryState.products.filter((item) => item.name || item.sku).forEach((item) => rows.push({ secao: "Estoque", descricao: `${item.name} · SKU ${item.sku}`, data: "", valor: item.quantity, status: item.location }));
       inventoryState.deliveries.filter((item) => item.description).forEach((item) => rows.push({ secao: "Logística", descricao: item.description, data: item.date, valor: "", status: item.status }));
     }
-    if (exportSections.commerce) commerceOrders.filter((item) => item.number || item.partner || Number(item.amount)).forEach((item) => rows.push({ secao: item.type === "venda" ? "Vendas" : "Compras", descricao: `${item.number || "Pedido"} · ${item.partner}`, data: item.date, valor: item.amount, status: item.status }));
+    if (exportSections.commerce) commerceOrders.filter((item) => item.number || item.partner || Number(item.amount)).forEach((item) => rows.push({ secao: item.type === "venda" ? "Vendas" : "Compras", descricao: `${item.number || "Pedido"} · ${item.partner}`, data: item.date, valor: item.type === "compra" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: item.status }));
     return rows;
   }
 
@@ -775,68 +843,80 @@ export default function Page() {
     const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "relatorio-selecionado.csv"; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     setNotice("CSV das seções selecionadas baixado.");
   }
-  async function saveCalculation() {
-    const hasFinancialTable =
-      Number(financeState.form.principal) > 0 &&
-      Number(financeState.form.periods) > 0;
+  async function saveActiveDocument({ title, calculationType: type, payload, success, navigate = true, workspace = workspacePayload }) {
     const response = await fetch("/api/history", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: saveTitle,
-        calculationType,
-        payload: {
-          inputs,
-          result,
-          table: result.table,
-          // Se a pessoa preencheu a tabela financeira, estado e memória ficam no mesmo histórico.
-          financeState: hasFinancialTable ? financeState : undefined,
-          financialTable: hasFinancialTable
-            ? { state: financeState, result: financialTableResult }
-            : undefined,
-        },
+        id: activeDocumentId,
+        title,
+        calculationType: type,
+        // O snapshot completo permite reabrir o documento sem perder dados de outros módulos.
+        payload: { ...payload, workspace },
       }),
     });
-    const data = await response.json();
-    setNotice(
-      response.ok ? "Cálculo salvo no histórico da sua conta." : data.error,
-    );
-    if (response.ok) {
-      // Impede que o mesmo conteúdo seja arquivado novamente ao sair.
-      await persistWorkspace(workspacePayload, true);
-      setView("history");
-    }
+    const data = await response.json().catch(() => ({}));
+    setNotice(response.ok ? success : data.error || "Não foi possível salvar o documento.");
+    if (!response.ok) return null;
+
+    setActiveDocumentId(data.item.id);
+    await persistWorkspace({ ...workspace, activeDocumentId: data.item.id }, true);
+    if (navigate) setView("history");
+    return data.item;
   }
-  async function createModuleHistory({ title, calculationType, payload, success, navigate = true }) {
-    // Todos os módulos usam a mesma rota para manter validação, limite e vínculo com a conta.
-    const response = await fetch("/api/history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, calculationType, payload }),
+
+  async function saveCalculation() {
+    const hasFinancialTable =
+      Number(financeState.form.principal) > 0 &&
+      Number(financeState.form.periods) > 0;
+    await saveActiveDocument({
+      title: saveTitle,
+      calculationType,
+      payload: {
+        inputs,
+        result,
+        table: result.table,
+        // Se a pessoa preencheu a tabela financeira, estado e memória ficam no mesmo documento.
+        financeState: hasFinancialTable ? financeState : undefined,
+        financialTable: hasFinancialTable
+          ? { state: financeState, result: financialTableResult }
+          : undefined,
+        financialTables: savedFinancings,
+      },
+      success: "Cálculo atualizado no histórico da sua conta.",
     });
-    const data = await response.json();
-    setNotice(response.ok ? success : data.error || "Não foi possível salvar no histórico.");
-    if (response.ok) {
-      await persistWorkspace(workspacePayload, true);
-      if (navigate) setView("history");
-      return data.item;
-    }
-    return null;
+  }
+  async function createModuleHistory({ title, calculationType, payload, success, navigate = true, workspace = workspacePayload }) {
+    // Todos os módulos usam a mesma rota para manter validação, limite e vínculo com a conta.
+    return saveActiveDocument({ title, calculationType, payload, success, navigate, workspace });
   }
   async function saveFinancialTable() {
     if (!financialTableResult.rows.length) {
       setNotice("Preencha o valor financiado e a quantidade de parcelas antes de salvar.");
       return;
     }
+    const financingId = financeState.id || globalThis.crypto?.randomUUID?.() || `financing-${Date.now()}`;
+    const nextFinanceState = { ...financeState, id: financingId };
+    // Guardamos apenas as premissas na coleção; as parcelas são recalculadas ao exportar para economizar banco.
+    const financing = { id: financingId, state: nextFinanceState };
+    const nextFinancings = [
+      ...savedFinancings.filter((item) => item.id !== financingId),
+      financing,
+    ];
+    const nextWorkspace = { ...workspacePayload, financeState: nextFinanceState, savedFinancings: nextFinancings };
+    setFinanceState(nextFinanceState);
+    setSavedFinancings(nextFinancings);
     await createModuleHistory({
       title: `Tabela ${financeState.system}`,
       calculationType: "tabela-financeira",
       payload: {
-        financeState,
-        financialTable: { state: financeState, result: financialTableResult },
+        financeState: nextFinanceState,
+        financialTable: { ...financing, result: financialTableResult },
+        financialTables: nextFinancings,
         table: financialTableResult.rows,
       },
-      success: "Tabela financeira salva no histórico da sua conta.",
+      workspace: nextWorkspace,
+      success: "Tabela financeira atualizada no documento da sua conta.",
     });
   }
   async function exportFinancialTableToDrive() {
@@ -844,14 +924,23 @@ export default function Page() {
       setNotice("Preencha o valor financiado e a quantidade de parcelas antes de exportar.");
       return;
     }
+    const financingId = financeState.id || globalThis.crypto?.randomUUID?.() || `financing-${Date.now()}`;
+    const nextFinanceState = { ...financeState, id: financingId };
+    const financing = { id: financingId, state: nextFinanceState };
+    const nextFinancings = [...savedFinancings.filter((entry) => entry.id !== financingId), financing];
+    const nextWorkspace = { ...workspacePayload, financeState: nextFinanceState, savedFinancings: nextFinancings };
+    setFinanceState(nextFinanceState);
+    setSavedFinancings(nextFinancings);
     const item = await createModuleHistory({
       title: `Tabela ${financeState.system}`,
       calculationType: "tabela-financeira",
       payload: {
-        financeState,
-        financialTable: { state: financeState, result: financialTableResult },
+        financeState: nextFinanceState,
+        financialTable: { ...financing, result: financialTableResult },
+        financialTables: nextFinancings,
         table: financialTableResult.rows,
       },
+      workspace: nextWorkspace,
       success: "Tabela salva. Preparando o envio ao Google Drive…",
       navigate: false,
     });
@@ -877,33 +966,20 @@ export default function Page() {
       ...entry,
       amount: Number(entry.amount) || 0,
     }));
-    const response = await fetch("/api/history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: organizationName || "Organização financeira",
-        calculationType: "fluxo-caixa",
-        payload: {
-          organizationName,
-          entries: normalized,
-          table: normalized,
-        },
-      }),
+    await saveActiveDocument({
+      title: organizationName || "Organização financeira",
+      calculationType: "fluxo-caixa",
+      payload: { organizationName, entries: normalized, table: normalized },
+      success: "Organização financeira atualizada no documento da sua conta.",
     });
-    setNotice(
-      response.ok
-        ? "Organização financeira salva na sua conta."
-        : "Não foi possível salvar a organização.",
-    );
-    if (response.ok) {
-      await persistWorkspace(workspacePayload, true);
-      setView("history");
-    }
   }
   async function deleteHistory(id) {
     if (!confirm("Excluir este registro salvo?")) return;
     const response = await fetch(`/api/history/${id}`, { method: "DELETE" });
-    if (response.ok) setHistory(history.filter((item) => item.id !== id));
+    if (response.ok) {
+      setHistory(history.filter((item) => item.id !== id));
+      if (activeDocumentId === id) setActiveDocumentId(null);
+    }
   }
   function connectGoogleDrive(item) {
     // Guarda no fluxo OAuth qual arquivo deve ser enviado após a conexão.
@@ -1022,9 +1098,25 @@ export default function Page() {
       setFinanceState(normalizeWorkspacePayload({ financeState: savedFinanceState }).financeState);
     }
     setSaveTitle(item.title);
+    setActiveDocumentId(item.id);
     setView("calculator");
   }
   function loadHistoryItem(item) {
+    setActiveDocumentId(item.id);
+    if (item.payload.workspace) {
+      // Documentos novos carregam o workspace completo e continuam usando o mesmo ID ao salvar.
+      applyWorkspace(normalizeWorkspacePayload({ ...item.payload.workspace, activeDocumentId: item.id }));
+      const targetView = {
+        "tabela-financeira": "financing",
+        "preco-produto": "pricing",
+        "fluxo-caixa": "cashflow",
+        "organizacao-financeira": "cashflow",
+        estoque: "inventory",
+        "vendas-compras": "commerce",
+      }[item.calculation_type] || "calculator";
+      setView(targetView);
+      return;
+    }
     // Cada tipo volta para a aba em que foi criado, sem misturar módulos diferentes.
     if (item.payload.financialTable && !item.payload.inputs) {
       setFinanceState(normalizeWorkspacePayload({ financeState: item.payload.financialTable.state }).financeState);
@@ -1053,20 +1145,20 @@ export default function Page() {
       pricing: {
         filename: "preco-produto.csv", title: "Preço do produto",
         rows: [
-          ...pricingState.expenses.map((expense) => ({ item: expense.name, valor: Number(expense.amount) || 0 })),
+          ...pricingState.expenses.map((expense) => ({ item: expense.name, valor: -Math.abs(Number(expense.amount) || 0) })),
           { item: "Custo unitário", valor: pricingResult.unitCost },
           { item: "Preço unitário", valor: pricingResult.unitPrice },
           { item: "Lucro unitário", valor: pricingResult.unitProfit },
-        ], totalSpent: pricingResult.totalCost,
+        ], totalSpent: -Math.abs(pricingResult.totalCost),
       },
       cashflow: {
         filename: "organizacao-financeira.csv",
         title: organizationName,
         rows: [
-          ...financialAccounts.map((item) => ({ registro: "Conta", tipo: item.type, descricao: item.description, parceiro: item.party, data: item.dueDate, valor: item.amount, status: item.status })),
-          ...cashEntries.map((item) => ({ registro: "Caixa", tipo: item.type, descricao: item.description, parceiro: item.category, data: item.date, valor: item.amount, status: "realizado" })),
+          ...financialAccounts.map((item) => ({ registro: "Conta", tipo: item.type, descricao: item.description, parceiro: item.party, data: item.dueDate, valor: item.type === "pagar" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: item.status })),
+          ...cashEntries.map((item) => ({ registro: "Caixa", tipo: item.type, descricao: item.description, parceiro: item.category, data: item.date, valor: item.type === "saida" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: "realizado" })),
         ],
-        totalSpent: cashEntries.reduce(
+        totalSpent: -cashEntries.reduce(
           (sum, entry) => sum + (entry.type === "saida" ? Number(entry.amount) || 0 : 0),
           0,
         ),
@@ -1081,8 +1173,8 @@ export default function Page() {
         summaryLabel: "Valor estimado do estoque",
       },
       commerce: {
-        filename: "vendas-compras.csv", title: "Vendas e compras", rows: commerceOrders,
-        totalSpent: commerceOrders.reduce((sum, item) => sum + (item.type === "compra" && item.status !== "cancelado" ? Number(item.amount) || 0 : 0), 0),
+        filename: "vendas-compras.csv", title: "Vendas e compras", rows: commerceOrders.map((item) => ({ ...item, amount: item.type === "compra" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0) })),
+        totalSpent: -commerceOrders.reduce((sum, item) => sum + (item.type === "compra" && item.status !== "cancelado" ? Number(item.amount) || 0 : 0), 0),
         summaryLabel: "Total dos pedidos de compra",
       },
     };
@@ -1254,7 +1346,7 @@ export default function Page() {
         <div className="brand">
           <i>CT</i> CandTech
         </div>
-        <div className="workspace">Gestão pessoal</div>
+        <div className="workspace">{user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal"}</div>
         <nav aria-label="Navegação principal">
           {[
             ["home", "Início", "⌂"],
@@ -1289,6 +1381,7 @@ export default function Page() {
             Sair
           </button>
         </nav>
+        <a className="sidebar-subscribe" href="/assinar"><span>Não é assinante?</span><strong>Assine agora</strong></a>
         <div className="sidebar-bottom">
           <span className="avatar">{user.name[0]?.toUpperCase()}</span>
           <div>
@@ -1419,6 +1512,7 @@ export default function Page() {
             state={financeState}
             setState={setFinanceState}
             onSave={saveFinancialTable}
+            onNew={() => setFinanceState(emptyFinanceState())}
             onExportDrive={exportFinancialTableToDrive}
           />
         )}
@@ -1440,8 +1534,15 @@ export default function Page() {
           </div>
         )}
         {view === "inventory" && <InventoryLogistics state={inventoryState} setState={setInventoryState} />}
-        {view === "commerce" && <SalesPurchases orders={commerceOrders} setOrders={setCommerceOrders}
-          onStatusChange={changeOrderStatus} onTestInvoice={downloadTestInvoice} />}
+        {view === "commerce" && <SalesPurchases
+          orders={commerceOrders}
+          setOrders={setCommerceOrders}
+          issuer={invoiceIssuer}
+          setIssuer={setInvoiceIssuer}
+          onStatusChange={changeOrderStatus}
+          onTestInvoice={downloadTestInvoice}
+          onSuggestFromCash={suggestOrdersFromCash}
+        />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
         {view === "history" && (
           <History
@@ -1638,7 +1739,7 @@ function Dashboard({ result, onOpen }) {
           <div className="mini-stats">
             <span>
               Capital desembolsado
-              <strong>{money.format(result.totalOutflows)}</strong>
+              <strong className="negative">{signedMoney(result.totalOutflows, "saida")}</strong>
             </span>
             <span>
               Resultado líquido
@@ -1844,7 +1945,7 @@ function Calculator({
                     <td>{row.period}</td>
                     <td>{formatDate(row.date)}</td>
                     <td className={row.flow >= 0 ? "positive" : "negative"}>
-                      {money.format(row.flow)}
+                      {signedMoney(row.flow, row.flow >= 0 ? "entrada" : "saida")}
                     </td>
                     <td>{money.format(row.discounted)}</td>
                     <td>{money.format(row.accumulated)}</td>
@@ -1984,12 +2085,12 @@ function CashFlow({
       <section className="stats-grid three">
         <StatCard
           label="Entradas"
-          value={money.format(totals.income)}
+          value={signedMoney(totals.income, "entrada")}
           caption="No período selecionado"
         />
         <StatCard
           label="Saídas"
-          value={money.format(totals.expense)}
+          value={signedMoney(totals.expense, "saida")}
           positive={false}
           caption="No período selecionado"
         />
@@ -2162,15 +2263,17 @@ function CashFlow({
                     </select>
                   </td>
                   <td>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={entry.amount}
-                      onChange={(e) =>
-                        edit(entry.originalIndex, "amount", e.target.value)
-                      }
-                    />
+                    <div className={`signed-amount-field ${entry.type === "entrada" ? "income" : "expense"}`}>
+                      <span>{entry.type === "entrada" ? "+" : "-"}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={Math.abs(Number(entry.amount)) || ""}
+                        onChange={(e) => edit(entry.originalIndex, "amount", e.target.value)}
+                      />
+                    </div>
                   </td>
                   <td
                     className={

@@ -5,7 +5,7 @@ import {
   getWorkspace,
   saveWorkspace,
 } from "@/lib/db";
-import { guardMutation } from "@/lib/request-security";
+import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -82,13 +82,17 @@ export async function PUT(request) {
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   try {
-    const { payload, markSaved = false } = await request.json();
+    const { payload, markSaved = false } = await readLimitedJson(request, {
+      maxBytes: 512_000, maxDepth: 12, maxNodes: 12_000, maxStringLength: 20_000,
+    });
     if (!validPayload(payload)) {
       return NextResponse.json({ error: "Rascunho inválido ou muito grande." }, { status: 400 });
     }
     const workspace = await saveWorkspace({ userId: user.id, payload, markSaved: Boolean(markSaved) });
     return NextResponse.json({ workspace });
   } catch (error) {
+    const bodyError = requestBodyErrorResponse(error);
+    if (bodyError) return bodyError;
     console.error("Falha ao salvar rascunho", error);
     return NextResponse.json({ error: "Não foi possível salvar o rascunho." }, { status: 500 });
   }
@@ -103,7 +107,9 @@ export async function POST(request) {
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   try {
-    const { payload } = await request.json();
+    const { payload } = await readLimitedJson(request, {
+      maxBytes: 512_000, maxDepth: 12, maxNodes: 12_000, maxStringLength: 20_000,
+    });
     if (!validPayload(payload)) {
       return NextResponse.json({ error: "Rascunho inválido ou muito grande." }, { status: 400 });
     }
@@ -121,6 +127,8 @@ export async function POST(request) {
     });
     return NextResponse.json({ archived: Boolean(item), item });
   } catch (error) {
+    const bodyError = requestBodyErrorResponse(error);
+    if (bodyError) return bodyError;
     console.error("Falha ao arquivar rascunho", error);
     return NextResponse.json({ error: "Não foi possível arquivar o rascunho." }, { status: 500 });
   }

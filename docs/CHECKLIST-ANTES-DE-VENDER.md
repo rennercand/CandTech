@@ -1,0 +1,63 @@
+# Checklist antes de vender — CandTech
+
+Este documento separa o que já pode ser preparado no código do que exige decisão, credencial ou contratação externa. Ele não é certificação de segurança, conformidade ou prontidão comercial.
+
+## Preparado no código
+
+- cadastro de pessoa física ou empresa;
+- página de assinatura sem preço e sem cobrança;
+- perfil cadastral de cobrança separado por usuário;
+- CPF/CNPJ não é solicitado antes de existir uma finalidade real de cobrança ou emissão;
+- nenhum campo de cartão, senha bancária ou conta é armazenado diretamente;
+- sessão revogável no servidor e expiração absoluta;
+- limites estruturais e de bytes nas APIs com corpo JSON;
+- limites separados de login e cadastro por IP e identidade normalizada;
+- resposta de autenticação mais resistente à enumeração;
+- vínculo do OAuth do Drive à sessão iniciadora;
+- auditoria inicial de conta, sessão e perfil;
+- exclusão explícita dos segredos no pacote de deploy;
+- estoque com busca, filtros, ordenação, alertas e ajuste rápido;
+- pré-nota identificada como documento sem validade fiscal.
+
+## Antes de um teste privado pequeno
+
+- revisar o diff e versionar somente os arquivos pretendidos;
+- configurar `OAUTH_STATE_SECRET` diferente de `JWT_SECRET` na Vercel;
+- confirmar novamente que Production e Preview usam bancos separados;
+- rotacionar credenciais que possam ter sido copiadas ou enviadas no passado;
+- publicar primeiro na branch `test` e verificar cadastro, login, logout, Drive, perfil e estoque;
+- habilitar observação no Firewall/WAF e criar alertas de erro e tráfego;
+- verificar cabeçalhos, cookies e limites no domínio publicado;
+- publicar termos de uso, política de privacidade e canal de suporte revisados por profissional adequado.
+
+## Antes de cobrar qualquer valor
+
+- definir planos, preços, impostos, cancelamento, reembolso e suporte;
+- escolher provedor de pagamento; CPF/CNPJ quando necessário, cartão e dados bancários devem ser coletados pelo provedor, não pela CandTech;
+- implementar webhooks assinados, idempotência, recibos e conciliação de pagamento;
+- criar status de assinatura no servidor e autorização por plano;
+- não liberar recurso apenas escondendo botão no navegador;
+- validar fluxo de falha, pagamento duplicado, estorno e chargeback;
+- revisar LGPD, relação com operadores e política de retenção.
+
+## Antes de vender para empresas
+
+- concluir todos os P0 e P1 aplicáveis da roadmap de segurança;
+- migrations versionadas e credencial de runtime sem privilégios DDL;
+- papéis, permissões e isolamento por empresa testados automaticamente;
+- auditoria de alterações financeiras, exportações e permissões;
+- backup e restauração realmente testados com RPO/RTO definidos;
+- e-mail verificado, recuperação segura e MFA para ações sensíveis;
+- teste de carga com orçamento e limites conhecidos;
+- pentest independente com correção dos achados críticos e altos;
+- plano de incidente, responsáveis e comunicação definidos;
+- emissão fiscal oficial somente após homologação e validação contábil.
+
+## Decisões que aguardam o responsável pelo produto
+
+- nomes finais dos planos e preços;
+- provedor de pagamento e conta recebedora;
+- termos comerciais, prazo de teste e política de reembolso;
+- empresa/CNPJ responsável pela venda do serviço;
+- ferramentas externas de e-mail, observabilidade, WAF distribuído e suporte;
+- autorização para deploy, migração de produção e mudanças no firewall.

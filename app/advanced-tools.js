@@ -11,6 +11,7 @@ const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+const expenseMoney = (value) => `-${money.format(Math.abs(Number(value) || 0))}`;
 const formatDate = (value) => {
   const [year, month, day] = String(value || "")
     .slice(0, 10)
@@ -30,7 +31,7 @@ function SummaryCard({ label, value, tone = "default" }) {
   );
 }
 
-export function FinanceTables({ state, setState, onSave, onExportDrive }) {
+export function FinanceTables({ state, setState, onSave, onNew, onExportDrive }) {
   // O estado vem da página para poder ser salvo no workspace da conta.
   const { system, form } = state;
   const setSystem = (systemValue) =>
@@ -72,6 +73,9 @@ export function FinanceTables({ state, setState, onSave, onExportDrive }) {
               ))}
             </div>
             <div className="module-actions">
+              <button className="secondary-button compact" onClick={onNew}>
+                Novo financiamento
+              </button>
               <button className="primary-button compact" onClick={onSave}>
                 Salvar no histórico
               </button>
@@ -88,6 +92,16 @@ export function FinanceTables({ state, setState, onSave, onExportDrive }) {
           <span className="eyebrow">DADOS DO CONTRATO</span>
           <h2>Premissas</h2>
           <div className="field-grid">
+            <label>
+              Finalidade / produto financiado
+              <input
+                placeholder="Ex.: estoque do produto SKU-123"
+                value={form.description || ""}
+                onChange={(event) =>
+                  setForm({ ...form, description: event.target.value })
+                }
+              />
+            </label>
             <label>
               Valor financiado
               <input
@@ -186,12 +200,13 @@ export function FinanceTables({ state, setState, onSave, onExportDrive }) {
             />
             <SummaryCard
               label="Total de juros"
-              value={money.format(result.totalInterest)}
+              value={expenseMoney(result.totalInterest)}
               tone="expense"
             />
             <SummaryCard
               label="Total pago"
-              value={money.format(result.totalPaid)}
+              value={expenseMoney(result.totalPaid)}
+              tone="expense"
             />
           </div>
           <div className="table-scroll finance-table">
@@ -213,11 +228,9 @@ export function FinanceTables({ state, setState, onSave, onExportDrive }) {
                     <td>{row.period}</td>
                     <td>{formatDate(row.date)}</td>
                     <td>{money.format(row.openingBalance)}</td>
-                    <td>{money.format(row.payment)}</td>
-                    <td className="negative">{money.format(row.interest)}</td>
-                    <td className="positive">
-                      {money.format(row.amortization)}
-                    </td>
+                    <td className="negative">{expenseMoney(row.payment)}</td>
+                    <td className="negative">{expenseMoney(row.interest)}</td>
+                    <td>{money.format(row.amortization)}</td>
                     <td>{money.format(row.balance)}</td>
                   </tr>
                 ))}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { authCookie, createToken, getSession } from "@/lib/auth";
+import { getSession, revokeSession } from "@/lib/auth";
+import { appendAuditEvent } from "@/lib/db";
 import { guardMutation } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
@@ -8,10 +9,11 @@ export async function GET(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  const response = NextResponse.json({ user });
-  // Renova cookies antigos com a política compatível com o retorno OAuth.
-  response.cookies.set("finsight_token", await createToken(user), authCookie);
-  return response;
+  const { sessionHash: _sessionHash, ...safeUser } = user;
+  return NextResponse.json(
+    { user: safeUser },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function DELETE(request) {
@@ -19,6 +21,11 @@ export async function DELETE(request) {
   if (blocked) return blocked;
   const limited = await enforceRateLimit(request, { scope: "session", limit: 30 });
   if (limited) return limited;
+  const session = await getSession(request);
+  if (session) {
+    await revokeSession(session);
+    await appendAuditEvent({ userId: session.id, action: "session.revoked" });
+  }
   const response = NextResponse.json({ ok: true });
   response.cookies.set("finsight_token", "", { httpOnly: true, path: "/", maxAge: 0 });
   return response;

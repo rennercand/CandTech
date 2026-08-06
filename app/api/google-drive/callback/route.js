@@ -1,4 +1,5 @@
 import { saveGoogleDriveConnection } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import {
   encryptDriveToken,
   exchangeAuthorizationCode,
@@ -26,10 +27,14 @@ export async function GET(request) {
 
   try {
     const verified = await verifyDriveState(state);
+    const session = await getSession(request);
     const callbackUri = `${url.origin}${url.pathname}`;
-    // O state foi assinado pelo servidor, expira em 10 minutos e contém o usuário.
-    // Assim o retorno OAuth não depende de cookies bloqueados na navegação do Google.
-    if (verified.redirectUri !== callbackUri) {
+    // O state assinado expira em 10 minutos; o callback também exige a mesma
+    // sessão iniciadora, evitando associar o Drive à conta errada.
+    if (
+      verified.redirectUri !== callbackUri || !session ||
+      session.id !== verified.userId || session.sessionHash !== verified.sessionHash
+    ) {
       return finish(request, "state-error");
     }
     const refreshToken = await exchangeAuthorizationCode({

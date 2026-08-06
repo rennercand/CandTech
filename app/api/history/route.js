@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { createHistory, listHistories, serializeHistory } from "@/lib/db";
-import { guardMutation } from "@/lib/request-security";
+import { listHistories, MAX_DOCUMENTS_PER_USER, saveHistory, serializeHistory } from "@/lib/db";
+import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -34,22 +34,37 @@ export async function POST(request) {
   }
 
   try {
-    const { title, calculationType, payload } = await request.json();
+    const { id, title, calculationType, payload } = await readLimitedJson(request, {
+      maxBytes: 512_000, maxDepth: 12, maxNodes: 12_000, maxStringLength: 20_000,
+    });
+    const safeId = Number(id);
     const safeTitle = String(title || "").trim().slice(0, 100);
     const safeType = String(calculationType || "").trim().slice(0, 50);
     if (!safeTitle || !safeType || !payload || JSON.stringify(payload).length > 500_000) {
       return NextResponse.json({ error: "Histórico inválido ou muito grande." }, { status: 400 });
     }
 
-    // Salva e devolve o registro criado por meio da camada de banco.
-    const item = await createHistory({
+    // Com um ID ativo, salvar atualiza o mesmo documento em vez de criar cópias no histórico.
+    const saved = await saveHistory({
+      id: Number.isInteger(safeId) && safeId > 0 ? safeId : null,
       userId: user.id,
       title: safeTitle,
       calculationType: safeType,
       payload,
     });
-    return NextResponse.json({ item: serializeHistory(item) }, { status: 201 });
+    return NextResponse.json(
+      { item: serializeHistory(saved.item), created: saved.created, limit: MAX_DOCUMENTS_PER_USER },
+      { status: saved.created ? 201 : 200 },
+    );
   } catch (error) {
+    const bodyError = requestBodyErrorResponse(error);
+    if (bodyError) return bodyError;
+    if (error?.code === "DOCUMENT_LIMIT_REACHED") {
+      return NextResponse.json(
+        { error: `Você atingiu o limite de ${MAX_DOCUMENTS_PER_USER} documentos. Exclua um documento antigo para criar outro.` },
+        { status: 409 },
+      );
+    }
     console.error("Falha ao salvar histórico", error);
     return NextResponse.json({ error: "Não foi possível salvar o histórico." }, { status: 500 });
   }

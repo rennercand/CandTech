@@ -105,11 +105,40 @@ test("CSV e XLSX apresentam total gasto ao final da seção", () => {
       ],
     },
   };
-  assert.match(historyCsv(item), /"Total gasto";1000/);
+  assert.match(historyCsv(item), /"Total gasto";-1000/);
   const files = unzipSync(new Uint8Array(historyXlsx(item)));
   const sheet = strFromU8(files["xl/worksheets/sheet1.xml"]);
   const workbook = strFromU8(files["xl/workbook.xml"]);
   assert.match(sheet, /Total gasto/);
   assert.match(sheet, /SUMIF/);
   assert.match(workbook, /name="CandTech"/);
+});
+
+test("XLSX detalha itens, múltiplos financiamentos e resumo financeiro", () => {
+  const first = calculateAmortization({ principal: 10_000, rate: 2, periods: 12, startDate: "2026-01-10", system: "PRICE" });
+  const item = {
+    id: 2,
+    title: "Documento empresarial",
+    calculation_type: "tabela-financeira",
+    created_at: "2026-08-05T00:00:00.000Z",
+    payload: {
+      financialTables: [
+        { id: "estoque", state: { system: "PRICE", form: { description: "Estoque SKU-A", principal: 10_000, rate: 2, periods: 12 } }, result: first },
+        { id: "equipamento", state: { system: "SAC", form: { description: "Máquina de corte", principal: 5_000, rate: 1.5, periods: 6, startDate: "2026-02-10" } } },
+      ],
+      workspace: {
+        inventoryState: { products: [{ name: "Produto A", sku: "SKU-A", quantity: 25, minimum: 5, unitCost: 40, location: "A1" }] },
+        commerceOrders: [], cashEntries: [], pricingState: { expenses: [] }, savedFinancings: [],
+      },
+    },
+  };
+  const files = unzipSync(new Uint8Array(historyXlsx(item)));
+  const sheet = strFromU8(files["xl/worksheets/sheet1.xml"]);
+  assert.match(sheet, /Resumo dos financiamentos/);
+  assert.match(sheet, /Estoque SKU-A/);
+  assert.match(sheet, /Máquina de corte/);
+  assert.match(sheet, /Quantidade total de itens/);
+  assert.match(sheet, /Total de juros/);
+  assert.match(sheet, /Total pago em financiamentos/);
+  assert.match(sheet, /Resumo final/);
 });

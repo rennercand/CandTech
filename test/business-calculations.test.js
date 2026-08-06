@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  ordersFromCashEntries,
   summarizeAccounts,
   summarizeInventory,
   summarizeOrders,
@@ -36,4 +37,16 @@ test("pedidos cancelados não entram nos totais comerciais", () => {
   assert.equal(result.purchases, 300);
   assert.equal(result.balance, 700);
   assert.equal(result.suppliers.size, 2);
+});
+
+test("extrato sugere vendas e compras editáveis sem duplicar lançamentos", () => {
+  const entries = [
+    { date: "2026-08-01", type: "entrada", amount: 150, description: "PIX Cliente A" },
+    { date: "2026-08-02", type: "saida", amount: 80, description: "PIX Fornecedor B" },
+  ];
+  const suggestions = ordersFromCashEntries(entries, []);
+  assert.equal(suggestions[0].type, "venda");
+  assert.equal(suggestions[1].type, "compra");
+  assert.equal(suggestions[0].status, "rascunho");
+  assert.equal(ordersFromCashEntries(entries, [suggestions[0]]).length, 1);
 });

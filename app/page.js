@@ -86,6 +86,8 @@ const emptyFinanceState = () => ({
 });
 
 const emptyPricingState = () => ({
+  productName: "",
+  sku: "",
   expenses: [{ name: "", amount: "" }],
   units: "",
   margin: "",
@@ -1145,10 +1147,16 @@ export default function Page() {
       pricing: {
         filename: "preco-produto.csv", title: "Preço do produto",
         rows: [
+          { item: "Produto", valor: pricingState.productName || "Não informado" },
+          { item: "SKU / código", valor: pricingState.sku || "Não informado" },
           ...pricingState.expenses.map((expense) => ({ item: expense.name, valor: -Math.abs(Number(expense.amount) || 0) })),
+          { item: "Quantidade produzida", valor: pricingResult.quantity },
+          { item: "Custo total do produto", valor: pricingResult.totalCost },
           { item: "Custo unitário", valor: pricingResult.unitCost },
+          { item: "Margem de lucro (%)", valor: Number(pricingState.margin) || 0 },
           { item: "Preço unitário", valor: pricingResult.unitPrice },
           { item: "Lucro unitário", valor: pricingResult.unitProfit },
+          { item: "Faturamento esperado", valor: pricingResult.expectedRevenue },
         ], totalSpent: -Math.abs(pricingResult.totalCost),
       },
       cashflow: {

@@ -247,7 +247,7 @@ const blankExpense = () => ({ name: "", amount: "" });
 
 export function ProductPricing({ state, setState, onSave }) {
   // Manter estes campos no componente pai permite restaurá-los após um novo login.
-  const { expenses, units, margin } = state;
+  const { productName = "", sku = "", expenses, units, margin } = state;
   const setExpenses = (value) =>
     setState((current) => ({
       ...current,
@@ -287,6 +287,25 @@ export function ProductPricing({ state, setState, onSave }) {
           >
             + Despesa
           </button>
+        </div>
+        {/* Estes dados identificam claramente o custo na planilha exportada. */}
+        <div className="field-grid product-identity-grid">
+          <label>
+            Produto
+            <input
+              placeholder="Ex.: Camiseta premium"
+              value={productName}
+              onChange={(event) => setState((current) => ({ ...current, productName: event.target.value }))}
+            />
+          </label>
+          <label>
+            SKU / código
+            <input
+              placeholder="Ex.: CAM-PRE-01"
+              value={sku}
+              onChange={(event) => setState((current) => ({ ...current, sku: event.target.value }))}
+            />
+          </label>
         </div>
         <div className="expense-list">
           {expenses.map((expense, index) => (

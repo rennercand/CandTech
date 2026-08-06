@@ -1940,7 +1940,7 @@ select:focus {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 5px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 9px;
   padding-left: 10px;
   background: #fff;
@@ -2088,5 +2088,328 @@ select:focus {
   .operations-panel .panel-heading button { width: 100%; }
   .operation-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/*
+ * Responsividade global: impede estouros horizontais e mantém todas as ações
+ * acessíveis por toque, inclusive em aparelhos estreitos e com área segura.
+ */
+body {
+  overflow-x: hidden;
+}
+
+.app-shell,
+.content,
+.content > *,
+.tool-stack,
+.business-stack,
+.operations-panel,
+.panel-heading > div,
+.history-item > div {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  html {
+    scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  body {
+    background: #f7f7fa;
+  }
+
+  .sidebar {
+    height: calc(76px + env(safe-area-inset-bottom));
+    padding-inline: 8px;
+  }
+
+  /* Reforça a prioridade móvel após os estilos dos módulos operacionais. */
+  .sidebar > .brand,
+  .sidebar > .workspace,
+  .sidebar > .sidebar-subscribe,
+  .sidebar > .sidebar-bottom {
+    display: none;
+  }
+
+  .sidebar nav {
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    scroll-snap-type: x proximity;
+    touch-action: pan-x;
+  }
+
+  .nav-link {
+    min-width: 68px;
+    scroll-snap-align: center;
+  }
+
+  .content {
+    min-width: 0;
+    padding: 18px 12px calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .content > header {
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 12px;
+  }
+
+  .date-tag {
+    align-self: center;
+    text-align: right;
+  }
+
+  .context-export-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) repeat(2, minmax(0, 0.75fr));
+    width: 100%;
+  }
+
+  .context-export-actions button,
+  .history-heading-actions > *,
+  .history-actions > *,
+  .module-actions > *,
+  .save-actions > * {
+    min-width: 0;
+  }
+
+  .panel,
+  .stat-card {
+    border-radius: 14px;
+  }
+
+  .panel-heading {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .panel-heading > button,
+  .panel-heading > .module-actions,
+  .finance-intro .module-toolbar {
+    width: 100%;
+  }
+
+  .module-toolbar {
+    justify-content: stretch;
+  }
+
+  .module-actions,
+  .save-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .module-actions button,
+  .module-actions .file-button,
+  .save-actions button,
+  .save-actions .file-button {
+    width: 100%;
+  }
+
+  input,
+  select,
+  textarea {
+    /* Evita o zoom automático do Safari ao focar campos pequenos. */
+    font-size: 16px;
+  }
+
+  .calculator-grid,
+  .dashboard-grid,
+  .finance-grid,
+  .product-grid,
+  .organization-visuals {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-scroll,
+  .finance-table,
+  .fc-chart-scroll {
+    width: 100%;
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .table-scroll {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .table-scroll table {
+    min-width: 680px;
+  }
+
+  .finance-table table {
+    min-width: 780px;
+  }
+
+  .table-scroll th,
+  .table-scroll td {
+    padding: 9px 8px;
+  }
+
+  .fc-chart-scroll {
+    min-height: 230px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fc-tooltip {
+    top: 2px;
+  }
+
+  .history-panel {
+    max-width: 100%;
+  }
+
+  .history-item {
+    gap: 13px;
+  }
+
+  .history-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .history-actions button,
+  .history-actions a,
+  .history-actions details,
+  .history-actions summary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .export-options-menu {
+    position: fixed;
+    inset: auto 12px calc(88px + env(safe-area-inset-bottom)) 12px;
+    width: auto;
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+  }
+
+  .export-checks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .export-checks label {
+    min-width: 0;
+  }
+
+  .inventory-product-card {
+    padding: 15px;
+  }
+
+  .inventory-card-heading,
+  .inventory-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .inventory-card-footer .remove-row {
+    align-self: flex-end;
+  }
+
+  .row-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    width: 100%;
+  }
+
+  .row-actions .secondary-button {
+    width: 100%;
+  }
+
+  .notice {
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 440px) {
+  .content {
+    padding-inline: 10px;
+  }
+
+  .content h1 {
+    font-size: 22px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .home-welcome {
+    padding: 20px;
+  }
+
+  .header-actions,
+  .context-export-actions,
+  .module-actions,
+  .save-actions,
+  .export-checks,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .date-tag {
+    text-align: left;
+  }
+
+  .context-export-actions {
+    grid-column: auto;
+  }
+
+  .expense-row {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .expense-row input:first-child,
+  .expense-row input:nth-child(2) {
+    grid-column: 1;
+  }
+
+  .expense-row .remove-row {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 44px;
+  }
+
+  .unit-price {
+    padding: 18px;
+  }
+
+  .unit-price strong,
+  .result-emphasis strong {
+    overflow-wrap: anywhere;
+  }
+
+  .history-actions,
+  .stats-grid,
+  .stats-grid.three,
+  .mini-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .table-scroll table {
+    min-width: 620px;
+  }
+
+  .auth-product-visual {
+    height: 116px;
+  }
+
+  .auth-mobile-brand.brand {
+    margin-bottom: 28px;
   }
 }

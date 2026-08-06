@@ -142,3 +142,35 @@ test("XLSX detalha itens, múltiplos financiamentos e resumo financeiro", () => 
   assert.match(sheet, /Total pago em financiamentos/);
   assert.match(sheet, /Resumo final/);
 });
+
+test("CSV e XLSX identificam o produto e detalham seu custo", () => {
+  const pricingState = {
+    productName: "Camiseta premium",
+    sku: "CAM-PRE-01",
+    expenses: [{ name: "Tecido", amount: 600 }, { name: "Embalagem", amount: 400 }],
+    units: 100,
+    margin: 20,
+  };
+  const pricingResult = calculateProductPrice(pricingState);
+  const item = {
+    id: 3,
+    title: "Preço do produto",
+    calculation_type: "preco-produto",
+    created_at: "2026-08-06T00:00:00.000Z",
+    payload: { pricingState, pricingResult },
+  };
+
+  const csv = historyCsv(item);
+  assert.match(csv, /Custo e preço do produto/);
+  assert.match(csv, /Camiseta premium/);
+  assert.match(csv, /CAM-PRE-01/);
+  assert.match(csv, /Custo unitário/);
+
+  const files = unzipSync(new Uint8Array(historyXlsx(item)));
+  const sheet = strFromU8(files["xl/worksheets/sheet1.xml"]);
+  assert.match(sheet, /Custo e preço do produto/);
+  assert.match(sheet, /Camiseta premium/);
+  assert.match(sheet, /CAM-PRE-01/);
+  assert.match(sheet, /Custo total do produto calculado/);
+  assert.match(sheet, /Custo unitário do produto/);
+});

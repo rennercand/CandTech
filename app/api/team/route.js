@@ -58,6 +58,8 @@ export async function POST(request) {
     const input = await readLimitedJson(request, { maxBytes: 8_192, maxDepth: 3, maxNodes: 50, maxStringLength: 254 });
     const email = String(input.email || "").trim().toLowerCase();
     const role = normalizeRole(input.role);
+    // Cargo profissional é apenas descritivo; o nível e as permissões controlam o acesso real.
+    const jobTitle = String(input.jobTitle || "").trim().slice(0, 80);
     const permissions = normalizePermissions(input.permissions, role);
     if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254 || email === String(context.user.email).toLowerCase()) {
       return NextResponse.json({ error: "Informe o e-mail de outra pessoa da equipe." }, { status: 400 });
@@ -65,7 +67,7 @@ export async function POST(request) {
     const token = randomBytes(32).toString("base64url");
     const invitation = await createOrganizationInvitation({
       organizationId: context.access.organizationId,
-      email, role, permissions, tokenHash: hashToken(token), invitedBy: context.user.id,
+      email, role, jobTitle, permissions, tokenHash: hashToken(token), invitedBy: context.user.id,
       expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1_000),
     });
     // O token fica no fragmento: navegadores não o enviam em logs HTTP nem no cabeçalho Referer.
@@ -107,6 +109,7 @@ export async function PATCH(request) {
       organizationId: context.access.organizationId,
       userId,
       role: normalizeRole(input.role),
+      jobTitle: String(input.jobTitle || "").trim().slice(0, 80),
       permissions: normalizePermissions(input.permissions, input.role),
       status: input.status,
     });

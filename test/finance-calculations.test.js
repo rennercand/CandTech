@@ -238,6 +238,7 @@ test("convite empresarial vincula o funcionário sem transferir a propriedade", 
       organizationId: organization.organizationId,
       email: employee.email,
       role: "attendant",
+      jobTitle: "Estoquista",
       permissions: ["inventory", "commerce"],
       tokenHash: "a".repeat(64),
       invitedBy: owner.id,
@@ -247,9 +248,12 @@ test("convite empresarial vincula o funcionário sem transferir a propriedade", 
     const access = await acceptOrganizationInvitation({ tokenHash: "a".repeat(64), userId: employee.id, email: employee.email });
     assert.equal(access.ownerUserId, owner.id);
     assert.equal(access.role, "attendant");
+    assert.equal(access.jobTitle, "Estoquista");
     assert.deepEqual(access.permissions, ["inventory", "commerce"]);
     assert.equal((await findOrganizationAccess(owner.id)).role, "owner");
-    assert.equal((await listOrganizationTeam(organization.organizationId)).members.length, 2);
+    const team = await listOrganizationTeam(organization.organizationId);
+    assert.equal(team.members.length, 2);
+    assert.equal(team.members.find((member) => member.id === employee.id).job_title, "Estoquista");
   } finally {
     await closeDatabaseForTests();
     process.chdir(previousCwd);

@@ -2438,6 +2438,15 @@ body {
 .team-owner-note { margin: 14px 0 0 52px; color: var(--muted); }
 .team-role-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0 14px; }
 .team-member-card .module-actions { justify-content: flex-end; margin-top: 16px; }
+.team-owner-panel { background: linear-gradient(135deg, #ffffff 0%, #f5f2ff 100%); }
+.team-owner-summary { display: grid; grid-template-columns: auto minmax(180px, 1fr) minmax(240px, auto); align-items: center; gap: 14px; margin-top: 18px; padding: 16px; border: 1px solid #ddd5ff; border-radius: 14px; background: rgba(255,255,255,.82); }
+.team-owner-summary > div { display: grid; gap: 4px; }
+.team-owner-summary small { color: var(--muted); }
+.team-owner-badges { justify-items: end; text-align: right; }
+.team-owner-badges > span { color: #573dd2; font-weight: 850; }
+.empty-team-state { padding: 24px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; color: var(--muted); background: #fbfaff; }
+.empty-team-state strong { color: var(--text); }
+.empty-team-state p { margin: 7px 0 0; }
 .danger-button, .text-button.danger { color: #b4233a; }
 .pending-invites { display: grid; gap: 10px; }
 .pending-invites > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
@@ -2449,6 +2458,8 @@ body {
   .team-permissions { grid-template-columns: 1fr 1fr; }
   .team-invite-link, .pending-invites > div { align-items: stretch; flex-direction: column; }
   .team-member-card .module-actions { grid-template-columns: 1fr; }
+  .team-owner-summary { grid-template-columns: auto 1fr; }
+  .team-owner-badges { grid-column: 1 / -1; justify-items: start; text-align: left; }
 }
 
 @media (max-width: 440px) {

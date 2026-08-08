@@ -1425,7 +1425,7 @@ export default function Page() {
         <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
         <nav aria-label="Navegação principal">
           {[
-            ["home", "Início", "⌂"],
+            ["home", "Documentos", "⌂"],
             ...(canAccess("dashboard") ? [["dashboard", "Visão geral", "◈"]] : []),
             ...(canAccess("calculator") ? [["calculator", "Calculadoras", "⌁"]] : []),
             ...(canAccess("financing") ? [["financing", "Tabela financeira", "▦"]] : []),
@@ -1433,7 +1433,7 @@ export default function Page() {
             ...(canAccess("cashflow") ? [["cashflow", "Financeiro", "▤"]] : []),
             ...(canAccess("inventory") ? [["inventory", "Estoque e logística", "▣"]] : []),
             ...(canAccess("commerce") ? [["commerce", "Vendas e compras", "⇄"]] : []),
-            ...(user.access?.role === "owner" ? [["team", "Equipe e acessos", "♙"]] : []),
+            ...(user.access?.role === "owner" ? [["team", "Empresa e acessos", "♙"]] : []),
             ...(isAdministrator ? [["admin", "Moderação", "◉"]] : []),
             ...(canAccess("history") ? [["history", "Histórico", "◷"]] : []),
           ].map(([id, label, icon]) => (
@@ -1496,7 +1496,7 @@ export default function Page() {
                             : view === "admin"
                               ? "Moderação do sistema"
                               : view === "team"
-                                ? "Equipe e acessos"
+                                ? "Empresa e acessos"
                             : "Histórico salvo"}
             </h1>
           </div>

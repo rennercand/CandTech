@@ -9,6 +9,7 @@ import { calculateAmortization, calculateProductPrice } from "../lib/finance-cal
 import { historyCsv } from "../lib/history-csv.js";
 import { historyXlsx } from "../lib/history-xlsx.js";
 import { calculateInvestment } from "../lib/investment-calculations.js";
+import { hasMeaningfulWorkspaceContent } from "../lib/workspace-content.js";
 import {
   filterHistoryForAccess,
   filterWorkspaceForAccess,
@@ -23,10 +24,16 @@ import {
   ensureOwnedOrganization,
   findOrganizationAccess,
   listOrganizationTeam,
+  saveWorkspace,
 } from "../lib/db.js";
 
 const closeTo = (actual, expected, tolerance = 0.01) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} deveria ser próximo de ${expected}`);
+
+test("workspace vazio não é confundido com dados financeiros", () => {
+  assert.equal(hasMeaningfulWorkspaceContent({}), false);
+  assert.equal(hasMeaningfulWorkspaceContent({ cashEntries: [{ description: "Venda", amount: 10 }] }), true);
+});
 
 test("VPL coincide com o exemplo de referência do Excel", () => {
   const result = calculateInvestment({
@@ -254,6 +261,40 @@ test("convite empresarial vincula o funcionário sem transferir a propriedade", 
     const team = await listOrganizationTeam(organization.organizationId);
     assert.equal(team.members.length, 2);
     assert.equal(team.members.find((member) => member.id === employee.id).job_title, "Estoquista");
+  } finally {
+    await closeDatabaseForTests();
+    process.chdir(previousCwd);
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousEnvironment;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("conta empresarial existente só migra para uma equipe quando seu espaço automático está vazio", async () => {
+  const previousCwd = process.cwd();
+  const previousEnvironment = process.env.NODE_ENV;
+  const directory = mkdtempSync(join(tmpdir(), "candtech-existing-team-"));
+  process.chdir(directory);
+  process.env.NODE_ENV = "test";
+  try {
+    const owner = await createUser({ name: "Empresa principal", email: "principal@empresa.test", passwordHash: "hash", accountType: "company" });
+    const existing = await createUser({ name: "Conta empresarial vazia", email: "vazia@empresa.test", passwordHash: "hash", accountType: "company" });
+    const organization = await ensureOwnedOrganization({ userId: owner.id, name: "Operação principal" });
+    await ensureOwnedOrganization({ userId: existing.id, name: "Espaço automático vazio" });
+    await createOrganizationInvitation({ organizationId: organization.organizationId, email: existing.email, role: "manager", jobTitle: "Gerente", permissions: ["dashboard"], tokenHash: "b".repeat(64), invitedBy: owner.id, expiresAt: new Date(Date.now() + 60_000) });
+    const migrated = await acceptOrganizationInvitation({ tokenHash: "b".repeat(64), userId: existing.id, email: existing.email });
+    assert.equal(migrated.organizationId, organization.organizationId);
+    assert.equal(migrated.role, "manager");
+
+    const protectedAccount = await createUser({ name: "Empresa com dados", email: "dados@empresa.test", passwordHash: "hash", accountType: "company" });
+    await ensureOwnedOrganization({ userId: protectedAccount.id, name: "Empresa com dados" });
+    await saveWorkspace({ userId: protectedAccount.id, payload: { cashEntries: [{ description: "Venda existente", amount: 100, type: "entrada" }] } });
+    await createOrganizationInvitation({ organizationId: organization.organizationId, email: protectedAccount.email, role: "attendant", permissions: ["commerce"], tokenHash: "c".repeat(64), invitedBy: owner.id, expiresAt: new Date(Date.now() + 60_000) });
+    await assert.rejects(
+      acceptOrganizationInvitation({ tokenHash: "c".repeat(64), userId: protectedAccount.id, email: protectedAccount.email }),
+      (error) => error.code === "OWNED_ORGANIZATION_NOT_EMPTY",
+    );
+    assert.equal((await findOrganizationAccess(protectedAccount.id)).role, "owner");
   } finally {
     await closeDatabaseForTests();
     process.chdir(previousCwd);

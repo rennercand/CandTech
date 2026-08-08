@@ -61,6 +61,12 @@ export async function POST(request) {
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
+    if (error?.code === "OWNED_ORGANIZATION_NOT_EMPTY") {
+      return NextResponse.json({ error: "Esta conta já possui uma empresa com dados, equipe ou assinatura. Para não misturar informações, aceite o convite com uma conta pessoal de colaborador." }, { status: 409 });
+    }
+    if (error?.code === "ACCOUNT_ALREADY_IN_ORGANIZATION") {
+      return NextResponse.json({ error: "Esta conta já pertence a outra equipe. Remova o acesso anterior antes de aceitar um novo convite." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Não foi possível aceitar o convite." }, { status: 500 });
   }
 }

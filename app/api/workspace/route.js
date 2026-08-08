@@ -9,38 +9,11 @@ import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterWorkspaceForAccess, hasPermission, mergeWorkspaceForAccess } from "@/lib/team-permissions";
+import { hasMeaningfulWorkspaceContent } from "@/lib/workspace-content";
 
 export const runtime = "nodejs";
 
 const MAX_WORKSPACE_SIZE = 500_000;
-
-function hasMeaningfulContent(payload) {
-  // Evita criar um item de histórico quando a pessoa apenas abriu e fechou o site.
-  const inputs = payload?.inputs || {};
-  const hasCalculation =
-    Number(inputs.investment) !== 0 ||
-    Number(inputs.rate) !== 0 ||
-    Number(inputs.periods) > 0 ||
-    (inputs.flows || []).some((flow) => Number(flow?.amount ?? flow) !== 0);
-  const hasOrganization = (payload?.cashEntries || []).some(
-    (entry) => String(entry?.description || "").trim() || Number(entry?.amount) !== 0,
-  );
-  const hasFinancialTable =
-    Number(payload?.financeState?.form?.principal) > 0 &&
-    Number(payload?.financeState?.form?.periods) > 0;
-  const hasAccounts = (payload?.financialAccounts || []).some(
-    (item) => String(item?.description || item?.party || "").trim() || Number(item?.amount) !== 0,
-  );
-  const hasInventory = (payload?.inventoryState?.products || []).some(
-    (item) => String(item?.name || item?.sku || "").trim() || Number(item?.quantity) !== 0,
-  ) || (payload?.inventoryState?.deliveries || []).some(
-    (item) => String(item?.description || item?.tracking || "").trim(),
-  );
-  const hasCommerce = (payload?.commerceOrders || []).some(
-    (item) => String(item?.number || item?.partner || "").trim() || Number(item?.amount) !== 0,
-  );
-  return hasCalculation || hasOrganization || hasFinancialTable || hasAccounts || hasInventory || hasCommerce;
-}
 
 function validPayload(payload) {
   return payload && typeof payload === "object" && JSON.stringify(payload).length <= MAX_WORKSPACE_SIZE;
@@ -68,7 +41,7 @@ export async function GET(request) {
     workspace &&
     hasPermission(access, "history") &&
     workspace.revision > workspace.archived_revision &&
-    hasMeaningfulContent(workspace.payload)
+    hasMeaningfulWorkspaceContent(workspace.payload)
   ) {
     await archiveWorkspace({ userId: access.ownerUserId, title: automaticTitle() });
     workspace = await getWorkspace(access.ownerUserId);
@@ -128,7 +101,7 @@ export async function POST(request) {
     const current = await getWorkspace(access.ownerUserId);
     const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
     await saveWorkspace({ userId: access.ownerUserId, payload: merged });
-    if (!hasMeaningfulContent(merged)) {
+    if (!hasMeaningfulWorkspaceContent(merged)) {
       // Marca o estado vazio como tratado para não tentar arquivá-lo em toda saída.
       await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: true });
       return NextResponse.json({ archived: false });

@@ -21,7 +21,7 @@ export const emptyInventoryState = () => ({
 });
 export const emptyCommerceOrder = () => ({
   id: "", type: "venda", number: "", partner: "", document: "", contact: "", description: "", date: "",
-  dueDate: "", amount: "", sku: "", quantity: "", status: "rascunho",
+  dueDate: "", amount: "", productId: "", productName: "", sku: "", quantity: "", status: "rascunho",
 });
 
 function Summary({ items }) {
@@ -129,22 +129,48 @@ export function InventoryLogistics({ state, setState }) {
   </div>;
 }
 
-export function SalesPurchases({ orders, setOrders, issuer, setIssuer, onStatusChange, onTestInvoice, onSuggestFromCash }) {
+export function SalesPurchases({ orders, setOrders, products = [], issuer, setIssuer, onStatusChange, onTestInvoice, onSuggestFromCash }) {
   const summary = useMemo(() => summarizeOrders(orders), [orders]);
   const update = (index, field, value) => setOrders((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
+  const availableProducts = products.map((product, index) => ({ ...product, productIndex: index })).filter((product) => product.name || product.sku);
+  const selectProduct = (orderIndex, selectedIndex) => {
+    const product = products[Number(selectedIndex)];
+    if (!product) return;
+    setOrders((current) => current.map((order, index) => index === orderIndex ? {
+      ...order, productId: product.id || "", productName: product.name || "", sku: product.sku || "", description: product.name || order.description,
+    } : order));
+  };
+  function guardPostedRemoval(event) {
+    if (!event.target.closest(".remove-row")) return;
+    const orderIndex = Number(event.target.closest(".order-row")?.dataset.orderIndex);
+    const order = orders[orderIndex];
+    const hasActivePosting = order && ((order.stockUpdatedAt && !order.stockReversedAt) || (order.financePostedAt && !order.financeReversedAt));
+    if (!hasActivePosting) return;
+    // Primeiro cancela para estornar estoque e caixa; depois a exclusão fica liberada.
+    event.preventDefault();
+    event.stopPropagation();
+    alert("Cancele o pedido para desfazer os movimentos do estoque e do caixa antes de excluí-lo.");
+  }
   return <div className="business-stack"><Summary items={[
     { label: "Pedidos de venda", value: signedMoney(summary.sales, "entrada"), tone: "positive", caption: "Exceto pedidos cancelados" },
     { label: "Pedidos de compra", value: signedMoney(summary.purchases, "saida"), tone: "negative", caption: "Exceto pedidos cancelados" },
     { label: "Saldo dos pedidos", value: `${summary.balance >= 0 ? "+" : "-"}${money.format(Math.abs(summary.balance))}`, tone: summary.balance >= 0 ? "positive" : "negative", caption: "Vendas menos compras" },
     { label: "Fornecedores", value: summary.suppliers.size, caption: `${summary.overdue} pedidos vencidos` },
   ]} />
+  <section className="panel commerce-stock-panel"><div className="panel-heading"><div><span className="eyebrow">ESTOQUE CONECTADO</span><h2>Produtos disponíveis para os pedidos</h2><p>Selecione um produto no pedido. Venda concluída reduz o saldo; compra concluída aumenta.</p></div></div>
+    {availableProducts.length ? <div className="commerce-stock-grid">{availableProducts.slice(0, 12).map((product) => {
+      const quantity = Number(product.quantity) || 0;
+      const minimum = Number(product.minimum) || 0;
+      return <article className={quantity <= 0 ? "out" : quantity <= minimum ? "low" : "ok"} key={product.id || `${product.sku}-${product.productIndex}`}><div><strong>{product.name || product.sku}</strong><small>{product.sku ? `SKU ${product.sku}` : "Sem SKU"}</small></div><span>{quantity} un.</span></article>;
+    })}</div> : <p className="empty-state">Cadastre produtos em Estoque e logística para vinculá-los aos pedidos.</p>}
+  </section>
   <section className="panel operations-panel issuer-panel"><div className="panel-heading"><div><span className="eyebrow">DOCUMENTO COMERCIAL</span><h2>Dados do emitente</h2><p>Usados na pré-nota em PDF. A emissão fiscal oficial exigirá integração com SEFAZ/provedor.</p></div></div><div className="issuer-grid"><Field label="Razão social / nome"><input value={issuer.legalName} onChange={(e) => setIssuer((current) => ({ ...current, legalName: e.target.value }))} /></Field><Field label="CNPJ / CPF"><input value={issuer.document} onChange={(e) => setIssuer((current) => ({ ...current, document: e.target.value }))} /></Field><Field label="Inscrição estadual"><input value={issuer.stateRegistration} onChange={(e) => setIssuer((current) => ({ ...current, stateRegistration: e.target.value }))} /></Field><Field label="Endereço"><input value={issuer.address} onChange={(e) => setIssuer((current) => ({ ...current, address: e.target.value }))} /></Field><Field label="Cidade"><input value={issuer.city} onChange={(e) => setIssuer((current) => ({ ...current, city: e.target.value }))} /></Field><Field label="UF"><input maxLength="2" value={issuer.state} onChange={(e) => setIssuer((current) => ({ ...current, state: e.target.value.toUpperCase() }))} /></Field></div></section>
   <section className="panel operations-panel"><div className="panel-heading"><div><span className="eyebrow">COMERCIAL</span><h2>Pedidos, clientes e fornecedores</h2><p>Contato e situação do pedido ficam juntos para facilitar o acompanhamento.</p></div><div className="module-actions"><button className="secondary-button" onClick={onSuggestFromCash}>Gerar rascunhos do extrato</button><button className="primary-button" onClick={() => setOrders((current) => [...current, { ...emptyCommerceOrder(), id: newId() }])}>+ Novo pedido</button></div></div>
-    <div className="operation-list">{orders.map((order, index) => <article className="operation-row order-row" key={order.id || `order-${index}`}>
-      <Field label="Tipo"><select value={order.type} onChange={(e) => update(index, "type", e.target.value)}><option value="venda">Venda</option><option value="compra">Compra</option></select></Field><Field label="Pedido"><input value={order.number} onChange={(e) => update(index, "number", e.target.value)} placeholder="Nº ou referência" /></Field><Field label={order.type === "compra" ? "Fornecedor" : "Cliente"}><input value={order.partner} onChange={(e) => update(index, "partner", e.target.value)} /></Field><Field label="CPF / CNPJ"><input value={order.document || ""} onChange={(e) => update(index, "document", e.target.value)} /></Field><Field label="Contato"><input value={order.contact} onChange={(e) => update(index, "contact", e.target.value)} placeholder="E-mail ou telefone" /></Field><Field label="SKU"><input value={order.sku || ""} onChange={(e) => update(index, "sku", e.target.value)} placeholder="Código do produto" /></Field><Field label="Quantidade"><input type="number" min="0" value={order.quantity || ""} onChange={(e) => update(index, "quantity", e.target.value)} /></Field><Field label="Data"><input type="date" value={order.date} onChange={(e) => update(index, "date", e.target.value)} /></Field><Field label="Prazo"><input type="date" value={order.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field><Field label="Valor"><div className={`signed-amount-field ${order.type === "venda" ? "income" : "expense"}`}><span>{order.type === "venda" ? "+" : "-"}</span><input type="number" min="0" step="0.01" value={order.amount} onChange={(e) => update(index, "amount", e.target.value)} /></div></Field><Field label="Status"><select value={order.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="rascunho">Rascunho</option><option value="confirmado">Confirmado</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></Field><div className="row-actions"><button className="secondary-button compact" onClick={() => onTestInvoice?.(order)} disabled={order.type !== "venda"}>Pré-nota PDF</button><button className="remove-row" onClick={() => setOrders((current) => current.filter((_, rowIndex) => rowIndex !== index))} aria-label="Excluir pedido">×</button></div>
+    <div className="operation-list" onClickCapture={guardPostedRemoval}>{orders.map((order, index) => <article className="operation-row order-row" data-order-index={index} key={order.id || `order-${index}`}>
+      <Field label="Tipo"><select value={order.type} disabled={Boolean(order.stockUpdatedAt && !order.stockReversedAt)} onChange={(e) => update(index, "type", e.target.value)}><option value="venda">Venda</option><option value="compra">Compra</option></select></Field><Field label="Pedido"><input value={order.number} onChange={(e) => update(index, "number", e.target.value)} placeholder="Nº ou referência" /></Field><Field label={order.type === "compra" ? "Fornecedor" : "Cliente"}><input value={order.partner} onChange={(e) => update(index, "partner", e.target.value)} /></Field><Field label="CPF / CNPJ"><input value={order.document || ""} onChange={(e) => update(index, "document", e.target.value)} /></Field><Field label="Contato"><input value={order.contact} onChange={(e) => update(index, "contact", e.target.value)} placeholder="E-mail ou telefone" /></Field><Field label="Produto do estoque"><select value={availableProducts.find((product) => (order.productId && product.id === order.productId) || (order.sku && product.sku === order.sku) || (order.productName && product.name === order.productName))?.productIndex ?? ""} disabled={Boolean(order.stockUpdatedAt && !order.stockReversedAt)} onChange={(e) => selectProduct(index, e.target.value)}><option value="">Selecione um produto</option>{availableProducts.map((product) => <option key={product.id || `${product.sku}-${product.productIndex}`} value={product.productIndex}>{product.name || product.sku} · {Number(product.quantity) || 0} un.</option>)}</select></Field><Field label="SKU"><input value={order.sku || ""} disabled={Boolean(order.stockUpdatedAt && !order.stockReversedAt)} onChange={(e) => update(index, "sku", e.target.value)} placeholder="Código do produto" /></Field><Field label="Quantidade"><input type="number" min="0" value={order.quantity || ""} disabled={Boolean(order.stockUpdatedAt && !order.stockReversedAt)} onChange={(e) => update(index, "quantity", e.target.value)} /></Field><Field label="Data"><input type="date" value={order.date} onChange={(e) => update(index, "date", e.target.value)} /></Field><Field label="Prazo"><input type="date" value={order.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field><Field label="Valor"><div className={`signed-amount-field ${order.type === "venda" ? "income" : "expense"}`}><span>{order.type === "venda" ? "+" : "-"}</span><input type="number" min="0" step="0.01" value={order.amount} disabled={Boolean(order.financePostedAt && !order.financeReversedAt)} onChange={(e) => update(index, "amount", e.target.value)} /></div></Field><Field label="Status"><select value={order.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="rascunho">Rascunho</option><option value="confirmado">Confirmado</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></Field><div className="row-actions"><button className="secondary-button compact" onClick={() => onTestInvoice?.(order)} disabled={order.type !== "venda"}>Pré-nota PDF</button><button className="remove-row" onClick={() => setOrders((current) => current.filter((_, rowIndex) => rowIndex !== index))} aria-label="Excluir pedido">×</button></div>
     </article>)}</div>
     {!orders.length && <p className="empty-state">Nenhum pedido cadastrado.</p>}
-    <p className="responsibility-note">Rascunhos criados pelo extrato continuam totalmente editáveis. A pré-nota em PDF não é NF-e, NFC-e nem DANFE e não possui validade fiscal.</p>
+    <p className="responsibility-note">Ao concluir, venda reduz o estoque e cria uma entrada; compra aumenta o estoque e cria uma saída. Campos já contabilizados ficam bloqueados para evitar lançamentos duplicados. A pré-nota em PDF não possui validade fiscal.</p>
   </section></div>;
 }
 

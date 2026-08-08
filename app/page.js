@@ -805,25 +805,73 @@ export default function Page() {
 
   function changeOrderStatus(index, nextStatus) {
     const order = commerceOrders[index];
-    if (!order || nextStatus !== "concluido" || order.status === "concluido") {
+    if (!order) return;
+    const postingKey = order.postingKey || order.id || `order-${Date.now()}-${index}`;
+    const findProductIndex = () => inventoryState.products.findIndex((product) =>
+      (order.productId && product.id && String(product.id) === String(order.productId)) ||
+      (order.sku && product.sku && product.sku.trim().toLowerCase() === String(order.sku).trim().toLowerCase()) ||
+      (order.productName && product.name && product.name.trim().toLowerCase() === String(order.productName).trim().toLowerCase()));
+
+    // Cancelar um pedido já lançado desfaz somente os movimentos criados por ele.
+    if (nextStatus === "cancelado" && ((order.stockUpdatedAt && !order.stockReversedAt) || (order.financePostedAt && !order.financeReversedAt))) {
+      const productIndex = findProductIndex();
+      if (order.stockUpdatedAt && !order.stockReversedAt && productIndex >= 0 && Number.isFinite(Number(order.stockDelta))) {
+        setInventoryState((current) => ({ ...current, products: current.products.map((item, itemIndex) => itemIndex === productIndex
+          ? { ...item, quantity: String((Number(item.quantity) || 0) - Number(order.stockDelta)) }
+          : item) }));
+      }
+      setCashEntries((current) => current.filter((entry) => entry.sourceOrderKey !== postingKey));
+      setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? {
+        ...item, status: "cancelado", postingKey,
+        stockReversedAt: item.stockUpdatedAt ? new Date().toISOString() : item.stockReversedAt,
+        financeReversedAt: item.financePostedAt ? new Date().toISOString() : item.financeReversedAt,
+      } : item));
+      setNotice("Pedido cancelado. Os movimentos automáticos identificados foram retirados do estoque e do caixa.");
+      return;
+    }
+    if (nextStatus !== "concluido" || order.status === "concluido") {
       setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus } : item));
       return;
     }
+    // Um pedido já contabilizado não pode movimentar o estoque duas vezes.
+    if (order.stockUpdatedAt && !order.stockReversedAt) {
+      setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus } : item));
+      setNotice("Pedido reaberto sem repetir a movimentação já registrada no estoque.");
+      return;
+    }
     const quantity = Number(order.quantity);
-    const productIndex = inventoryState.products.findIndex((product) => product.sku && product.sku.trim().toLowerCase() === String(order.sku || "").trim().toLowerCase());
+    const productIndex = findProductIndex();
+    let stockDelta = 0;
     if (!(quantity > 0) || productIndex < 0) {
-      if (!confirm("SKU ou quantidade não corresponde ao estoque. Concluir o pedido sem alterar o estoque?")) return;
+      if (!confirm("Produto ou quantidade não corresponde ao estoque. Concluir o pedido sem alterar o estoque?")) return;
     } else {
       const product = inventoryState.products[productIndex];
       const currentQuantity = Number(product.quantity) || 0;
-      const nextQuantity = order.type === "venda" ? currentQuantity - quantity : currentQuantity + quantity;
+      stockDelta = order.type === "venda" ? -quantity : quantity;
+      const nextQuantity = currentQuantity + stockDelta;
       const verb = order.type === "venda" ? "retirar" : "adicionar";
       const negativeWarning = nextQuantity < 0 ? ` Isso deixará o estoque em ${nextQuantity}.` : "";
-      if (!confirm(`Concluir o pedido e ${verb} ${quantity} unidade(s) do estoque de ${product.name || product.sku}?${negativeWarning}`)) return;
+      const financeMessage = Number(order.amount) > 0 ? ` O valor de ${money.format(Number(order.amount))} também será lançado no Financeiro.` : "";
+      if (!confirm(`Concluir o pedido e ${verb} ${quantity} unidade(s) do estoque de ${product.name || product.sku}?${negativeWarning}${financeMessage}`)) return;
       setInventoryState((current) => ({ ...current, products: current.products.map((item, itemIndex) => itemIndex === productIndex ? { ...item, quantity: String(nextQuantity) } : item) }));
     }
-    setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus, stockUpdatedAt: new Date().toISOString() } : item));
-    setNotice("Pedido concluído com a atualização confirmada.");
+    const postedAt = new Date().toISOString();
+    if (Number(order.amount) > 0 && canAccess("cashflow")) {
+      setCashEntries((current) => current.some((entry) => entry.sourceOrderKey === postingKey) ? current : [...current, {
+        ...blankCashRow(), sourceOrderKey: postingKey,
+        date: order.date || today(), category: order.type === "venda" ? "Vendas" : "Compras",
+        description: `${order.type === "venda" ? "Venda" : "Compra"} ${order.number || order.productName || order.sku || "comercial"}`,
+        type: order.type === "venda" ? "entrada" : "saida", amount: String(Math.abs(Number(order.amount))),
+      }]);
+    }
+    setCommerceOrders((current) => current.map((item, itemIndex) => itemIndex === index ? {
+      ...item, status: nextStatus, postingKey, stockDelta,
+      stockUpdatedAt: productIndex >= 0 && quantity > 0 ? postedAt : item.stockUpdatedAt,
+      stockReversedAt: null,
+      financePostedAt: Number(order.amount) > 0 && canAccess("cashflow") ? postedAt : item.financePostedAt,
+      financeReversedAt: null,
+    } : item));
+    setNotice("Pedido concluído: estoque atualizado e movimento financeiro lançado sem duplicação.");
   }
 
   async function downloadTestInvoice(order) {
@@ -1636,6 +1684,7 @@ export default function Page() {
         {view === "commerce" && <SalesPurchases
           orders={commerceOrders}
           setOrders={setCommerceOrders}
+          products={inventoryState.products}
           issuer={invoiceIssuer}
           setIssuer={setInvoiceIssuer}
           onStatusChange={changeOrderStatus}

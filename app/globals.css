@@ -881,6 +881,14 @@ select:focus {
 .reset-operation-checks { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .reset-operation-checks label { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-weight: 700; }
 .reset-operation-checks input { width: 17px; height: 17px; min-height: 0; accent-color: var(--primary); }
+.commerce-stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 18px; }
+.commerce-stock-grid article { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 14px; border: 1px solid var(--line); border-left: 4px solid #24a36a; border-radius: 12px; background: #fbfffd; }
+.commerce-stock-grid article.low { border-left-color: #f0a320; background: #fffbf3; }
+.commerce-stock-grid article.out { border-left-color: #d74355; background: #fff7f8; }
+.commerce-stock-grid article > div { display: grid; gap: 3px; min-width: 0; }
+.commerce-stock-grid article strong, .commerce-stock-grid article small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commerce-stock-grid article small { color: var(--muted); }
+.commerce-stock-grid article > span { color: var(--text); font-weight: 850; white-space: nowrap; }
 .calculator-grid {
   grid-template-columns: minmax(310px, 0.9fr) minmax(400px, 1.1fr);
 }

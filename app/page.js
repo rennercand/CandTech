@@ -202,11 +202,11 @@ function normalizeWorkspacePayload(payload = {}) {
   };
 }
 
-function StatCard({ label, value, positive = true, caption }) {
+function StatCard({ label, value, positive = true, neutral = false, caption }) {
   return (
     <article className="stat-card">
       <span>{label}</span>
-      <strong className={positive ? "positive" : "negative"}>{value}</strong>
+      <strong className={neutral ? "" : positive ? "positive" : "negative"}>{value}</strong>
       <small>{caption}</small>
     </article>
   );
@@ -1565,7 +1565,25 @@ export default function Page() {
           />
         )}
         {view === "dashboard" && (
-          <Dashboard result={result} onOpen={() => setView("calculator")} />
+          <Dashboard
+            cashEntries={cashEntries}
+            financialAccounts={financialAccounts}
+            inventoryState={inventoryState}
+            commerceOrders={commerceOrders}
+            access={{ finance: canAccess("cashflow"), inventory: canAccess("inventory"), commerce: canAccess("commerce") }}
+            onOpen={(target) => setView(target)}
+            onReset={(sections) => {
+              // A limpeza é voluntária e afeta somente as áreas marcadas do documento atual.
+              if (sections.finance) {
+                setCashEntries([blankCashRow()]);
+                setFinancialAccounts([emptyFinancialAccount()]);
+                setCashFilters({ month: "", type: "todos", category: "todos" });
+              }
+              if (sections.inventory) setInventoryState(emptyInventoryState());
+              if (sections.commerce) setCommerceOrders([emptyCommerceOrder()]);
+              setNotice("Novo ciclo iniciado nas áreas selecionadas. O salvamento automático atualizará este documento.");
+            }}
+          />
         )}
         {view === "calculator" && (
           <Calculator
@@ -1756,87 +1774,87 @@ function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAl
   );
 }
 
-function Dashboard({ result, onOpen }) {
+function InventoryOverviewChart({ products }) {
+  const rows = products
+    .filter((product) => product.name || product.sku || Number(product.quantity))
+    .sort((a, b) => (Number(b.quantity) || 0) - (Number(a.quantity) || 0))
+    .slice(0, 8);
+  const max = Math.max(...rows.map((product) => Math.max(Number(product.quantity) || 0, Number(product.minimum) || 0)), 1);
+  if (!rows.length) return <p className="overview-empty">Cadastre produtos para visualizar o nível do estoque.</p>;
+  return <div className="inventory-overview-chart">{rows.map((product, index) => {
+    const quantity = Number(product.quantity) || 0;
+    const minimum = Number(product.minimum) || 0;
+    const tone = quantity <= 0 ? "out" : quantity <= minimum ? "low" : "ok";
+    return <div className="inventory-overview-row" key={product.id || `${product.sku}-${index}`}>
+      <div><strong>{product.name || product.sku || "Produto"}</strong><small>{quantity} un. · mínimo {minimum}</small></div>
+      <span><i className={tone} style={{ width: `${Math.max(quantity > 0 ? 4 : 0, (Math.max(0, quantity) / max) * 100)}%` }} /></span>
+    </div>;
+  })}</div>;
+}
+
+function CommerceOverviewChart({ orders }) {
+  const rows = orders.filter((order) => order.status !== "cancelado" && Number(order.amount) > 0);
+  if (!rows.length) return <p className="overview-empty">Registre compras e vendas para acompanhar a evolução comercial.</p>;
+  let balance = 0;
+  const points = rows.map((order, index) => {
+    const value = Math.abs(Number(order.amount) || 0) * (order.type === "compra" ? -1 : 1);
+    balance += value;
+    return { ...order, index, value, balance };
+  });
+  const max = Math.max(...points.map((point) => Math.abs(point.value)), 1);
+  const width = Math.max(560, points.length * 108);
+  return <div className="commerce-chart-scroll" aria-label="Evolução de compras e vendas"><div className="commerce-chart" style={{ width }}>
+    {points.map((point) => {
+      const sale = point.value >= 0;
+      const signed = `${sale ? "+" : "-"}${money.format(Math.abs(point.value))}`;
+      return <div className="commerce-column" key={point.id || `${point.date}-${point.index}`} tabIndex="0" aria-label={`${sale ? "Venda" : "Compra"} ${signed}; saldo acumulado ${money.format(point.balance)}`}>
+        <div className="commerce-track"><span className="commerce-tooltip"><strong>{signed}</strong><small>Saldo: {money.format(point.balance)}</small></span><i className={sale ? "sale" : "purchase"} style={{ height: `${Math.max(8, Math.abs(point.value) / max * 82)}px` }} /></div>
+        <strong className={sale ? "positive" : "negative"}>{sale ? "Venda" : "Compra"}</strong><small>{formatDate(point.date)}</small>
+      </div>;
+    })}
+  </div></div>;
+}
+
+function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrders, access, onOpen, onReset }) {
+  const [period, setPeriod] = useState("90");
+  const [resetSections, setResetSections] = useState({ finance: false, inventory: false, commerce: false });
+  const cutoff = period === "all" ? null : new Date(Date.now() - Number(period) * 86_400_000);
+  const inPeriod = (date) => !cutoff || !date || new Date(`${date}T12:00:00`) >= cutoff;
+  const financeRows = cashEntries.filter((entry) => (entry.description || Number(entry.amount)) && inPeriod(entry.date));
+  const orderRows = commerceOrders.filter((order) => inPeriod(order.date));
+  const cash = financeRows.reduce((total, entry) => total + (entry.type === "entrada" ? 1 : -1) * (Number(entry.amount) || 0), 0);
+  const pending = financialAccounts.reduce((total, account) => {
+    if (account.status !== "pendente" || !inPeriod(account.dueDate)) return total;
+    return total + (account.type === "receber" ? 1 : -1) * (Number(account.amount) || 0);
+  }, 0);
+  const stockValue = inventoryState.products.reduce((sum, product) => sum + (Number(product.quantity) || 0) * (Number(product.unitCost) || 0), 0);
+  const commerce = orderRows.reduce((total, order) => order.status === "cancelado" ? total : total + (order.type === "venda" ? 1 : -1) * (Number(order.amount) || 0), 0);
+  const flowRows = financeRows
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .map((entry, index) => ({ period: index + 1, date: entry.date, flow: (entry.type === "entrada" ? 1 : -1) * (Number(entry.amount) || 0) }));
+  const allowedReset = Object.entries(resetSections).some(([key, selected]) => selected && access[key]);
+  function resetSelected() {
+    if (!allowedReset) return;
+    if (!confirm("Iniciar um novo ciclo nas áreas marcadas? Os dados atuais dessas áreas serão limpos deste documento. Documentos já salvos no Histórico não serão apagados.")) return;
+    onReset(resetSections);
+    setResetSections({ finance: false, inventory: false, commerce: false });
+  }
   return (
-    <>
+    <div className="business-stack operational-dashboard">
+      <section className="panel overview-toolbar"><div><span className="eyebrow">OPERAÇÃO DA EMPRESA</span><h2>Status atual da loja</h2><p>Os valores abaixo vêm diretamente do Financeiro, Estoque e Vendas e compras.</p></div><label>Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="all">Todo o período</option></select></label></section>
       <section className="stats-grid">
-        <StatCard
-          label="VPL estimado"
-          value={money.format(result.npv)}
-          positive={result.npv >= 0}
-          caption="Valor presente líquido"
-        />
-        <StatCard
-          label="ROI"
-          value={pct(result.roi)}
-          positive={result.roi >= 0}
-          caption="Retorno sobre investimento"
-        />
-        <StatCard
-          label="TIR"
-          value={pct(result.irr)}
-          positive={Number.isFinite(result.irr) && result.irr >= 0}
-          caption={
-            Number.isFinite(result.irr)
-              ? "Taxa interna de retorno"
-              : "Fluxo sem TIR única no intervalo"
-          }
-        />
-        <StatCard
-          label="Payback"
-          value={result.paybackDuration || "N/D"}
-          positive
-          caption={
-            result.paybackDate
-              ? `Recuperação em ${formatDate(result.paybackDate)}`
-              : "Tempo de retorno"
-          }
-        />
+        {access.finance && <StatCard label="Caixa realizado" value={`${cash > 0 ? "+" : cash < 0 ? "-" : ""}${money.format(Math.abs(cash))}`} positive={cash > 0} neutral={cash === 0} caption={cash > 0 ? "A operação está com entrada líquida" : cash < 0 ? "As saídas superam as entradas" : "Entradas e saídas estão equilibradas"} />}
+        {access.finance && <StatCard label="Contas pendentes" value={`${pending > 0 ? "+" : pending < 0 ? "-" : ""}${money.format(Math.abs(pending))}`} positive={pending > 0} neutral={pending === 0} caption={pending > 0 ? "Há mais valores a receber" : pending < 0 ? "Há mais valores a pagar" : "Sem diferença entre contas pendentes"} />}
+        {access.inventory && <StatCard label="Valor em estoque" value={money.format(stockValue)} positive={stockValue >= 0} caption={`${inventoryState.products.filter((item) => item.name || item.sku).length} produtos cadastrados`} />}
+        {access.commerce && <StatCard label="Saldo comercial" value={`${commerce > 0 ? "+" : commerce < 0 ? "-" : ""}${money.format(Math.abs(commerce))}`} positive={commerce > 0} neutral={commerce === 0} caption="Vendas menos compras no período" />}
       </section>
-      <section className="dashboard-grid">
-        <article className="panel chart-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">ANÁLISE DE FLUXO</span>
-              <h2>Entradas e saídas previstas</h2>
-            </div>
-            <button className="secondary-button" onClick={onOpen}>
-              Editar cálculo
-            </button>
-          </div>
-          <CashFlowChart rows={result.table} />
-        </article>
-        <article className="panel indicator-panel">
-          <span className="eyebrow">INDICADORES</span>
-          <h2>Retorno do projeto</h2>
-          <Indicator
-            label="Índice de lucratividade"
-            value={(result.profitabilityIndex ?? 0) * 100}
-            display={
-              Number.isFinite(result.profitabilityIndex)
-                ? `${result.profitabilityIndex.toFixed(3)}×`
-                : "N/D"
-            }
-          />
-          <div className="mini-stats">
-            <span>
-              Capital desembolsado
-              <strong className="negative">{signedMoney(result.totalOutflows, "saida")}</strong>
-            </span>
-            <span>
-              Resultado líquido
-              <strong className={result.net >= 0 ? "positive" : "negative"}>
-                {money.format(result.net)}
-              </strong>
-            </span>
-          </div>
-          <div className="callout">
-            O ROE não é calculado aqui: ele exige lucro líquido contábil e
-            patrimônio líquido médio, dados diferentes do fluxo do projeto.
-          </div>
-        </article>
+      <section className="overview-chart-grid">
+        {access.finance && <article className="panel chart-panel"><div className="panel-heading"><div><span className="eyebrow">FINANCEIRO</span><h2>Entradas e saídas realizadas</h2><p>Movimentos cadastrados no caixa dentro do período escolhido.</p></div><button className="secondary-button" onClick={() => onOpen("cashflow")}>Abrir Financeiro</button></div>{flowRows.length ? <CashFlowChart rows={flowRows} /> : <p className="overview-empty">Adicione movimentos no Financeiro para formar o gráfico.</p>}</article>}
+        {access.inventory && <article className="panel"><div className="panel-heading"><div><span className="eyebrow">ESTOQUE</span><h2>Quantidade por produto</h2><p>Um gráfico diferente do caixa, com alerta para o nível mínimo.</p></div><button className="secondary-button" onClick={() => onOpen("inventory")}>Abrir Estoque</button></div><InventoryOverviewChart products={inventoryState.products} /></article>}
+        {access.commerce && <article className="panel overview-commerce-panel"><div className="panel-heading"><div><span className="eyebrow">VENDAS E COMPRAS</span><h2>Evolução comercial</h2><p>Compras ficam negativas em vermelho; cada venda acrescenta valor em verde.</p></div><button className="secondary-button" onClick={() => onOpen("commerce")}>Abrir pedidos</button></div><CommerceOverviewChart orders={orderRows} /></article>}
       </section>
-    </>
+      <details className="panel reset-operation-panel"><summary>Iniciar um novo ciclo da loja</summary><p>Use apenas quando quiser limpar uma ou mais áreas do documento atual e começar novos gráficos. O histórico salvo permanece disponível.</p><div className="reset-operation-checks">{access.finance && <label><input type="checkbox" checked={resetSections.finance} onChange={(event) => setResetSections((current) => ({ ...current, finance: event.target.checked }))} /> Financeiro</label>}{access.inventory && <label><input type="checkbox" checked={resetSections.inventory} onChange={(event) => setResetSections((current) => ({ ...current, inventory: event.target.checked }))} /> Estoque</label>}{access.commerce && <label><input type="checkbox" checked={resetSections.commerce} onChange={(event) => setResetSections((current) => ({ ...current, commerce: event.target.checked }))} /> Vendas e compras</label>}</div><button className="secondary-button danger-button" disabled={!allowedReset} onClick={resetSelected}>Limpar áreas selecionadas</button></details>
+    </div>
   );
 }
 function Indicator({ label, value, display }) {

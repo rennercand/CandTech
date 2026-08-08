@@ -7,6 +7,8 @@ import {
 } from "@/lib/db";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { getOrganizationAccess } from "@/lib/organization-access";
+import { filterWorkspaceForAccess, hasPermission, mergeWorkspaceForAccess } from "@/lib/team-permissions";
 
 export const runtime = "nodejs";
 
@@ -58,18 +60,23 @@ export async function GET(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const access = await getOrganizationAccess(user);
 
-  let workspace = await getWorkspace(user.id);
+  let workspace = await getWorkspace(access.ownerUserId);
   // Garante o histórico no próximo login mesmo se o navegador encerrou antes do pagehide terminar.
   if (
     workspace &&
+    hasPermission(access, "history") &&
     workspace.revision > workspace.archived_revision &&
     hasMeaningfulContent(workspace.payload)
   ) {
-    await archiveWorkspace({ userId: user.id, title: automaticTitle() });
-    workspace = await getWorkspace(user.id);
+    await archiveWorkspace({ userId: access.ownerUserId, title: automaticTitle() });
+    workspace = await getWorkspace(access.ownerUserId);
   }
-  return NextResponse.json({ workspace });
+  const visibleWorkspace = workspace
+    ? { ...workspace, payload: filterWorkspaceForAccess(workspace.payload, access) }
+    : null;
+  return NextResponse.json({ workspace: visibleWorkspace });
 }
 
 export async function PUT(request) {
@@ -80,6 +87,7 @@ export async function PUT(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const access = await getOrganizationAccess(user);
 
   try {
     const { payload, markSaved = false } = await readLimitedJson(request, {
@@ -88,8 +96,10 @@ export async function PUT(request) {
     if (!validPayload(payload)) {
       return NextResponse.json({ error: "Rascunho inválido ou muito grande." }, { status: 400 });
     }
-    const workspace = await saveWorkspace({ userId: user.id, payload, markSaved: Boolean(markSaved) });
-    return NextResponse.json({ workspace });
+    const current = await getWorkspace(access.ownerUserId);
+    const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
+    const workspace = await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: Boolean(markSaved) });
+    return NextResponse.json({ workspace: { ...workspace, payload: filterWorkspaceForAccess(workspace.payload, access) } });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
@@ -105,6 +115,7 @@ export async function POST(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const access = await getOrganizationAccess(user);
 
   try {
     const { payload } = await readLimitedJson(request, {
@@ -114,15 +125,17 @@ export async function POST(request) {
       return NextResponse.json({ error: "Rascunho inválido ou muito grande." }, { status: 400 });
     }
 
-    await saveWorkspace({ userId: user.id, payload });
-    if (!hasMeaningfulContent(payload)) {
+    const current = await getWorkspace(access.ownerUserId);
+    const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
+    await saveWorkspace({ userId: access.ownerUserId, payload: merged });
+    if (!hasMeaningfulContent(merged)) {
       // Marca o estado vazio como tratado para não tentar arquivá-lo em toda saída.
-      await saveWorkspace({ userId: user.id, payload, markSaved: true });
+      await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: true });
       return NextResponse.json({ archived: false });
     }
 
     const item = await archiveWorkspace({
-      userId: user.id,
+      userId: access.ownerUserId,
       title: automaticTitle(),
     });
     return NextResponse.json({ archived: Boolean(item), item });

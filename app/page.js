@@ -19,6 +19,33 @@ import {
   emptyFinancialAccount,
   emptyInventoryState,
 } from "./business-tools";
+import TeamAccess from "./team-access";
+
+async function hydrateAuthenticatedUser(inviteToken = "") {
+  let inviteMessage = "";
+  if (inviteToken) {
+    const response = await fetch("/api/team/invitation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: inviteToken }),
+    });
+    const body = await response.json();
+    inviteMessage = response.ok
+      ? `Convite aceito. Você entrou em ${body.access.organizationName}.`
+      : body.error || "Não foi possível aceitar o convite.";
+    if (response.ok) window.history.replaceState({}, "", window.location.pathname);
+  }
+  const response = await fetch("/api/auth/me", { cache: "no-store" });
+  const body = response.ok ? await response.json() : null;
+  return { user: body?.user || null, inviteMessage };
+}
+
+function invitationTokenFromLocation() {
+  if (typeof window === "undefined") return "";
+  const queryToken = new URLSearchParams(window.location.search).get("invite");
+  const fragmentToken = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("invite");
+  return fragmentToken || queryToken || "";
+}
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -239,14 +266,28 @@ function CashFlowChart({ rows }) {
   );
 }
 
-function AuthScreen({ onAuthenticated }) {
+function AuthScreen({ onAuthenticated, inviteToken }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [invitation, setInvitation] = useState(null);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
-  }, []);
+    if (!inviteToken) return;
+    fetch("/api/team/invitation", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: inviteToken }),
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((body) => {
+        if (!body?.invitation) return;
+        setInvitation(body.invitation);
+        setMode("register");
+        setForm((current) => ({ ...current, email: body.invitation.email, accountType: "person" }));
+      });
+  }, [inviteToken]);
   async function submit(event) {
     event.preventDefault();
     setLoading(true);
@@ -310,6 +351,7 @@ function AuthScreen({ onAuthenticated }) {
             ? "Continue de onde parou e acesse seus documentos."
             : "Organize suas decisões financeiras em poucos minutos."}
         </p>
+        {invitation && <div className="invite-auth-banner"><strong>Convite de {invitation.organizationName}</strong><span>Entre ou crie a conta com <b>{invitation.email}</b>. O acesso será limitado pelo proprietário.</span></div>}
         <form onSubmit={submit}>
           {mode === "register" && (
             <>
@@ -369,7 +411,9 @@ function AuthScreen({ onAuthenticated }) {
           </button>
         </form>
         {mode === "login" ? (
-          <div className="auth-subscribe-link"><span>Não é assinante?</span><a href="/assinar">Assine agora</a></div>
+          invitation
+            ? <button className="text-button" onClick={() => { setMode("register"); setError(""); }}>Ainda não tenho conta</button>
+            : <div className="auth-subscribe-link"><span>Não é assinante?</span><a href="/assinar">Assine agora</a></div>
         ) : (
           <button className="text-button" onClick={() => { setMode("login"); setError(""); }}>Já possui conta? Entrar</button>
         )}
@@ -417,6 +461,7 @@ export default function Page() {
   const [adminOverview, setAdminOverview] = useState(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
   const [showExportCenter, setShowExportCenter] = useState(false);
+  const [inviteToken] = useState(invitationTokenFromLocation);
   const [exportSections, setExportSections] = useState({ calculations: true, finance: true, inventory: true, commerce: true });
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
@@ -463,14 +508,24 @@ export default function Page() {
       invoiceIssuer,
     ],
   );
+  const canAccess = (permission) => {
+    const access = user?.access;
+    return !access || ["owner", "personal"].includes(access.role) || access.permissions?.includes(permission);
+  };
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : null))
+    hydrateAuthenticatedUser(inviteToken)
       .then((data) => {
-        if (data?.user) setUser(data.user);
+        if (data.user) setUser(data.user);
+        if (data.inviteMessage) setNotice(data.inviteMessage);
       })
       .finally(() => setChecking(false));
-  }, []);
+  }, [inviteToken]);
+
+  async function completeAuthentication(baseUser) {
+    const hydrated = await hydrateAuthenticatedUser(inviteToken);
+    setUser(hydrated.user || baseUser);
+    if (hydrated.inviteMessage) setNotice(hydrated.inviteMessage);
+  }
 
   useEffect(() => {
     // O callback OAuth volta para a página inicial com um estado curto e sem tokens na URL.
@@ -499,6 +554,10 @@ export default function Page() {
       setDriveStatus({ configured: false, connected: false, loading: false });
       return;
     }
+    if (!canAccess("drive")) {
+      setDriveStatus({ configured: false, connected: false, loading: false });
+      return;
+    }
     let active = true;
     fetch("/api/google-drive/status")
       .then((response) => (response.ok ? response.json() : null))
@@ -511,7 +570,7 @@ export default function Page() {
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.access?.permissions?.join(",")]);
 
   async function loadAdminOverview() {
     const response = await fetch("/api/admin/overview");
@@ -596,8 +655,17 @@ export default function Page() {
   }, [user?.id, workspaceReady, workspacePayload]);
 
   useEffect(() => {
-    if (user && (view === "home" || view === "history")) loadHistory();
+    if (user && canAccess("history") && (view === "home" || view === "history")) loadHistory();
   }, [user, view]);
+
+  useEffect(() => {
+    const permission = {
+      dashboard: "dashboard", calculator: "calculator", financing: "financing", pricing: "pricing",
+      cashflow: "cashflow", inventory: "inventory", commerce: "commerce", history: "history",
+    }[view];
+    if (permission && !canAccess(permission)) setView("home");
+    if (view === "team" && user?.access?.role !== "owner") setView("home");
+  }, [view, user?.access?.role, user?.access?.permissions?.join(",")]);
 
   function applyWorkspace(payload) {
     setInputs(payload.inputs);
@@ -1325,7 +1393,7 @@ export default function Page() {
   }
   if (checking || (user && !workspaceReady))
     return <div className="loading">Carregando os dados da sua conta…</div>;
-  if (!user) return <AuthScreen onAuthenticated={setUser} />;
+  if (!user) return <AuthScreen onAuthenticated={completeAuthentication} inviteToken={inviteToken} />;
   const filteredCashEntries = cashEntries
     .map((entry, originalIndex) => ({ ...entry, originalIndex }))
     .filter(
@@ -1354,19 +1422,20 @@ export default function Page() {
         <div className="brand">
           <i>CT</i> CandTech
         </div>
-        <div className="workspace">{user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal"}</div>
+        <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
         <nav aria-label="Navegação principal">
           {[
             ["home", "Início", "⌂"],
-            ["dashboard", "Visão geral", "◈"],
-            ["calculator", "Calculadoras", "⌁"],
-            ["financing", "Tabela financeira", "▦"],
-            ["pricing", "Preço do produto", "◇"],
-            ["cashflow", "Financeiro", "▤"],
-            ["inventory", "Estoque e logística", "▣"],
-            ["commerce", "Vendas e compras", "⇄"],
+            ...(canAccess("dashboard") ? [["dashboard", "Visão geral", "◈"]] : []),
+            ...(canAccess("calculator") ? [["calculator", "Calculadoras", "⌁"]] : []),
+            ...(canAccess("financing") ? [["financing", "Tabela financeira", "▦"]] : []),
+            ...(canAccess("pricing") ? [["pricing", "Preço do produto", "◇"]] : []),
+            ...(canAccess("cashflow") ? [["cashflow", "Financeiro", "▤"]] : []),
+            ...(canAccess("inventory") ? [["inventory", "Estoque e logística", "▣"]] : []),
+            ...(canAccess("commerce") ? [["commerce", "Vendas e compras", "⇄"]] : []),
+            ...(user.access?.role === "owner" ? [["team", "Equipe e acessos", "♙"]] : []),
             ...(isAdministrator ? [["admin", "Moderação", "◉"]] : []),
-            ["history", "Histórico", "◷"],
+            ...(canAccess("history") ? [["history", "Histórico", "◷"]] : []),
           ].map(([id, label, icon]) => (
             <button
               key={id}
@@ -1389,7 +1458,7 @@ export default function Page() {
             Sair
           </button>
         </nav>
-        <a className="sidebar-subscribe" href="/assinar"><span>Não é assinante?</span><strong>Assine agora</strong></a>
+        {["owner", "personal"].includes(user.access?.role) && <a className="sidebar-subscribe" href="/assinar"><span>Não é assinante?</span><strong>Assine agora</strong></a>}
         <div className="sidebar-bottom">
           <span className="avatar">{user.name[0]?.toUpperCase()}</span>
           <div>
@@ -1426,6 +1495,8 @@ export default function Page() {
                             ? "Vendas e compras"
                             : view === "admin"
                               ? "Moderação do sistema"
+                              : view === "team"
+                                ? "Equipe e acessos"
                             : "Histórico salvo"}
             </h1>
           </div>
@@ -1446,7 +1517,7 @@ export default function Page() {
                 year: "numeric",
               })}
             </span>
-            {view !== "history" && view !== "home" && (
+            {canAccess("exports") && view !== "history" && view !== "home" && view !== "team" && (
               <div className="context-export-actions" aria-label="Exportar aba atual">
                 <button className="secondary-button compact" onClick={() => setShowExportCenter((current) => !current)}>
                   Exportar seleção
@@ -1489,6 +1560,8 @@ export default function Page() {
             onOpen={loadHistoryItem}
             onRestore={restoreAutomaticDraft}
             onViewAll={() => setView("history")}
+            allowedViews={new Set(["calculator", "financing", "pricing", "cashflow", "inventory", "commerce"].filter((area) => canAccess(area)))}
+            showHistory={canAccess("history")}
           />
         )}
         {view === "dashboard" && (
@@ -1552,6 +1625,7 @@ export default function Page() {
           onSuggestFromCash={suggestOrdersFromCash}
         />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
+        {view === "team" && user.access?.role === "owner" && <TeamAccess />}
         {view === "history" && (
           <History
             items={history}
@@ -1592,7 +1666,7 @@ const DOCUMENT_TEMPLATES = [
   { id: "commerce", title: "Vendas e compras", text: "Pedidos, clientes e fornecedores", icon: "⇄", tone: "orange" },
 ];
 
-function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll }) {
+function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll, allowedViews, showHistory }) {
   const recentItems = items.slice(0, 6);
 
   return (
@@ -1623,7 +1697,7 @@ function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAl
           </div>
         </div>
         <div className="template-grid">
-          {DOCUMENT_TEMPLATES.map((template) => (
+          {DOCUMENT_TEMPLATES.filter((template) => allowedViews?.has(template.id) ?? true).map((template) => (
             <button className="template-card" key={template.id} onClick={() => onNew(template.id)}>
               <span className={`document-icon ${template.tone}`}>{template.icon}</span>
               <span>
@@ -1636,7 +1710,7 @@ function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAl
         </div>
       </section>
 
-      <section className="home-section recent-section">
+      {showHistory && <section className="home-section recent-section">
         <div className="home-section-heading">
           <div>
             <span className="eyebrow">SUA CONTA</span>
@@ -1677,7 +1751,7 @@ function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAl
             })}
           </div>
         )}
-      </section>
+      </section>}
     </div>
   );
 }

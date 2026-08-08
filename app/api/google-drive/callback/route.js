@@ -6,6 +6,7 @@ import {
   verifyDriveState,
 } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { requirePermission } from "@/lib/organization-access";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,8 @@ export async function GET(request) {
     // sessão iniciadora, evitando associar o Drive à conta errada.
     if (
       verified.redirectUri !== callbackUri || !session ||
-      session.id !== verified.userId || session.sessionHash !== verified.sessionHash
+      session.id !== verified.userId || session.sessionHash !== verified.sessionHash ||
+      !(await requirePermission(session, "drive"))
     ) {
       return finish(request, "state-error");
     }

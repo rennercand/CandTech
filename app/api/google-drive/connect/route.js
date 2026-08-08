@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { googleAuthorizationUrl, googleDriveConfigured } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { requirePermission } from "@/lib/organization-access";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,7 @@ export async function GET(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
+  if (!(await requirePermission(user, "drive"))) return Response.json({ error: "Sem permissão para usar o Drive." }, { status: 403 });
   if (!googleDriveConfigured()) {
     return Response.json({ error: "Google Drive não configurado" }, { status: 503 });
   }

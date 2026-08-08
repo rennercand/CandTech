@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { listHistories, MAX_DOCUMENTS_PER_USER, saveHistory, serializeHistory } from "@/lib/db";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { getOrganizationAccess } from "@/lib/organization-access";
+import { filterHistoryForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
 
 export const runtime = "nodejs";
 
@@ -12,11 +14,16 @@ export async function GET(request) {
   // Toda consulta de histórico exige uma sessão válida.
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const access = await getOrganizationAccess(user);
+  if (!hasPermission(access, "history")) {
+    return NextResponse.json({ error: "Sem permissão para acessar o histórico." }, { status: 403 });
+  }
 
   const type = new URL(request.url).searchParams.get("type");
-  // O user.id impede que uma conta leia registros pertencentes a outra.
-  const rows = await listHistories(user.id, type);
-  return NextResponse.json({ items: rows.map(serializeHistory) });
+  // O ID do proprietário delimita o espaço compartilhado da empresa.
+  const rows = await listHistories(access.ownerUserId, type);
+  const items = rows.map(serializeHistory).map((item) => filterHistoryForAccess(item, access)).filter(Boolean);
+  return NextResponse.json({ items });
 }
 
 export async function POST(request) {
@@ -26,6 +33,7 @@ export async function POST(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  const access = await getOrganizationAccess(user);
 
   const contentLength = Number(request.headers.get("content-length") || 0);
   // Rejeita históricos excessivamente grandes antes de carregar o corpo inteiro.
@@ -43,14 +51,20 @@ export async function POST(request) {
     if (!safeTitle || !safeType || !payload || JSON.stringify(payload).length > 500_000) {
       return NextResponse.json({ error: "Histórico inválido ou muito grande." }, { status: 400 });
     }
+    const permission = permissionForCalculationType(safeType);
+    if ((!permission && !["owner", "personal"].includes(access.role)) || (permission && !hasPermission(access, permission)) || !hasPermission(access, "history")) {
+      return NextResponse.json({ error: "Sem permissão para salvar este documento." }, { status: 403 });
+    }
+    const filteredItem = filterHistoryForAccess({ calculation_type: safeType, payload }, access);
+    if (!filteredItem) return NextResponse.json({ error: "Tipo de documento não autorizado." }, { status: 403 });
 
     // Com um ID ativo, salvar atualiza o mesmo documento em vez de criar cópias no histórico.
     const saved = await saveHistory({
       id: Number.isInteger(safeId) && safeId > 0 ? safeId : null,
-      userId: user.id,
+      userId: access.ownerUserId,
       title: safeTitle,
       calculationType: safeType,
-      payload,
+      payload: filteredItem.payload,
     });
     return NextResponse.json(
       { item: serializeHistory(saved.item), created: saved.created, limit: MAX_DOCUMENTS_PER_USER },

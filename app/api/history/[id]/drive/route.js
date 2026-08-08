@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { findHistoryById, getGoogleDriveConnection, serializeHistory } from "@/lib/db";
+import { getGoogleDriveConnection } from "@/lib/db";
 import {
   decryptDriveToken,
   refreshDriveAccessToken,
@@ -8,6 +8,7 @@ import {
 import { historyXlsx, historyXlsxFilename } from "@/lib/history-xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
+import { getAccessibleHistory } from "@/lib/organization-access";
 
 export const runtime = "nodejs";
 
@@ -20,15 +21,15 @@ export async function POST(request, { params }) {
   if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
 
   const { id } = await params;
-  const row = await findHistoryById(Number(id), user.id);
-  if (!row) return Response.json({ error: "Registro não encontrado" }, { status: 404 });
+  const { item, forbidden } = await getAccessibleHistory({ user, id, permissions: ["history", "exports", "drive"] });
+  if (forbidden) return Response.json({ error: "Sem permissão para enviar arquivos ao Drive." }, { status: 403 });
+  if (!item) return Response.json({ error: "Registro não encontrado" }, { status: 404 });
   const connection = await getGoogleDriveConnection(user.id);
   if (!connection) {
     return Response.json({ error: "Conecte sua conta do Google Drive primeiro." }, { status: 409 });
   }
 
   try {
-    const item = serializeHistory(row);
     const refreshToken = decryptDriveToken(connection.encrypted_refresh_token);
     const accessToken = await refreshDriveAccessToken(refreshToken);
     const file = await uploadFileToDrive({

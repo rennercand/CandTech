@@ -1,11 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { strFromU8, unzipSync } from "fflate";
 
 import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations.js";
 import { historyCsv } from "../lib/history-csv.js";
 import { historyXlsx } from "../lib/history-xlsx.js";
 import { calculateInvestment } from "../lib/investment-calculations.js";
+import {
+  filterHistoryForAccess,
+  filterWorkspaceForAccess,
+  mergeWorkspaceForAccess,
+  normalizePermissions,
+} from "../lib/team-permissions.js";
+import {
+  acceptOrganizationInvitation,
+  closeDatabaseForTests,
+  createOrganizationInvitation,
+  createUser,
+  ensureOwnedOrganization,
+  findOrganizationAccess,
+  listOrganizationTeam,
+} from "../lib/db.js";
 
 const closeTo = (actual, expected, tolerance = 0.01) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} deveria ser próximo de ${expected}`);
@@ -173,4 +191,70 @@ test("CSV e XLSX identificam o produto e detalham seu custo", () => {
   assert.match(sheet, /CAM-PRE-01/);
   assert.match(sheet, /Custo total do produto calculado/);
   assert.match(sheet, /Custo unitário do produto/);
+});
+
+test("atendente recebe somente as áreas explicitamente autorizadas", () => {
+  const access = { role: "attendant", permissions: ["inventory", "commerce"] };
+  const workspace = {
+    inputs: { investment: 9000 },
+    cashEntries: [{ description: "Saldo bancário", amount: 5000 }],
+    inventoryState: { products: [{ name: "Produto", quantity: 2 }] },
+    commerceOrders: [{ number: "PED-1", amount: 100 }],
+  };
+  assert.deepEqual(filterWorkspaceForAccess(workspace, access), {
+    inventoryState: workspace.inventoryState,
+    commerceOrders: workspace.commerceOrders,
+  });
+});
+
+test("salvamento parcial não apaga áreas ocultas do espaço empresarial", () => {
+  const access = { role: "attendant", permissions: ["inventory"] };
+  const current = { cashEntries: [{ amount: 800 }], inventoryState: { products: [] } };
+  const incoming = { cashEntries: [], inventoryState: { products: [{ name: "Novo" }] } };
+  assert.deepEqual(mergeWorkspaceForAccess(current, incoming, access), {
+    cashEntries: current.cashEntries,
+    inventoryState: incoming.inventoryState,
+  });
+});
+
+test("histórico e permissões desconhecidas são negados por padrão", () => {
+  const access = { role: "attendant", permissions: normalizePermissions(["inventory", "area-inventada"], "attendant") };
+  assert.deepEqual(access.permissions, ["inventory"]);
+  assert.equal(filterHistoryForAccess({ calculation_type: "tabela-financeira", payload: {} }, access), null);
+  assert.equal(filterHistoryForAccess({ calculation_type: "tipo-inventado", payload: {} }, access), null);
+});
+
+test("convite empresarial vincula o funcionário sem transferir a propriedade", async () => {
+  const previousCwd = process.cwd();
+  const previousEnvironment = process.env.NODE_ENV;
+  const directory = mkdtempSync(join(tmpdir(), "candtech-team-"));
+  process.chdir(directory);
+  process.env.NODE_ENV = "test";
+  try {
+    const owner = await createUser({ name: "Proprietário", email: "dono@empresa.test", passwordHash: "hash", accountType: "company" });
+    const employee = await createUser({ name: "Atendente", email: "atendente@empresa.test", passwordHash: "hash", accountType: "person" });
+    const organization = await ensureOwnedOrganization({ userId: owner.id, name: "Empresa Teste" });
+    await createOrganizationInvitation({
+      organizationId: organization.organizationId,
+      email: employee.email,
+      role: "attendant",
+      permissions: ["inventory", "commerce"],
+      tokenHash: "a".repeat(64),
+      invitedBy: owner.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    assert.equal(await acceptOrganizationInvitation({ tokenHash: "a".repeat(64), userId: employee.id, email: "errado@empresa.test" }), null);
+    const access = await acceptOrganizationInvitation({ tokenHash: "a".repeat(64), userId: employee.id, email: employee.email });
+    assert.equal(access.ownerUserId, owner.id);
+    assert.equal(access.role, "attendant");
+    assert.deepEqual(access.permissions, ["inventory", "commerce"]);
+    assert.equal((await findOrganizationAccess(owner.id)).role, "owner");
+    assert.equal((await listOrganizationTeam(organization.organizationId)).members.length, 2);
+  } finally {
+    await closeDatabaseForTests();
+    process.chdir(previousCwd);
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousEnvironment;
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

@@ -7,6 +7,12 @@ import {
 } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
+import { getOrganizationAccess } from "@/lib/organization-access";
+import { hasPermission } from "@/lib/team-permissions";
+
+async function canUseDrive(user) {
+  return hasPermission(await getOrganizationAccess(user), "drive");
+}
 
 export const runtime = "nodejs";
 
@@ -15,6 +21,7 @@ export async function GET(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
+  if (!(await canUseDrive(user))) return Response.json({ error: "Sem permissão para usar o Drive." }, { status: 403 });
   const configured = googleDriveConfigured();
   const connection = configured ? await getGoogleDriveConnection(user.id) : null;
   return Response.json(
@@ -30,6 +37,7 @@ export async function DELETE(request) {
   if (limited) return limited;
   const user = await getSession(request);
   if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
+  if (!(await canUseDrive(user))) return Response.json({ error: "Sem permissão para usar o Drive." }, { status: 403 });
 
   const connection = await getGoogleDriveConnection(user.id);
   if (connection) {

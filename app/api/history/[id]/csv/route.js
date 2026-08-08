@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { findHistoryById, serializeHistory } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { historyCsv, historyCsvFilename } from "@/lib/history-csv";
+import { getAccessibleHistory } from "@/lib/organization-access";
 
 export const runtime = "nodejs";
 
@@ -13,11 +13,9 @@ export async function GET(request, { params }) {
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   const { id } = await params;
-  // Busca pelo id e pelo dono do registro antes de gerar o arquivo.
-  const row = await findHistoryById(Number(id), user.id);
-  if (!row) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
-
-  const item = serializeHistory(row);
+  const { item, forbidden } = await getAccessibleHistory({ user, id, permissions: ["history", "exports"] });
+  if (forbidden) return NextResponse.json({ error: "Sem permissão para exportar." }, { status: 403 });
+  if (!item) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
   const csv = historyCsv(item);
 
   return new NextResponse(`\ufeff${csv}`, {

@@ -2413,3 +2413,47 @@ body {
     margin-bottom: 28px;
   }
 }
+
+/* Equipe empresarial: cartões deixam função e permissões legíveis sem expor dados ocultos. */
+.team-access-page { max-width: 1180px; }
+.team-limit, .role-pill { display: inline-flex; align-items: center; min-height: 30px; padding: 5px 10px; border-radius: 999px; background: #eeeafd; color: #573dd2; font-size: .78rem; font-weight: 800; white-space: nowrap; }
+.team-email-warning, .team-message, .team-invite-link { margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: #f5f2ff; color: #4d3ca4; }
+.team-message.error { background: #fff0f2; color: #b4233a; }
+.team-invite-form { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(190px, .45fr); gap: 16px; margin-top: 20px; }
+.team-invite-form > label, .team-role-row label { display: grid; gap: 7px; font-weight: 700; }
+.team-permission-field { grid-column: 1 / -1; display: grid; gap: 9px; }
+.team-permission-field > span { font-weight: 800; }
+.team-permissions { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 9px; }
+.team-permissions label { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 650; }
+.team-permissions input { width: 18px; height: 18px; min-height: 0; accent-color: var(--primary); }
+.team-invite-form > .primary-button { grid-column: 1 / -1; justify-self: start; }
+.team-invite-link { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.team-invite-link div, .team-member-identity div, .pending-invites div > div { display: grid; gap: 4px; }
+.team-invite-link small, .team-member-identity small, .pending-invites small { color: var(--muted); }
+.team-member-list { display: grid; gap: 16px; }
+.team-member-card { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: #fbfaff; }
+.team-member-card.suspended { opacity: .68; }
+.team-member-identity { display: flex; align-items: center; gap: 12px; }
+.team-member-identity .role-pill { margin-left: auto; }
+.team-owner-note { margin: 14px 0 0 52px; color: var(--muted); }
+.team-role-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0 14px; }
+.team-member-card .module-actions { justify-content: flex-end; margin-top: 16px; }
+.danger-button, .text-button.danger { color: #b4233a; }
+.pending-invites { display: grid; gap: 10px; }
+.pending-invites > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.invite-auth-banner { display: grid; gap: 5px; margin: 16px 0; padding: 13px 14px; border-radius: 12px; background: #f1edff; color: #49369c; }
+.invite-auth-banner span { font-size: .86rem; line-height: 1.45; }
+
+@media (max-width: 720px) {
+  .team-invite-form, .team-role-row { grid-template-columns: 1fr; }
+  .team-permissions { grid-template-columns: 1fr 1fr; }
+  .team-invite-link, .pending-invites > div { align-items: stretch; flex-direction: column; }
+  .team-member-card .module-actions { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 440px) {
+  .team-permissions { grid-template-columns: 1fr; }
+  .team-member-identity { align-items: flex-start; }
+  .team-member-identity .role-pill { margin-left: 0; }
+  .team-owner-note { margin-left: 0; }
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, revokeSession } from "@/lib/auth";
 import { appendAuditEvent } from "@/lib/db";
+import { getOrganizationAccess, publicAccess } from "@/lib/organization-access";
 import { guardMutation } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
@@ -10,8 +11,9 @@ export async function GET(request) {
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const { sessionHash: _sessionHash, ...safeUser } = user;
+  const access = await getOrganizationAccess(user);
   return NextResponse.json(
-    { user: safeUser },
+    { user: { ...safeUser, access: publicAccess(access) } },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

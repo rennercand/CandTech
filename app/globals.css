@@ -889,6 +889,12 @@ select:focus {
 .commerce-stock-grid article strong, .commerce-stock-grid article small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .commerce-stock-grid article small { color: var(--muted); }
 .commerce-stock-grid article > span { color: var(--text); font-weight: 850; white-space: nowrap; }
+.inventory-product-card.draft { border-style: dashed; background: #fcfbff; }
+.stock-badge.draft { color: #684bd8; background: #eeeafd; }
+.inventory-fixed-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.inventory-fixed-grid > span { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+.inventory-fixed-grid small { color: var(--muted); }
+.inventory-card-footer .primary-button { margin-left: auto; }
 .calculator-grid {
   grid-template-columns: minmax(310px, 0.9fr) minmax(400px, 1.1fr);
 }
@@ -1627,6 +1633,9 @@ select:focus {
   .overview-chart-grid { grid-template-columns: 1fr; }
   .overview-chart-grid .chart-panel, .overview-commerce-panel { grid-column: auto; }
   .inventory-overview-row { grid-template-columns: 1fr; gap: 7px; }
+  .inventory-fixed-grid { grid-template-columns: 1fr 1fr; }
+  .inventory-card-footer { align-items: stretch; flex-wrap: wrap; }
+  .inventory-card-footer .primary-button { width: 100%; margin-left: 0; }
   .auth-layout {
     grid-template-columns: 1fr;
   }

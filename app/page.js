@@ -183,7 +183,11 @@ function normalizeWorkspacePayload(payload = {}) {
       : defaults.financialAccounts,
     inventoryState: {
       products: Array.isArray(payload.inventoryState?.products)
-        ? payload.inventoryState.products
+        ? payload.inventoryState.products.map((product) => ({
+            ...product,
+            // Produtos de versões anteriores já eram estoque real; entram bloqueados na nova regra.
+            lockedAt: product.lockedAt || ((product.name || product.sku) && product.quantity !== "" ? "legacy" : ""),
+          }))
         : defaults.inventoryState.products,
       deliveries: Array.isArray(payload.inventoryState?.deliveries)
         ? payload.inventoryState.deliveries
@@ -1825,7 +1829,7 @@ function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAl
 
 function InventoryOverviewChart({ products }) {
   const rows = products
-    .filter((product) => product.name || product.sku || Number(product.quantity))
+    .filter((product) => product.lockedAt && (product.name || product.sku || Number(product.quantity)))
     .sort((a, b) => (Number(b.quantity) || 0) - (Number(a.quantity) || 0))
     .slice(0, 8);
   const max = Math.max(...rows.map((product) => Math.max(Number(product.quantity) || 0, Number(product.minimum) || 0)), 1);

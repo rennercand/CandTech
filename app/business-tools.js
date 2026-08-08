@@ -61,19 +61,32 @@ export function FinancialCommitments({ accounts, setAccounts, onStatusChange, on
 }
 
 export function InventoryLogistics({ state, setState }) {
-  const summary = useMemo(() => summarizeInventory(state), [state]);
+  const summary = useMemo(() => summarizeInventory({ ...state, products: state.products.filter((product) => product.lockedAt) }), [state]);
   const [productQuery, setProductQuery] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [stockSort, setStockSort] = useState("name");
   const update = (group, index, field, value) => setState((current) => ({ ...current, [group]: current[group].map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row) }));
   const add = (group, row) => setState((current) => ({ ...current, [group]: [...current[group], { ...row, id: newId() }] }));
   const remove = (group, index) => setState((current) => ({ ...current, [group]: current[group].filter((_, rowIndex) => rowIndex !== index) }));
-  const adjustQuantity = (index, delta) => setState((current) => ({
-    ...current,
-    products: current.products.map((product, rowIndex) => rowIndex === index
-      ? { ...product, quantity: String((Number(product.quantity) || 0) + delta) }
-      : product),
-  }));
+  function lockProduct(index) {
+    const product = state.products[index];
+    const duplicateSku = state.products.some((item, itemIndex) => itemIndex !== index && item.sku?.trim().toLowerCase() === product.sku?.trim().toLowerCase());
+    if (!product.name?.trim() || !product.sku?.trim() || product.quantity === "" || Number(product.quantity) < 0 || !Number.isFinite(Number(product.quantity))) {
+      alert("Preencha produto, SKU e uma quantidade válida antes de fixar no estoque.");
+      return;
+    }
+    if (duplicateSku) {
+      alert("Este SKU já está cadastrado. Use um código único para evitar movimentar o produto errado.");
+      return;
+    }
+    if (!confirm(`Fixar ${product.name} com ${Number(product.quantity)} unidade(s)? Depois disso, alterações manuais exigirão remover e cadastrar novamente.`)) return;
+    setState((current) => ({ ...current, products: current.products.map((item, itemIndex) => itemIndex === index ? { ...item, lockedAt: new Date().toISOString() } : item) }));
+  }
+  function removeProduct(index) {
+    const product = state.products[index];
+    if (product?.lockedAt && !confirm(`Remover ${product.name || product.sku} do estoque? Pedidos já salvos continuarão no histórico, mas o produto precisará ser cadastrado novamente.`)) return;
+    remove("products", index);
+  }
   const visibleProducts = useMemo(() => state.products
     .map((product, originalIndex) => ({ ...product, originalIndex }))
     .filter((product) => {
@@ -104,22 +117,23 @@ export function InventoryLogistics({ state, setState }) {
       <div className="inventory-list">{visibleProducts.map((product) => {
         const quantity = Number(product.quantity) || 0;
         const minimum = Number(product.minimum) || 0;
-        const status = quantity <= 0 ? "out" : quantity <= minimum ? "low" : "ok";
+        const locked = Boolean(product.lockedAt);
+        const status = !locked ? "draft" : quantity <= 0 ? "out" : quantity <= minimum ? "low" : "ok";
         return <article className={`inventory-product-card ${status}`} key={product.id || `product-${product.originalIndex}`}>
-          <div className="inventory-card-heading"><div><span className={`stock-badge ${status}`}>{status === "out" ? "Sem estoque" : status === "low" ? "Estoque baixo" : "Disponível"}</span><strong>{product.name || "Produto sem nome"}</strong><small>{product.sku ? `SKU ${product.sku}` : "Adicione um SKU para localizar rapidamente"}</small></div><button className="remove-row" onClick={() => remove("products", product.originalIndex)} aria-label={`Excluir ${product.name || "produto"}`}>×</button></div>
-          <div className="inventory-fields">
+          <div className="inventory-card-heading"><div><span className={`stock-badge ${status}`}>{status === "draft" ? "Rascunho" : status === "out" ? "Sem estoque" : status === "low" ? "Estoque baixo" : "Disponível"}</span><strong>{product.name || "Produto sem nome"}</strong><small>{product.sku ? `SKU ${product.sku}` : "Adicione um SKU para localizar rapidamente"}</small></div><button className="remove-row" onClick={() => removeProduct(product.originalIndex)} aria-label={`Excluir ${product.name || "produto"}`}>×</button></div>
+          {!locked ? <div className="inventory-fields">
             <Field label="Produto"><input value={product.name} onChange={(e) => update("products", product.originalIndex, "name", e.target.value)} placeholder="Nome do produto" /></Field>
             <Field label="SKU / código"><input value={product.sku} onChange={(e) => update("products", product.originalIndex, "sku", e.target.value)} placeholder="Ex.: CAM-001" /></Field>
-            <Field label="Quantidade"><div className="quantity-stepper"><button type="button" onClick={() => adjustQuantity(product.originalIndex, -1)} aria-label="Diminuir uma unidade">−</button><input type="number" value={product.quantity} onChange={(e) => update("products", product.originalIndex, "quantity", e.target.value)} /><button type="button" onClick={() => adjustQuantity(product.originalIndex, 1)} aria-label="Adicionar uma unidade">+</button></div></Field>
+            <Field label="Quantidade"><input type="number" min="0" value={product.quantity} onChange={(e) => update("products", product.originalIndex, "quantity", e.target.value)} /></Field>
             <Field label="Estoque mínimo"><input type="number" min="0" value={product.minimum} onChange={(e) => update("products", product.originalIndex, "minimum", e.target.value)} /></Field>
             <Field label="Custo unitário"><input type="number" min="0" step="0.01" value={product.unitCost} onChange={(e) => update("products", product.originalIndex, "unitCost", e.target.value)} /></Field>
             <Field label="Localização"><input value={product.location} onChange={(e) => update("products", product.originalIndex, "location", e.target.value)} placeholder="Ex.: corredor A" /></Field>
-          </div>
-          <div className="inventory-card-footer"><span>Valor estimado deste item</span><strong>{money.format(quantity * (Number(product.unitCost) || 0))}</strong></div>
+          </div> : <div className="inventory-fixed-grid"><span><small>Produto</small><strong>{product.name}</strong></span><span><small>SKU</small><strong>{product.sku}</strong></span><span><small>Quantidade atual</small><strong>{quantity} un.</strong></span><span><small>Estoque mínimo</small><strong>{minimum} un.</strong></span><span><small>Custo unitário</small><strong>{money.format(Number(product.unitCost) || 0)}</strong></span><span><small>Localização</small><strong>{product.location || "Não informada"}</strong></span></div>}
+          <div className="inventory-card-footer"><span>{locked ? "Valor fixado no estoque" : "Revise os dados antes de fixar"}</span><strong>{money.format(quantity * (Number(product.unitCost) || 0))}</strong>{!locked && <button className="primary-button compact" onClick={() => lockProduct(product.originalIndex)}>Fixar no estoque</button>}</div>
         </article>;
       })}</div>
       {!visibleProducts.length && <p className="empty-state">Nenhum produto corresponde aos filtros atuais.</p>}
-      <p className="responsibility-note">Ajustes rápidos alteram somente a quantidade. Vendas concluídas continuam movimentando o estoque automaticamente e podem gerar saldo negativo após confirmação.</p>
+      <p className="responsibility-note">Depois de fixado, o produto fica somente para leitura. A quantidade muda apenas por vendas, compras ou pela remoção e criação de um novo cadastro, reduzindo alterações manuais acidentais.</p>
     </section>
     <section className="panel operations-panel"><div className="panel-heading"><div><span className="eyebrow">LOGÍSTICA</span><h2>Controle de entregas</h2><p>Registre entradas e saídas, responsáveis e códigos de rastreio.</p></div><button className="primary-button" onClick={() => add("deliveries", { description: "", partner: "", direction: "saida", date: "", status: "preparando", tracking: "" })}>+ Entrega</button></div>
       <div className="operation-list">{state.deliveries.map((delivery, index) => <article className="operation-row delivery-row" key={delivery.id || `delivery-${index}`}>
@@ -132,7 +146,7 @@ export function InventoryLogistics({ state, setState }) {
 export function SalesPurchases({ orders, setOrders, products = [], issuer, setIssuer, onStatusChange, onTestInvoice, onSuggestFromCash }) {
   const summary = useMemo(() => summarizeOrders(orders), [orders]);
   const update = (index, field, value) => setOrders((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
-  const availableProducts = products.map((product, index) => ({ ...product, productIndex: index })).filter((product) => product.name || product.sku);
+  const availableProducts = products.map((product, index) => ({ ...product, productIndex: index })).filter((product) => product.lockedAt && (product.name || product.sku));
   const selectProduct = (orderIndex, selectedIndex) => {
     const product = products[Number(selectedIndex)];
     if (!product) return;

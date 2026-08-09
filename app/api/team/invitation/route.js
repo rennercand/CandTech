@@ -21,11 +21,15 @@ export async function PUT(request) {
   if (blocked) return blocked;
   const limited = await enforceRateLimit(request, { scope: "team-invitation-read", limit: 30 });
   if (limited) return limited;
+  const user = await getSession(request);
+  if (!user) return NextResponse.json({ error: "Entre para consultar este convite." }, { status: 401 });
   try {
     const { token } = await readLimitedJson(request, { maxBytes: 2_048, maxDepth: 2, maxNodes: 8, maxStringLength: 100 });
     if (!validToken(token)) return NextResponse.json({ error: "Convite inválido." }, { status: 400 });
     const invitation = await findOrganizationInvitation(tokenHash(token));
-    if (!invitation) return NextResponse.json({ error: "Convite inválido, cancelado ou expirado." }, { status: 404 });
+    if (!invitation || invitation.email !== String(user.email).toLowerCase()) {
+      return NextResponse.json({ error: "Convite inválido, cancelado ou expirado." }, { status: 404 });
+    }
     return NextResponse.json({
       invitation: {
         email: invitation.email,

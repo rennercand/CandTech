@@ -19,12 +19,16 @@ import {
 import {
   acceptOrganizationInvitation,
   closeDatabaseForTests,
+  createHistory,
   createOrganizationInvitation,
   createUser,
   ensureOwnedOrganization,
+  findHistoryById,
   findOrganizationAccess,
+  getWorkspace,
   listOrganizationTeam,
   saveWorkspace,
+  updateOrganizationMember,
 } from "../lib/db.js";
 
 const closeTo = (actual, expected, tolerance = 0.01) =>
@@ -229,6 +233,47 @@ test("histórico e permissões desconhecidas são negados por padrão", () => {
   assert.deepEqual(access.permissions, ["inventory"]);
   assert.equal(filterHistoryForAccess({ calculation_type: "tabela-financeira", payload: {} }, access), null);
   assert.equal(filterHistoryForAccess({ calculation_type: "tipo-inventado", payload: {} }, access), null);
+});
+
+test("IDs de outra conta não permitem ler, sobrescrever ou administrar recursos", async () => {
+  const previousCwd = process.cwd();
+  const previousEnvironment = process.env.NODE_ENV;
+  const directory = mkdtempSync(join(tmpdir(), "candtech-idor-"));
+  process.chdir(directory);
+  process.env.NODE_ENV = "test";
+  try {
+    const ownerA = await createUser({ name: "Empresa A", email: "a@idor.test", passwordHash: "hash", accountType: "company" });
+    const ownerB = await createUser({ name: "Empresa B", email: "b@idor.test", passwordHash: "hash", accountType: "company" });
+    const employeeB = await createUser({ name: "Funcionário B", email: "funcionario@idor.test", passwordHash: "hash" });
+    const organizationA = await ensureOwnedOrganization({ userId: ownerA.id, name: "Empresa A" });
+    const organizationB = await ensureOwnedOrganization({ userId: ownerB.id, name: "Empresa B" });
+    await createOrganizationInvitation({
+      organizationId: organizationB.organizationId, email: employeeB.email, role: "attendant",
+      permissions: ["inventory"], tokenHash: "d".repeat(64), invitedBy: ownerB.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    await acceptOrganizationInvitation({ tokenHash: "d".repeat(64), userId: employeeB.id, email: employeeB.email });
+
+    const historyB = await createHistory({ userId: ownerB.id, title: "Privado B", calculationType: "investimento", payload: { secret: "B" } });
+    assert.match(historyB.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    assert.equal(await findHistoryById(String(ownerB.id), ownerB.id), null);
+    assert.equal(await findHistoryById(historyB.id, ownerA.id), null);
+    await createHistory({ id: historyB.id, userId: ownerA.id, title: "Tentativa A", calculationType: "investimento", payload: { secret: "A" } });
+    assert.equal((await findHistoryById(historyB.id, ownerB.id)).title, "Privado B");
+
+    await saveWorkspace({ userId: ownerB.id, payload: { cashEntries: [{ description: "Privado B", amount: 10 }] } });
+    assert.equal(await getWorkspace(ownerA.id), null);
+    assert.equal(await updateOrganizationMember({
+      organizationId: organizationA.organizationId, userId: employeeB.id, role: "manager", permissions: ["dashboard"],
+    }), null);
+    assert.equal((await findOrganizationAccess(employeeB.id)).organizationId, organizationB.organizationId);
+  } finally {
+    await closeDatabaseForTests();
+    process.chdir(previousCwd);
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousEnvironment;
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("convite empresarial vincula o funcionário sem transferir a propriedade", async () => {

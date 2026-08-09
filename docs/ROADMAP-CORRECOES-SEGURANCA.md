@@ -1,6 +1,6 @@
 # Roadmap de correções de segurança verificadas — CandTech
 
-Data da revisão: 2026-08-05.
+Data da revisão inicial: 2026-08-05. Última atualização verificada: 2026-08-09.
 
 ## Escopo e limites
 
@@ -10,11 +10,15 @@ Não foi executado pentest invasivo, teste de carga, tentativa de quebra de senh
 
 ### Controles confirmados
 
-- `npm audit` não encontrou vulnerabilidades conhecidas nas 91 dependências analisadas;
+- `npm audit` encontrou e corrigiu em 9 de agosto de 2026 o alerta de severidade alta em `nanoid < 3.3.17`, dependência transitiva; a verificação final retornou zero vulnerabilidades conhecidas;
 - senhas usam `bcrypt` com custo 12;
 - cookies de sessão são `HttpOnly`, `Secure` em produção e `SameSite=Lax`;
 - JWT aceita explicitamente apenas `HS256` e expira em oito horas;
 - consultas de workspace, histórico, exportações e Drive usam o `user_id` da sessão;
+- todas as APIs privadas exigem sessão JWT; apenas cadastro e login permanecem públicos por necessidade do fluxo de autenticação;
+- atributos atuais da conta são recarregados do banco após a validação da sessão, em vez de confiar em nome, e-mail ou tipo de conta antigos no JWT;
+- documentos expostos em URLs usam UUID público aleatório; o ID sequencial interno permanece restrito ao banco;
+- testes automatizados e ensaio HTTP com duas empresas confirmaram `401` sem sessão e `404` para leitura ou exclusão cruzada por UUID adulterado;
 - SQL usa parâmetros, sem concatenação direta de entrada do usuário;
 - refresh tokens do Google Drive são cifrados com AES-256-GCM;
 - mutações rejeitam origem cruzada e tipos de conteúdo inesperados;
@@ -42,6 +46,17 @@ As mudanças abaixo foram implementadas e testadas localmente, mas só contam co
 - **SEC-07 — implementada no código:** login usa comparação bcrypt fictícia para conta inexistente, cadastro possui resposta neutra e os limites foram separados por IP e identidade normalizada;
 - **SEC-08 — implementada no código:** as exportações personalizadas neutralizam prefixos perigosos antes de abrir no Excel;
 - **SEC-15 — parcialmente implementada:** eventos de criação de conta, login, logout e alteração do perfil de cobrança são registrados; ainda falta cobrir operações financeiras, exportações e permissões.
+
+## Progresso local em 9 de agosto de 2026
+
+- **SEC-04 — endurecida:** a sessão persistida continua sendo a fonte da identidade e os atributos atuais do usuário são consultados no banco a cada validação;
+- **SEC-14 — parcialmente endurecida:** a consulta e o aceite de convite exigem sessão, e os detalhes do convite só são devolvidos quando o e-mail atual da conta corresponde ao destinatário; verificação de e-mail, recuperação e MFA continuam pendentes;
+- **SEC-16 — parcialmente implementada:** a suíte agora cobre duas empresas, UUID público, tentativa de leitura, sobrescrita, exclusão e administração cruzadas, além de falhar quando uma nova API privada não declara validação de sessão;
+- **IDOR de documentos — mitigado no código:** URLs deixaram de expor IDs sequenciais, mas o controle principal continua sendo a consulta com UUID público e proprietário derivado da sessão;
+- **Dependências — corrigidas:** `npm audit fix` atualizou a dependência transitiva vulnerável e a auditoria final retornou zero achados;
+- **Validação:** 26 testes e o build de produção passaram; o ensaio HTTP retornou `401` sem JWT, `404` para UUID de outra empresa, `404` para o antigo ID numérico e `200` apenas para o proprietário correto.
+
+Essas mudanças ainda precisam passar por preview da branch `test` e verificação no domínio publicado antes de serem consideradas efetivas em produção.
 
 Continuam dependendo de configuração ou validação externa: WAF na borda, rotação de credenciais potencialmente antigas, confirmação de backup/restauração, `OAUTH_STATE_SECRET` em produção, CSP sem `unsafe-inline`, e-mail verificado, MFA, pentest e monitoramento independente.
 
@@ -174,10 +189,10 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 ### SEC-16 — Ausência de testes automatizados de segurança
 
 - **Severidade:** média-baixa.
-- **Evidência:** os 11 testes atuais cobrem cálculos e exportações; não há casos automatizados de autenticação, IDOR, CSRF/origem, payload, sessão, OAuth ou rate limit.
+- **Evidência atual:** existem testes de limite de payload, campos perigosos, autorização entre empresas, adulteração de identificadores e presença de autenticação nas APIs privadas. Ainda faltam testes de integração completos para CSRF/origem, revogação de sessão, OAuth, rate limit e todos os verbos de cada entidade futura.
 - **Risco:** regressões de autorização podem chegar à produção sem detecção.
 - **Correção:** suíte de integração com dois usuários e duas organizações; casos negativos para todos os verbos; testes de limites e cabeçalhos; execução obrigatória antes do merge.
-- **Aceite:** CI bloqueia merge quando isolamento ou controles falham.
+- **Aceite:** CI bloqueia merge quando isolamento ou controles falham. **Situação: parcial; a suíte local existe, mas a obrigatoriedade no CI ainda deve ser confirmada.**
 
 ### SEC-17 — Backup, restauração e resposta a incidentes não estão comprovados
 

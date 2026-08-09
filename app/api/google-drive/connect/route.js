@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { googleAuthorizationUrl, googleDriveConfigured } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { requirePermission } from "@/lib/organization-access";
+import { isPublicHistoryId, requirePermission } from "@/lib/organization-access";
 
 export const runtime = "nodejs";
 
@@ -17,8 +17,8 @@ export async function GET(request) {
 
   try {
     const requestUrl = new URL(request.url);
-    const historyId = Number(requestUrl.searchParams.get("historyId"));
-    if (!Number.isInteger(historyId) || historyId <= 0) {
+    const historyId = requestUrl.searchParams.get("historyId");
+    if (!isPublicHistoryId(historyId)) {
       return Response.json({ error: "Histórico inválido para exportação." }, { status: 400 });
     }
 

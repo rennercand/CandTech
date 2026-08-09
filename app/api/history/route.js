@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { listHistories, MAX_DOCUMENTS_PER_USER, saveHistory, serializeHistory } from "@/lib/db";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { getOrganizationAccess } from "@/lib/organization-access";
+import { getOrganizationAccess, isPublicHistoryId } from "@/lib/organization-access";
 import { filterHistoryForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
 
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export async function POST(request) {
     const { id, title, calculationType, payload } = await readLimitedJson(request, {
       maxBytes: 512_000, maxDepth: 12, maxNodes: 12_000, maxStringLength: 20_000,
     });
-    const safeId = Number(id);
+    const safeId = isPublicHistoryId(id) ? id : null;
     const safeTitle = String(title || "").trim().slice(0, 100);
     const safeType = String(calculationType || "").trim().slice(0, 50);
     if (!safeTitle || !safeType || !payload || JSON.stringify(payload).length > 500_000) {
@@ -60,7 +60,7 @@ export async function POST(request) {
 
     // Com um ID ativo, salvar atualiza o mesmo documento em vez de criar cópias no histórico.
     const saved = await saveHistory({
-      id: Number.isInteger(safeId) && safeId > 0 ? safeId : null,
+      id: safeId,
       userId: access.ownerUserId,
       title: safeTitle,
       calculationType: safeType,

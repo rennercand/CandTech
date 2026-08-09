@@ -10,6 +10,10 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - CPF/CNPJ não é solicitado antes de existir uma finalidade real de cobrança ou emissão;
 - nenhum campo de cartão, senha bancária ou conta é armazenado diretamente;
 - sessão revogável no servidor e expiração absoluta;
+- APIs privadas protegidas por sessão JWT, com teste que detecta rota privada criada sem validação de sessão;
+- documentos identificados externamente por UUID aleatório e consultas sempre vinculadas ao proprietário obtido da sessão;
+- teste automatizado de IDOR entre duas empresas para leitura, sobrescrita e administração cruzadas;
+- auditoria atual de dependências sem vulnerabilidades conhecidas após atualização do `nanoid` transitivo;
 - limites estruturais e de bytes nas APIs com corpo JSON;
 - limites separados de login e cadastro por IP e identidade normalizada;
 - resposta de autenticação mais resistente à enumeração;
@@ -26,6 +30,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - confirmar novamente que Production e Preview usam bancos separados;
 - rotacionar credenciais que possam ter sido copiadas ou enviadas no passado;
 - publicar primeiro na branch `test` e verificar cadastro, login, logout, Drive, perfil e estoque;
+- repetir no preview os testes negativos de API sem JWT, UUID adulterado e exclusão cruzada;
 - habilitar observação no Firewall/WAF e criar alertas de erro e tráfego;
 - verificar cabeçalhos, cookies e limites no domínio publicado;
 - publicar termos de uso, política de privacidade e canal de suporte revisados por profissional adequado.
@@ -43,6 +48,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 ## Antes de vender para empresas
 
 - concluir todos os P0 e P1 aplicáveis da roadmap de segurança;
+- manter auditoria de dependências obrigatória no CI para impedir regressões conhecidas;
 - migrations versionadas e credencial de runtime sem privilégios DDL;
 - papéis, permissões e isolamento por empresa testados automaticamente;
 - auditoria de alterações financeiras, exportações e permissões;

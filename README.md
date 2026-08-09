@@ -48,8 +48,11 @@ Aplicação web para análise e organização financeira, construída com Next.j
 O banco inteiro não é transformado em hash. Hash é irreversível e, por isso, é adequado para senhas, mas não para cálculos e históricos que precisam ser exibidos novamente.
 
 - As senhas são transformadas com `bcrypt`, salt automático e custo 12 antes de serem armazenadas. A senha original não é gravada.
-- A sessão usa um JWT assinado, com duração de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Strict` e `Secure` em produção.
+- A sessão usa um JWT assinado, com duração absoluta de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. O identificador da sessão também é persistido para permitir revogação.
+- Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
 - Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
+- Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
+- Todas as APIs privadas exigem sessão; somente cadastro e login são públicos.
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
 - APIs possuem rate limit compartilhado no PostgreSQL/Neon; o IP é armazenado somente como hash e limites excedidos retornam `429`.
 - O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
@@ -64,7 +67,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 
 Os controles acima formam uma base de segurança, mas não representam certificação nem deixam o produto automaticamente pronto para empresas. Antes da comercialização, o projeto ainda deve receber:
 
-- modelo multiempresa com `tenant_id`, organizações, papéis e permissões;
+- concluir a normalização multiempresa com `tenant_id` em todas as entidades; organizações, proprietário, gerente, atendente e permissões por área já possuem uma primeira versão;
 - MFA e, conforme o cliente, SSO/SAML;
 - limitador distribuído, trilha de auditoria imutável e alertas de segurança;
 - cálculos oficiais executados e validados no servidor, com versão da fórmula e testes de referência;

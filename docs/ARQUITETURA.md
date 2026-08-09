@@ -18,7 +18,7 @@ flowchart LR
 
   subgraph Backend Vercel
     API --> SEC[Validação de origem e rate limit]
-    SEC --> AUTH[Autenticação JWT e bcrypt]
+    SEC --> AUTH[JWT revogável + identidade atual do banco]
     SEC --> HISTORY[Histórico e workspace]
     SEC --> REPORTS[Gerador PDF/CSV/XLSX]
     SEC --> DRIVE[Integração Google Drive]
@@ -99,7 +99,7 @@ mindmap
 | Tabela | Conteúdo | Isolamento atual |
 | --- | --- | --- |
 | `users` | nome, e-mail e hash bcrypt da senha | e-mail único |
-| `histories` | documentos e payloads salvos | `user_id` |
+| `histories` | documentos e payloads salvos; UUID público para URLs | proprietário da organização derivado da sessão |
 | `workspaces` | estado atual e revisão do autosave | uma linha por `user_id` |
 | `rate_limits` | contadores temporários de requisição | chave derivada do escopo/origem |
 | `google_drive_connections` | refresh token OAuth cifrado | uma linha por `user_id` |
@@ -108,6 +108,19 @@ mindmap
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
 
 O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extrai o identificador do usuário e consulta o Neon usando esse identificador. A credencial do banco permanece no servidor.
+
+### Autenticação e proteção contra IDOR
+
+- cadastro e login são as únicas APIs públicas, pois criam a sessão;
+- todas as outras APIs validam o JWT em cookie `HttpOnly` e confirmam a sessão persistida, não revogada e dentro da expiração absoluta;
+- após validar o token, nome, e-mail e tipo de conta são recarregados da tabela `users`, evitando decisões com atributos antigos gravados no JWT;
+- `organizationId`, papel, permissões e proprietário dos dados são resolvidos no servidor; identificadores enviados pelo navegador nunca escolhem livremente a empresa;
+- documentos usam `public_id` em formato UUID nas URLs e mantêm o `id` sequencial apenas como chave interna;
+- leitura, alteração, exclusão e exportação procuram simultaneamente `public_id` e proprietário da organização;
+- trocar o UUID na URL não revela se o registro pertence a outra empresa: a resposta é `404`;
+- consulta de convite exige sessão e só revela detalhes quando o e-mail atual da conta corresponde ao e-mail convidado.
+
+O UUID reduz enumeração, mas não substitui autorização. O isolamento efetivo vem do escopo de proprietário/organização aplicado em todas as consultas.
 
 ### Ambientes atuais e destino planejado
 
@@ -134,6 +147,7 @@ flowchart TB
 - `auth_sessions` permite expiração absoluta e revogação no logout;
 - `audit_events` registra inicialmente conta, sessão e perfil sem copiar documentos completos para os metadados;
 - a migração PostgreSQL correspondente está em `migrations/20260806_security_and_billing.sql`;
+- a migration `migrations/20260809_history_public_ids.sql` cria, preenche e torna obrigatório o UUID público usado nas URLs de documentos;
 - quando houver cobrança, o navegador deverá ser direcionado ao componente seguro do provedor e o servidor confirmará o resultado por webhook assinado e idempotente.
 
 Preview recebe sua própria `DATABASE_URL` sensível e não recebe as credenciais da branch de Production. A branch `preview-test` foi criada com schema somente, sem copiar usuários, históricos ou dados financeiros reais. Development não possui credenciais PostgreSQL na Vercel e usa o fallback SQLite, salvo quando o desenvolvedor configura conscientemente uma URL local separada.

@@ -196,8 +196,8 @@ function normalizeWorkspacePayload(payload = {}) {
     commerceOrders: Array.isArray(payload.commerceOrders)
       ? payload.commerceOrders
       : defaults.commerceOrders,
-    activeDocumentId: Number.isInteger(Number(payload.activeDocumentId)) && Number(payload.activeDocumentId) > 0
-      ? Number(payload.activeDocumentId)
+    activeDocumentId: /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(payload.activeDocumentId || ""))
+      ? String(payload.activeDocumentId)
       : null,
     savedFinancings: Array.isArray(payload.savedFinancings)
       ? payload.savedFinancings
@@ -543,8 +543,8 @@ export default function Page() {
       "state-error": "A resposta do Google não passou na validação de segurança.",
       error: "Não foi possível concluir a conexão com o Google Drive.",
     };
-    const pendingHistoryId = Number(params.get("export"));
-    if (driveResult === "connected" && Number.isInteger(pendingHistoryId) && pendingHistoryId > 0) {
+    const pendingHistoryId = params.get("export");
+    if (driveResult === "connected" && /^[0-9a-f-]{36}$/i.test(pendingHistoryId || "")) {
       // Continua automaticamente o envio iniciado antes da autorização do Google.
       sendHistoryToDrive({ id: pendingHistoryId });
     } else {

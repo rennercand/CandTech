@@ -5,6 +5,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readLimitedJson, RequestBodyError } from "../lib/request-security.js";
 import { ANALYTICS_CONSENT_KEY, trackMarketingEvent } from "../lib/analytics.js";
+import nextConfig from "../next.config.mjs";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -69,4 +70,15 @@ test("eventos de marketing exigem consentimento e descartam dados pessoais", () 
   assert.deepEqual(calls[0], ["event", "sign_up", { method: "email", account_type: "company" }]);
   assert.equal(trackMarketingEvent("financial_document_saved", { amount: 999 }), false);
   delete global.window;
+});
+
+test("CSP permite somente os endpoints necessarios do Google Analytics", async () => {
+  const rules = await nextConfig.headers();
+  const csp = rules
+    .flatMap((rule) => rule.headers)
+    .find((header) => header.key === "Content-Security-Policy")?.value;
+
+  assert.match(csp, /script-src[^;]*https:\/\/www\.googletagmanager\.com/);
+  assert.match(csp, /connect-src[^;]*https:\/\/\*\.google-analytics\.com/);
+  assert.doesNotMatch(csp, /script-src[^;]*https:\/\/\*/);
 });

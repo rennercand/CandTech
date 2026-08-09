@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
+import { trackMarketingEvent } from "../../lib/analytics";
 
 const emptyProfile = {
   accountType: "person", legalName: "", phone: "", postalCode: "",
@@ -22,6 +23,7 @@ export default function SubscribePage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    trackMarketingEvent("view_subscription", { source: "subscription_page" });
     Promise.all([
       fetch("/api/auth/me", { cache: "no-store" }),
       fetch("/api/profile", { cache: "no-store" }),
@@ -44,6 +46,7 @@ export default function SubscribePage() {
     setStatus("ready");
     if (!response.ok) return setMessage(data.error || "Não foi possível salvar os dados.");
     setProfile({ ...emptyProfile, ...data.profile });
+    trackMarketingEvent("generate_lead", { source: "billing_profile", account_type: data.profile?.accountType || profile.accountType });
     setMessage("Dados de cobrança preparados. Nenhuma cobrança foi realizada.");
   }
 

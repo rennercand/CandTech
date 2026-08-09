@@ -20,6 +20,7 @@ import {
   emptyInventoryState,
 } from "./business-tools";
 import TeamAccess from "./team-access";
+import { trackMarketingEvent } from "../lib/analytics";
 
 async function hydrateAuthenticatedUser(inviteToken = "") {
   let inviteMessage = "";
@@ -308,6 +309,10 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
     setLoading(false);
     if (!response.ok)
       return setError(data.error || "Não foi possível continuar.");
+    trackMarketingEvent(mode === "login" ? "login" : "sign_up", {
+      method: "email",
+      account_type: data.user?.accountType || form.accountType,
+    });
     onAuthenticated(data.user);
   }
   return (

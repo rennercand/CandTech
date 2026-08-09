@@ -1,0 +1,11 @@
+.page { min-height: 100vh; padding: 32px 20px 72px; background: #f6f4fb; color: #211c34; }
+.page nav, .page article { width: min(760px, 100%); margin: 0 auto; }
+.page nav { margin-bottom: 24px; }
+.page a { color: #563bd1; font-weight: 750; }
+.page article { padding: clamp(24px, 5vw, 48px); border: 1px solid #e2ddf0; border-radius: 22px; background: #fff; box-shadow: 0 20px 60px rgba(56, 42, 102, .08); }
+.page article > span { color: #674ce0; font-size: .76rem; font-weight: 850; letter-spacing: .13em; }
+.page h1 { margin: 10px 0 18px; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; }
+.page h2 { margin: 32px 0 9px; font-size: 1.15rem; }
+.page p { color: #5d576c; line-height: 1.72; }
+.page .summary { padding: 16px 18px; border-radius: 12px; background: #f2effd; color: #493b87; }
+.page code { padding: 2px 6px; border-radius: 6px; background: #f1eff5; }

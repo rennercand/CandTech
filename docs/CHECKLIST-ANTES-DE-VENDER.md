@@ -35,6 +35,19 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - verificar cabeçalhos, cookies e limites no domínio publicado;
 - publicar termos de uso, política de privacidade e canal de suporte revisados por profissional adequado.
 
+## Marketing e medição antes do lançamento
+
+- criar a propriedade GA4 e informar apenas o Measurement ID `G-...` em `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`;
+- configurar `NEXT_PUBLIC_SITE_URL` com o domínio comercial definitivo;
+- definir `NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL` e completar a identificação da empresa responsável;
+- revisar juridicamente a página de privacidade e publicar termos de uso, política de cookies e canal de suporte;
+- cadastrar sitemap e domínio no Google Search Console;
+- marcar como conversões somente cadastro e lead comercial, sem enviar dados financeiros ou campos pessoais;
+- definir uma página pública de apresentação com proposta de valor, público-alvo, limitações do MVP, demonstração e chamada para piloto;
+- criar perfil da empresa no Google somente quando houver nome comercial, contato e atendimento reais;
+- medir origem, cadastro, interesse no plano e ativação do piloto antes de investir em anúncios pagos;
+- não ativar remarketing ou publicidade personalizada sem decisão jurídica, finalidade documentada e consentimento correspondente.
+
 ## Antes de cobrar qualquer valor
 
 - definir planos, preços, impostos, cancelamento, reembolso e suporte;

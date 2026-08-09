@@ -180,6 +180,15 @@ Desde 5 de agosto de 2026, os ambientes estão separados: Production usa a branc
 
 O menu de exportação diferencia download local e envio ao Google Drive. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech.
 
+## Analytics, consentimento e SEO
+
+- `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` ativa o GA4 somente depois do consentimento explícito para cookies analíticos;
+- recusar não bloqueia nenhuma função da CandTech, e a preferência pode ser alterada pelo botão “Cookies”;
+- eventos de marketing usam uma lista fechada de nomes e parâmetros e não aceitam e-mail, nome, documentos ou valores financeiros;
+- `NEXT_PUBLIC_SITE_URL` define canonical, sitemap e endereço informado aos buscadores;
+- `NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL` publica o canal de privacidade quando a empresa responsável o definir;
+- `/privacidade` descreve a configuração técnica atual, mas ainda precisa dos dados da empresa responsável e revisão jurídica antes da comercialização.
+
 ## Ideias planejadas
 
 A evolução comercial — conciliação por regras, estoque, rastreamento, Reforma Tributária e split payment — está organizada em [ROADMAP-PRODUTO.md](./docs/ROADMAP-PRODUTO.md). A inteligência artificial foi retirada do escopo atual. O plano conceitual de proteção está em [ROADMAP-SEGURANCA.md](./docs/ROADMAP-SEGURANCA.md), enquanto os achados verificados no código ficam em [ROADMAP-CORRECOES-SEGURANCA.md](./docs/ROADMAP-CORRECOES-SEGURANCA.md). Esses documentos são planejamento: não indicam que as funções ou controles já foram implementados.

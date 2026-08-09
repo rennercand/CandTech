@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readLimitedJson, RequestBodyError } from "../lib/request-security.js";
+import { ANALYTICS_CONSENT_KEY, trackMarketingEvent } from "../lib/analytics.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -50,4 +51,22 @@ test("toda API privada exige sessão JWT no servidor", () => {
     const source = readFileSync(file, "utf8");
     assert.match(source, /getSession\s*\(/, `${route} precisa validar a sessão JWT`);
   }
+});
+
+test("eventos de marketing exigem consentimento e descartam dados pessoais", () => {
+  const calls = [];
+  global.window = {
+    localStorage: { getItem: () => "denied" },
+    gtag: (...args) => calls.push(args),
+  };
+  assert.equal(trackMarketingEvent("sign_up", { method: "email" }), false);
+  assert.equal(calls.length, 0);
+
+  global.window.localStorage.getItem = (key) => key === ANALYTICS_CONSENT_KEY ? "granted" : null;
+  assert.equal(trackMarketingEvent("sign_up", {
+    method: "email", account_type: "company", email: "cliente@exemplo.com", amount: 999,
+  }), true);
+  assert.deepEqual(calls[0], ["event", "sign_up", { method: "email", account_type: "company" }]);
+  assert.equal(trackMarketingEvent("financial_document_saved", { amount: 999 }), false);
+  delete global.window;
 });

@@ -103,6 +103,8 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 
 ## Fase 3 — Sessões e autenticação
 
+**Decisão de produto em 9 de agosto de 2026:** passkeys ficam adiadas e não bloqueiam o piloto comercial controlado. Verificação de e-mail e recuperação segura continuam prioritárias; MFA deverá ser reavaliado antes da venda empresarial ampla e de ações administrativas sensíveis.
+
 - adicionar identificador único de sessão;
 - manter sessões ativas no servidor ou uma lista de revogação;
 - permitir encerrar uma sessão ou todas as sessões;

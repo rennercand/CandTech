@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdminOverview } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,7 @@ export async function GET(request) {
       privacy: "Somente métricas agregadas; nenhum dado financeiro de usuários é consultado.",
     });
   } catch (error) {
-    console.error(JSON.stringify({ level: "error", message: "admin_overview_failed", error: error.message }));
+    reportServerError(error, { request, route: "/api/admin/overview", operation: "read" });
     return NextResponse.json({ error: "Não foi possível consultar a saúde do sistema." }, { status: 500 });
   }
 }

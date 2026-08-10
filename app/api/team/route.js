@@ -17,6 +17,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { sendTeamInvitation, teamEmailConfigured } from "@/lib/team-email";
 import { TEAM_AREAS } from "@/lib/team-permissions";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -97,7 +98,7 @@ export async function POST(request) {
     if (error?.code === "TEAM_LIMIT_REACHED") {
       return NextResponse.json({ error: `A equipe atingiu o limite de ${MAX_ORGANIZATION_MEMBERS} acessos e convites.` }, { status: 409 });
     }
-    console.error("Falha ao criar convite de equipe", error);
+    reportServerError(error, { request, route: "/api/team", operation: "invite" });
     return NextResponse.json({ error: "Não foi possível criar o convite." }, { status: 500 });
   }
 }

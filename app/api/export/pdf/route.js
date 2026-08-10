@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterHistoryForAccess, filterWorkspaceForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function POST(request) {
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
-    console.error("Falha ao gerar PDF da aba", error);
+    reportServerError(error, { request, route: "/api/export/pdf", operation: "generate" });
     return NextResponse.json({ error: "Não foi possível gerar o PDF." }, { status: 500 });
   }
 }

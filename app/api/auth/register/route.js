@@ -4,6 +4,7 @@ import { authCookie, createToken } from "@/lib/auth";
 import { appendAuditEvent, createUser, isUniqueConstraintError } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
+import { reportServerError } from "@/lib/observability";
 
 // Força o uso do runtime Node.js, necessário para bcrypt e para o banco.
 export const runtime = "nodejs";
@@ -65,7 +66,7 @@ export async function POST(request) {
     }
 
     // Registra o erro real apenas no servidor; a resposta pública permanece genérica.
-    console.error("Falha ao registrar usuário", error);
+    reportServerError(error, { request, route: "/api/auth/register", operation: "register" });
     return NextResponse.json({ error: "Não foi possível criar a conta." }, { status: 500 });
   }
 }

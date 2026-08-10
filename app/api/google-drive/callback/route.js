@@ -7,6 +7,7 @@ import {
 } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/organization-access";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,7 @@ export async function GET(request) {
     await saveGoogleDriveConnection(verified.userId, encryptDriveToken(refreshToken));
     return finish(request, "connected", { historyId: verified.historyId, returnTo: verified.returnTo });
   } catch (error) {
-    console.error("Falha no callback do Google Drive", error);
+    reportServerError(error, { request, route: "/api/google-drive/callback", operation: "exchange" });
     return finish(request, "error");
   }
 }

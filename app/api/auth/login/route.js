@@ -4,6 +4,7 @@ import { authCookie, createToken } from "@/lib/auth";
 import { appendAuditEvent, findUserByEmail } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
+import { reportServerError } from "@/lib/observability";
 
 // Mantém a rota no runtime Node.js, compatível com bcrypt e o banco.
 export const runtime = "nodejs";
@@ -49,7 +50,7 @@ export async function POST(request) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
     // Mantém detalhes técnicos nos logs da Vercel, sem vazar informações ao usuário.
-    console.error("Falha ao autenticar usuário", error);
+    reportServerError(error, { request, route: "/api/auth/login", operation: "login" });
     return NextResponse.json({ error: "Não foi possível entrar." }, { status: 500 });
   }
 }

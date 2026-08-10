@@ -13,6 +13,7 @@ import {
   listInventory,
   undoInventoryBatch,
 } from "@/lib/inventory-db";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -71,7 +72,7 @@ export async function GET(request) {
     const inventory = await migrateLegacyInventory({ access: auth.access, tenantId: auth.tenantId, userId: auth.user.id });
     return NextResponse.json({ inventory });
   } catch (error) {
-    console.error("Falha ao carregar estoque relacional", error);
+    reportServerError(error, { request, route: "/api/inventory", operation: "read" });
     return NextResponse.json({ error: "Não foi possível carregar o estoque." }, { status: 500 });
   }
 }
@@ -148,7 +149,7 @@ export async function POST(request) {
     if (/INSUFFICIENT|UNDO_WOULD|division by zero|22012/i.test(message)) {
       return NextResponse.json({ error: "A operação deixaria o estoque negativo ou contém um produto inválido." }, { status: 409 });
     }
-    console.error("Falha na operação de estoque", error);
+    reportServerError(error, { request, route: "/api/inventory", operation: "mutation" });
     return NextResponse.json({ error: "Não foi possível concluir a operação de estoque." }, { status: 500 });
   }
 }

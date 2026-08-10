@@ -9,6 +9,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { hasPermission } from "@/lib/team-permissions";
+import { reportServerError } from "@/lib/observability";
 
 async function canUseDrive(user) {
   return hasPermission(await getOrganizationAccess(user), "drive");
@@ -44,7 +45,7 @@ export async function DELETE(request) {
     try {
       await revokeDriveToken(decryptDriveToken(connection.encrypted_refresh_token));
     } catch (error) {
-      console.error("Falha ao revogar token no Google; conexão local será removida", error);
+      reportServerError(error, { request, route: "/api/google-drive/status", operation: "revoke", status: 502 });
     }
     await deleteGoogleDriveConnection(user.id);
   }

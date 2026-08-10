@@ -9,6 +9,7 @@ import { historyXlsx, historyXlsxFilename } from "@/lib/history-xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 import { getAccessibleHistory } from "@/lib/organization-access";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -40,8 +41,8 @@ export async function POST(request, { params }) {
     });
     return Response.json({ file });
   } catch (error) {
-    console.error("Falha ao enviar histórico ao Google Drive", error);
     const reconnect = error?.code === "invalid_grant";
+    reportServerError(error, { request, route: "/api/history/:id/drive", operation: "upload", status: reconnect ? 401 : 502 });
     return Response.json(
       {
         error: reconnect

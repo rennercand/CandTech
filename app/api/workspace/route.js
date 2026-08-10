@@ -10,6 +10,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterWorkspaceForAccess, hasPermission, mergeWorkspaceForAccess } from "@/lib/team-permissions";
 import { hasMeaningfulWorkspaceContent } from "@/lib/workspace-content";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -76,7 +77,7 @@ export async function PUT(request) {
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
-    console.error("Falha ao salvar rascunho", error);
+    reportServerError(error, { request, route: "/api/workspace", operation: "save" });
     return NextResponse.json({ error: "Não foi possível salvar o rascunho." }, { status: 500 });
   }
 }
@@ -115,7 +116,7 @@ export async function POST(request) {
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
-    console.error("Falha ao arquivar rascunho", error);
+    reportServerError(error, { request, route: "/api/workspace", operation: "archive" });
     return NextResponse.json({ error: "Não foi possível arquivar o rascunho." }, { status: 500 });
   }
 }

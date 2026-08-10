@@ -5,6 +5,7 @@ import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOrganizationAccess, isPublicHistoryId } from "@/lib/organization-access";
 import { filterHistoryForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -79,7 +80,7 @@ export async function POST(request) {
         { status: 409 },
       );
     }
-    console.error("Falha ao salvar histórico", error);
+    reportServerError(error, { request, route: "/api/history", operation: "save" });
     return NextResponse.json({ error: "Não foi possível salvar o histórico." }, { status: 500 });
   }
 }

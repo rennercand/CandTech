@@ -4,6 +4,7 @@ import { appendAuditEvent, getBillingProfile, saveBillingProfile } from "@/lib/d
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { normalizeBillingProfile } from "@/lib/profile-validation";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,7 @@ export async function PUT(request) {
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
-    console.error("Falha ao salvar perfil de cobrança", error);
+    reportServerError(error, { request, route: "/api/profile", operation: "save" });
     return NextResponse.json({ error: "Não foi possível salvar os dados." }, { status: 500 });
   }
 }

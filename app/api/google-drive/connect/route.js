@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { googleAuthorizationUrl, googleDriveConfigured } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isPublicHistoryId, requirePermission } from "@/lib/organization-access";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ export async function GET(request) {
     });
     return Response.redirect(authorizationUrl, 302);
   } catch (error) {
-    console.error("Falha ao iniciar OAuth do Google Drive", error);
+    reportServerError(error, { request, route: "/api/google-drive/connect", operation: "authorize" });
     return Response.json({ error: "Não foi possível conectar ao Google Drive." }, { status: 500 });
   }
 }

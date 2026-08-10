@@ -1,0 +1,35 @@
+name: Qualidade
+
+on:
+  push:
+    branches: [main, test]
+  pull_request:
+    branches: [main, test]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências reproduzíveis
+        run: npm ci
+      - name: Bloquear vulnerabilidades altas ou críticas
+        run: npm audit --audit-level=high
+      - name: Executar testes
+        run: npm test
+      - name: Validar build de produção
+        run: npm run build

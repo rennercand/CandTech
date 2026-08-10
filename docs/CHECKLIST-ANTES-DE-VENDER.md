@@ -31,6 +31,9 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - convite com tela própria de ingresso, prévia segura da empresa e do cargo, criação ou login da conta e abertura direta do workspace conforme as permissões recebidas;
 - envio transacional de convite preparado para Resend, com idempotência e alternativa de link copiável quando o provedor não estiver configurado.
 - página inicial indexável sem JavaScript, com title e description adequados, canonical no domínio oficial, hierarquia H1/H2 e links internos para planos e privacidade.
+- telas de recuperação para falhas inesperadas locais e globais, sem expor detalhes técnicos ao cliente;
+- logs de erro das APIs em formato estruturado, com remoção de credenciais, e-mails e documentos; mensagens livres não são registradas em produção;
+- CI no GitHub para as branches `test` e `main`, bloqueando vulnerabilidades altas/críticas e exigindo testes e build válidos.
 
 ## Antes de um teste privado pequeno
 

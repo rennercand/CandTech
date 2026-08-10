@@ -12,6 +12,7 @@ import { getOrganizationAccess } from "@/lib/organization-access";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { normalizePermissions, normalizeRole } from "@/lib/team-permissions";
+import { reportServerError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -75,7 +76,7 @@ export async function POST(request) {
     if (bodyError) return bodyError;
     const known = jobErrorResponse(error);
     if (known) return known;
-    console.error("Falha ao criar cargo", error);
+    reportServerError(error, { request, route: "/api/team/jobs", operation: "create" });
     return NextResponse.json({ error: "Não foi possível criar o cargo." }, { status: 500 });
   }
 }
@@ -110,7 +111,7 @@ export async function PATCH(request) {
     if (bodyError) return bodyError;
     const known = jobErrorResponse(error);
     if (known) return known;
-    console.error("Falha ao atualizar cargo", error);
+    reportServerError(error, { request, route: "/api/team/jobs", operation: "update" });
     return NextResponse.json({ error: "Não foi possível atualizar o cargo." }, { status: 500 });
   }
 }

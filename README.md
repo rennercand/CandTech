@@ -10,6 +10,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Convites de equipe abrem uma jornada própria: mostram empresa, cargo, e-mail mascarado e áreas permitidas; após cadastro ou login, o colaborador entra diretamente no workspace empresarial.
 - Workspace inicial com resumo do negócio, documentos recentes e modelos para novos trabalhos; gráficos e controles detalhados ficam recolhidos para preservar a praticidade.
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
+- Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Visão geral financeira integrada ao workspace de cada usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.

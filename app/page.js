@@ -548,7 +548,12 @@ export default function Page() {
       error: "Não foi possível concluir a conexão com o Google Drive.",
     };
     const pendingHistoryId = params.get("export");
-    if (driveResult === "connected" && /^[0-9a-f-]{36}$/i.test(pendingHistoryId || "")) {
+    const pendingInventory = params.get("inventoryDrive") === "1";
+    if (driveResult === "connected" && pendingInventory) {
+      sessionStorage.setItem("candtech_pending_inventory_drive", "1");
+      setView("inventory");
+      setNotice(messages.connected);
+    } else if (driveResult === "connected" && /^[0-9a-f-]{36}$/i.test(pendingHistoryId || "")) {
       // Continua automaticamente o envio iniciado antes da autorização do Google.
       sendHistoryToDrive({ id: pendingHistoryId });
     } else {
@@ -1688,8 +1693,8 @@ export default function Page() {
               onSave={saveCashFlow} />
           </div>
         )}
-        {view === "inventory" && <InventoryOperations onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
-        {view === "commerce" && <InventoryOperations initialSection="orders" onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "inventory" && <InventoryOperations canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "commerce" && <InventoryOperations initialSection="orders" canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
         {view === "team" && user.access?.role === "owner" && <TeamAccess />}
         {view === "history" && (

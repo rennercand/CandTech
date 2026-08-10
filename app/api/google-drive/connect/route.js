@@ -18,7 +18,8 @@ export async function GET(request) {
   try {
     const requestUrl = new URL(request.url);
     const historyId = requestUrl.searchParams.get("historyId");
-    if (!isPublicHistoryId(historyId)) {
+    const returnTo = requestUrl.searchParams.get("returnTo") === "inventory" ? "inventory" : "";
+    if (!isPublicHistoryId(historyId) && returnTo !== "inventory") {
       return Response.json({ error: "Histórico inválido para exportação." }, { status: 400 });
     }
 
@@ -29,6 +30,7 @@ export async function GET(request) {
       redirectUri,
       historyId,
       sessionHash: user.sessionHash,
+      returnTo,
     });
     return Response.redirect(authorizationUrl, 302);
   } catch (error) {

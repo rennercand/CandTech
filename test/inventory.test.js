@@ -13,7 +13,9 @@ import {
   undoInventoryBatch,
 } from "../lib/inventory-db.js";
 import { normalizeMovementLines, validateProducts } from "../lib/inventory.js";
-import { parseInventoryText } from "../lib/inventory-import.js";
+import { matchInventoryEntry, parseInventoryText } from "../lib/inventory-import.js";
+import { canExportInventory, inventoryCsv, inventoryXlsx } from "../lib/inventory-report.js";
+import { strFromU8, unzipSync } from "fflate";
 
 test("estoque relacional isola empresas, movimenta vários itens e desfaz operações", async () => {
   const directory = mkdtempSync(join(tmpdir(), "candtech-inventory-"));
@@ -89,4 +91,54 @@ test("prévia CSV agrupa variações e preserva lote e validade", () => {
   assert.equal(preview.products[0].variants[1].expiresOn, "2027-11-30");
   const excelDate = parseInventoryText("Produto;SKU;Quantidade;Validade\nBolo;BOLO-1;2;46752");
   assert.match(excelDate.products[0].variants[0].expiresOn, /^202\d-\d{2}-\d{2}$/);
+});
+
+test("entrada por planilha associa somente SKUs existentes e exige quantidade recebida", () => {
+  const preview = parseInventoryText([
+    "Produto;SKU;Quantidade;Custo unitário;Lote;Validade",
+    "Pelúcia;PEL-1;3;16,50;L-3;2027-10-30",
+    "Pelúcia;DESCONHECIDO;2;10,00;;",
+  ].join("\n"));
+  const matched = matchInventoryEntry(preview, [{ id: "variant-1", sku: "PEL-1", unitCost: 15 }]);
+  assert.equal(matched.lines.length, 1);
+  assert.deepEqual(matched.lines[0], {
+    variantId: "variant-1", quantity: 3, unitCost: 16.5, lotCode: "L-3", expiresOn: "2027-10-30",
+  });
+  assert.match(matched.errors.join(" "), /DESCONHECIDO/);
+
+  const zero = matchInventoryEntry(parseInventoryText("Produto;SKU;Quantidade\nPelúcia;PEL-1;0"), [{ id: "variant-1", sku: "PEL-1" }]);
+  assert.match(zero.errors.join(" "), /maior que zero/);
+});
+
+test("relatórios do estoque são reimportáveis, seguros e incluem lotes no Excel", () => {
+  const inventory = {
+    products: [{ name: "=Produto perigoso", category: "Presentes", unit: "un", variants: [{
+      name: "Padrão", sku: "+SKU-1", quantity: 7, minimumQuantity: 2, unitCost: 12.5,
+      salePrice: 25, location: "Prateleira A",
+    }] }],
+    orders: [],
+    lots: [{ product_name: "Produto", variant_name: "Padrão", sku: "SKU-1", lot_code: "L-1", expires_on: "2027-12-31", received_quantity: 7 }],
+  };
+  const csv = inventoryCsv(inventory);
+  assert.match(csv, /"Produto";.*"SKU";"Quantidade"/);
+  assert.match(csv, /"'=Produto perigoso"/);
+  assert.match(csv, /"'\+SKU-1"/);
+  const roundTrip = parseInventoryText(csv);
+  assert.equal(roundTrip.products[0].variants[0].quantity, 7);
+
+  const files = unzipSync(new Uint8Array(inventoryXlsx(inventory)));
+  const sheet = strFromU8(files["xl/worksheets/sheet1.xml"]);
+  assert.match(sheet, /Lotes e validades recebidos/);
+  assert.match(sheet, /L-1/);
+  assert.match(sheet, /PreÃ§o de venda|Preço de venda/);
+});
+
+test("relatório de estoque exige leitura, exportação e permissão adicional para Drive", () => {
+  const access = (permissions) => ({ role: "attendant", permissions });
+  assert.equal(canExportInventory(access(["inventory"])), false);
+  assert.equal(canExportInventory(access(["inventory", "exports"])), true);
+  assert.equal(canExportInventory(access(["commerce", "exports"])), true);
+  assert.equal(canExportInventory(access(["inventory", "exports"]), { drive: true }), false);
+  assert.equal(canExportInventory(access(["inventory", "exports", "drive"]), { drive: true }), true);
+  assert.equal(canExportInventory({ role: "owner", permissions: [] }, { drive: true }), true);
 });

@@ -11,7 +11,7 @@ flowchart LR
     UI --> PDFJS[Leitor PDF.js]
     PDFJS --> PARSER[Parser de extrato]
     PARSER --> UI
-    UI --> EXPORTLOCAL[CSV e solicitação de PDF]
+    UI --> EXPORTLOCAL[CSV, XLSX e solicitação de PDF]
   end
 
   UI -->|HTTPS + cookie HttpOnly| API[Route Handlers / API]
@@ -28,6 +28,7 @@ flowchart LR
   AUTH --> DB[(PostgreSQL / Neon)]
   HISTORY --> DB
   INVENTORY --> DB
+  INVENTORY --> REPORTS
   SEC --> DB
   DRIVE --> TOKENS[Tokens OAuth cifrados no banco]
   TOKENS --> DB
@@ -120,6 +121,7 @@ O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extra
 - todas as outras APIs validam o JWT em cookie `HttpOnly` e confirmam a sessão persistida, não revogada e dentro da expiração absoluta;
 - após validar o token, nome, e-mail e tipo de conta são recarregados da tabela `users`, evitando decisões com atributos antigos gravados no JWT;
 - `organizationId`, papel, permissões e proprietário dos dados são resolvidos no servidor; identificadores enviados pelo navegador nunca escolhem livremente a empresa;
+- `/api/inventory/export` não recebe ID de usuário, empresa ou estoque; download e envio ao Drive usam o `tenant_id` resolvido a partir da sessão JWT;
 - documentos usam `public_id` em formato UUID nas URLs e mantêm o `id` sequencial apenas como chave interna;
 - leitura, alteração, exclusão e exportação procuram simultaneamente `public_id` e proprietário da organização;
 - trocar o UUID na URL não revela se o registro pertence a outra empresa: a resposta é `404`;

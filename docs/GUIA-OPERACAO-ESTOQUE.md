@@ -19,7 +19,8 @@ O SKU identifica uma variação específica. A quantidade muda somente por entra
 3. Em **Entrada rápida**, receba duas variações na mesma operação.
 4. Em **Pedidos**, conclua uma venda com dois produtos e confira a redução do saldo.
 5. Em **Movimentações**, desfaça a venda de teste e confira a restauração do saldo.
-6. Em **Importar planilha**, baixe o modelo e mostre a prévia sem confirmar.
+6. Em **Importar planilha**, mostre a diferença entre cadastrar produtos e dar entrada em SKUs existentes.
+7. Em **Visão geral**, mostre o gráfico por categoria e baixe um relatório de teste.
 
 ## Rotina diária
 
@@ -49,12 +50,24 @@ O SKU identifica uma variação específica. A quantidade muda somente por entra
 
 ### Estoque inicial por planilha
 
-1. Abra **Importar planilha** e baixe o modelo.
+1. Abra **Importar planilha**, escolha **Cadastrar produtos novos** e baixe o modelo.
 2. Preserve os cabeçalhos obrigatórios `Produto`, `SKU` e `Quantidade`.
 3. Use uma linha para cada variação.
 4. Envie CSV, TSV, TXT ou XLSX, ou cole linhas copiadas do Excel.
 5. Corrija todos os erros apresentados na prévia.
 6. Confirme somente depois de conferir a quantidade de SKUs.
+
+### Entrada de muitas mercadorias por planilha
+
+1. Abra **Importar planilha** e escolha **Dar entrada em SKUs existentes**.
+2. Na coluna `Quantidade`, informe somente o que chegou agora — nunca o saldo total da loja.
+3. O SKU já deve existir. SKU desconhecido é recusado antes de qualquer gravação.
+4. Informe fornecedor, referência, custo, lote e validade quando aplicáveis.
+5. Confira a prévia e confirme. A quantidade é somada ao saldo e a operação fica disponível em **Movimentações**.
+
+### Relatórios e Google Drive
+
+Na **Visão geral**, usuários com permissão de exportação podem baixar CSV ou Excel. O CSV usa as mesmas colunas do importador; ao reutilizá-lo para uma entrada, substitua a quantidade atual pela quantidade recebida. O Excel inclui resumo, produtos, pedidos, lotes e validades. Usuários com permissões de exportação e Drive também podem enviar esse Excel à própria conta Google conectada.
 
 ### Corrigir erro
 
@@ -72,6 +85,7 @@ Todas as APIs exigem sessão JWT e resolvem a empresa pelo acesso atual do usuá
 ## Conferência semanal
 
 - revisar alertas de estoque mínimo;
+- conferir o gráfico de valor por categoria para identificar dinheiro concentrado ou mercadoria parada;
 - conferir operações desfeitas e referências sem identificação;
 - verificar lotes próximos da validade quando usados;
 - comparar compras recebidas com entradas registradas;
@@ -81,5 +95,5 @@ Todas as APIs exigem sessão JWT e resolvem a empresa pelo acesso atual do usuá
 
 - lotes e validades recebidos possuem consulta própria, mas a baixa automática por lote/FEFO ainda não está implementada;
 - não existe integração fiscal oficial nem leitura automática de nota;
-- importações criam produtos novos e recusam SKU já existente; atualização em massa exige fluxo próprio futuro;
+- a entrada em massa atualiza quantidade e custo de SKUs existentes, mas alterações em massa de nome, preço, mínimo e localização ainda exigem um fluxo próprio futuro;
 - o saldo é protegido por transação, mas testes de carga e restauração de backup continuam obrigatórios antes da venda empresarial ampla.

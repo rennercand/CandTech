@@ -20,7 +20,8 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - vínculo do OAuth do Drive à sessão iniciadora;
 - auditoria inicial de conta, sessão e perfil;
 - exclusão explícita dos segredos no pacote de deploy;
-- estoque relacional por empresa, com produtos, variações, SKU, entrada rápida, importação com prévia, pedidos multi-item, movimentações e desfazimento;
+- estoque relacional por empresa, com produtos, variações, SKU, entrada rápida, cadastro e entrada por planilha com prévia, pedidos multi-item, movimentações e desfazimento;
+- visão de valor do estoque por categoria, alertas de mínimo/validade e relatórios CSV/XLSX com envio opcional ao Google Drive;
 - guia de capacitação de estoque e ajuda incorporada à interface;
 - pré-nota identificada como documento sem validade fiscal.
 
@@ -31,6 +32,8 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - confirmar novamente que Production e Preview usam bancos separados;
 - rotacionar credenciais que possam ter sido copiadas ou enviadas no passado;
 - publicar primeiro na branch `test` e verificar cadastro, login, logout, Drive, perfil e estoque;
+- importar uma entrada em SKU existente, conferir o novo saldo e desfazer a operação no preview;
+- baixar CSV/XLSX do estoque e abrir os dois arquivos; quando o Drive estiver configurado, conferir o arquivo enviado pela conta conectada;
 - repetir no preview os testes negativos de API sem JWT, UUID adulterado e exclusão cruzada;
 - habilitar observação no Firewall/WAF e criar alertas de erro e tráfego;
 - verificar cabeçalhos, cookies e limites no domínio publicado;

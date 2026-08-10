@@ -154,7 +154,7 @@ A integração com inteligência artificial foi retirada do escopo atual. Esta f
 
 ### Estoque
 
-**Entregue na branch `test` em 9 de agosto de 2026:** base relacional por empresa, produtos e variações com SKU, entrada em lote, importação CSV/TSV/TXT/XLSX com prévia, pedidos multi-item, livro de movimentações e reversão auditável. Lote e validade são capturados e consultáveis; baixa automática por lote/FEFO, custo médio histórico e curva ABC continuam pendentes.
+**Entregue na branch `test` em 9 e 10 de agosto de 2026:** base relacional por empresa, produtos e variações com SKU, entrada em lote, importação CSV/TSV/TXT/XLSX com prévia, entrada por planilha em SKUs existentes, pedidos multi-item, livro de movimentações e reversão auditável. A visão geral mostra valor por categoria, estoque mínimo e validade próxima; relatórios CSV/XLSX podem ser baixados ou enviados ao Google Drive. Lote e validade são capturados e consultáveis; baixa automática por lote/FEFO, custo médio histórico e curva ABC continuam pendentes.
 
 - livro de movimentações;
 - entrada, saída, transferência, venda, ajuste e devolução;

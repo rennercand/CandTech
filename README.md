@@ -27,7 +27,9 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Cadastro diferenciado para pessoa física e empresa.
 - Página de futura assinatura em `/assinar`, sem preços ou cobrança ativa.
 - Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
-- Estoque com busca, filtros, ordenação, alertas e ajustes rápidos de quantidade.
+- Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
+- Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, sempre com prévia e conferência por SKU.
+- Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 
 ## Tecnologias
@@ -142,7 +144,7 @@ app/
   api/auth/          cadastro, login e sessão
   api/history/       histórico, exclusão e CSV
   api/workspace/     restauração, autosave e rascunho automático
-  api/inventory/     estoque relacional, entradas, pedidos e desfazimento
+  api/inventory/     estoque relacional, entradas, pedidos, relatórios e desfazimento
   advanced-tools.js  financiamento, preço e leitor de PDF
   inventory-operations.js operação guiada e treinamento de estoque
   page.js            dashboard, cálculos e organização financeira
@@ -151,6 +153,7 @@ lib/
   db.js              PostgreSQL/Neon e fallback SQLite
   inventory-db.js    produtos, variações e movimentos transacionais
   inventory-import.js leitura local de CSV/TSV/TXT/XLSX
+  inventory-report.js relatório CSV/XLSX reimportável do estoque
   finance-calculations.js
   request-security.js valida origem e formato das mutações
 next.config.mjs       cabeçalhos de segurança do navegador
@@ -185,7 +188,7 @@ Desde 5 de agosto de 2026, os ambientes estão separados: Production usa a branc
 
 ## Google Drive
 
-O menu de exportação diferencia download local e envio ao Google Drive. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech.
+O menu de exportação diferencia download local e envio ao Google Drive, inclusive no relatório do estoque. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech. A rota de relatório do estoque não recebe ID de empresa: o `tenant_id` é sempre derivado da sessão JWT e das permissões atuais.
 
 ## Analytics, consentimento e SEO
 

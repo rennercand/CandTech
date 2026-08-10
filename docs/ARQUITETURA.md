@@ -109,6 +109,8 @@ mindmap
 | `auth_sessions` | sessões ativas, expiração e revogação | `user_id` + hash da sessão |
 | `billing_profiles` | identificação e endereço de cobrança | uma linha por `user_id` |
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
+| `organizations` / `organization_jobs` | empresa e modelos de cargos personalizados | proprietário autenticado + `organization_id` |
+| `organization_members` / `organization_invitations` | colaboradores, permissões e convites de uso único | `organization_id` resolvido pela sessão |
 | `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | `tenant_id` derivado da sessão e da organização |
 | `inventory_batches` / `inventory_movements` | livro de movimentos e reversões | `tenant_id` + autor autenticado |
 | `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | `tenant_id` + lote de movimentação |
@@ -125,7 +127,9 @@ O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extra
 - documentos usam `public_id` em formato UUID nas URLs e mantêm o `id` sequencial apenas como chave interna;
 - leitura, alteração, exclusão e exportação procuram simultaneamente `public_id` e proprietário da organização;
 - trocar o UUID na URL não revela se o registro pertence a outra empresa: a resposta é `404`;
-- consulta de convite exige sessão e só revela detalhes quando o e-mail atual da conta corresponde ao e-mail convidado.
+- consulta de convite exige sessão e só revela detalhes quando o e-mail atual da conta corresponde ao e-mail convidado;
+- criação e alteração de cargos exigem o proprietário autenticado; convites recebem o cargo consultado no servidor, sem confiar em permissões enviadas livremente pelo navegador;
+- o link do convite usa token aleatório de uso único, expira em 72 horas e só é aceito após autenticação com o mesmo e-mail destinatário.
 
 O UUID reduz enumeração, mas não substitui autorização. O isolamento efetivo vem do escopo de proprietário/organização aplicado em todas as consultas.
 

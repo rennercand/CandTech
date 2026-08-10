@@ -4,7 +4,9 @@ import { getSession } from "@/lib/auth";
 import {
   appendAuditEvent,
   createOrganizationInvitation,
+  findOrganizationJob,
   listOrganizationTeam,
+  MAX_ORGANIZATION_JOBS,
   MAX_ORGANIZATION_MEMBERS,
   removeOrganizationMember,
   revokeOrganizationInvitation,
@@ -14,7 +16,7 @@ import { getOrganizationAccess } from "@/lib/organization-access";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { sendTeamInvitation, teamEmailConfigured } from "@/lib/team-email";
-import { normalizePermissions, normalizeRole, TEAM_AREAS } from "@/lib/team-permissions";
+import { TEAM_AREAS } from "@/lib/team-permissions";
 
 export const runtime = "nodejs";
 
@@ -43,6 +45,7 @@ export async function GET(request) {
     ...team,
     areas: TEAM_AREAS,
     limit: MAX_ORGANIZATION_MEMBERS,
+    jobLimit: MAX_ORGANIZATION_JOBS,
     emailConfigured: teamEmailConfigured(),
   }, { headers: { "Cache-Control": "private, no-store" } });
 }
@@ -57,10 +60,15 @@ export async function POST(request) {
   try {
     const input = await readLimitedJson(request, { maxBytes: 8_192, maxDepth: 3, maxNodes: 50, maxStringLength: 254 });
     const email = String(input.email || "").trim().toLowerCase();
-    const role = normalizeRole(input.role);
-    // Cargo profissional é apenas descritivo; o nível e as permissões controlam o acesso real.
-    const jobTitle = String(input.jobTitle || "").trim().slice(0, 80);
-    const permissions = normalizePermissions(input.permissions, role);
+    const jobId = Number(input.jobId);
+    const job = Number.isInteger(jobId) && jobId > 0
+      ? await findOrganizationJob({ organizationId: context.access.organizationId, jobId })
+      : null;
+    if (!job) return NextResponse.json({ error: "Crie ou selecione um cargo antes de enviar o convite." }, { status: 400 });
+    // O servidor usa o cargo da própria empresa; o navegador não escolhe permissões arbitrárias.
+    const role = job.role;
+    const jobTitle = job.name;
+    const permissions = job.permissions;
     if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254 || email === String(context.user.email).toLowerCase()) {
       return NextResponse.json({ error: "Informe o e-mail de outra pessoa da equipe." }, { status: 400 });
     }
@@ -76,10 +84,12 @@ export async function POST(request) {
       to: email,
       organizationName: context.access.organizationName,
       inviterName: context.user.name,
+      jobTitle,
+      permissionLabels: TEAM_AREAS.filter((area) => permissions.includes(area.id)).map((area) => area.label),
       inviteUrl,
       invitationId: invitation.id,
     });
-    await appendAuditEvent({ userId: context.user.id, action: "team.invitation.created", metadata: { organizationId: context.access.organizationId, role, emailSent: delivery.sent } });
+    await appendAuditEvent({ userId: context.user.id, action: "team.invitation.created", metadata: { organizationId: context.access.organizationId, role, jobTitle, emailSent: delivery.sent } });
     return NextResponse.json({ invitation, inviteUrl, emailSent: delivery.sent }, { status: 201 });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
@@ -105,12 +115,17 @@ export async function PATCH(request) {
     if (!Number.isInteger(userId) || userId <= 0 || userId === context.user.id) {
       return NextResponse.json({ error: "Membro inválido." }, { status: 400 });
     }
+    const jobId = Number(input.jobId);
+    const job = Number.isInteger(jobId) && jobId > 0
+      ? await findOrganizationJob({ organizationId: context.access.organizationId, jobId })
+      : null;
+    if (!job) return NextResponse.json({ error: "Selecione um cargo cadastrado para esse colaborador." }, { status: 400 });
     const member = await updateOrganizationMember({
       organizationId: context.access.organizationId,
       userId,
-      role: normalizeRole(input.role),
-      jobTitle: String(input.jobTitle || "").trim().slice(0, 80),
-      permissions: normalizePermissions(input.permissions, input.role),
+      role: job.role,
+      jobTitle: job.name,
+      permissions: job.permissions,
       status: input.status,
     });
     if (!member) return NextResponse.json({ error: "Membro não encontrado." }, { status: 404 });

@@ -26,12 +26,15 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - pré-nota identificada como documento sem validade fiscal.
 - workspace inicial com o resumo do negócio integrado e detalhes operacionais recolhíveis;
 - categorias financeiras cadastráveis e reutilizáveis em contas e lançamentos, salvas conforme a permissão do painel financeiro;
-- formulário de contas a receber simplificado, sem exigir descrição redundante além do cliente e da categoria.
+- formulário de contas a receber simplificado, sem exigir descrição redundante além do cliente e da categoria;
+- cargos personalizados por empresa, permissões reutilizáveis e convite de colaborador vinculado ao e-mail autenticado;
+- envio transacional de convite preparado para Resend, com idempotência e alternativa de link copiável quando o provedor não estiver configurado.
 
 ## Antes de um teste privado pequeno
 
 - revisar o diff e versionar somente os arquivos pretendidos;
 - configurar `OAUTH_STATE_SECRET` diferente de `JWT_SECRET` na Vercel;
+- verificar o domínio remetente no Resend, configurar `RESEND_API_KEY` e `TEAM_INVITE_FROM` e confirmar a chegada de um convite real;
 - confirmar novamente que Production e Preview usam bancos separados;
 - rotacionar credenciais que possam ter sido copiadas ou enviadas no passado;
 - publicar primeiro na branch `test` e verificar cadastro, login, logout, Drive, perfil e estoque;

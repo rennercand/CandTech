@@ -297,22 +297,11 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [invitation, setInvitation] = useState(null);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
     if (!inviteToken) return;
-    fetch("/api/team/invitation", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: inviteToken }),
-    })
-      .then((response) => response.ok ? response.json() : null)
-      .then((body) => {
-        if (!body?.invitation) return;
-        setInvitation(body.invitation);
-        setMode("register");
-        setForm((current) => ({ ...current, email: body.invitation.email, accountType: "person" }));
-      });
+    setMode("register");
+    setForm((current) => ({ ...current, accountType: "person" }));
   }, [inviteToken]);
   async function submit(event) {
     event.preventDefault();
@@ -381,17 +370,17 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
             ? "Continue de onde parou e acesse seus documentos."
             : "Organize suas decisões financeiras em poucos minutos."}
         </p>
-        {invitation && <div className="invite-auth-banner"><strong>Convite de {invitation.organizationName}</strong><span>Entre ou crie a conta com <b>{invitation.email}</b>. O acesso será limitado pelo proprietário.</span></div>}
+        {inviteToken && <div className="invite-auth-banner"><strong>Você recebeu um convite de empresa</strong><span>Entre ou crie uma conta usando exatamente o e-mail que recebeu o convite. Depois da autenticação, o servidor confirmará o cargo e as áreas liberadas.</span></div>}
         <form onSubmit={submit}>
           {mode === "register" && (
             <>
-              <div className="account-type-field">
+              {!inviteToken && <div className="account-type-field">
                 <span>Como você vai usar?</span>
                 <div className="account-type-toggle" role="group" aria-label="Tipo de cadastro">
                   <button type="button" className={form.accountType === "person" ? "active" : ""} onClick={() => setForm({ ...form, accountType: "person" })}>Pessoa física</button>
                   <button type="button" className={form.accountType === "company" ? "active" : ""} onClick={() => setForm({ ...form, accountType: "company" })}>Empresa</button>
                 </div>
-              </div>
+              </div>}
               <label>
                 {form.accountType === "person" ? "Nome completo" : "Responsável pela empresa"}
                 <input
@@ -441,7 +430,7 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
           </button>
         </form>
         {mode === "login" ? (
-          invitation
+          inviteToken
             ? <button className="text-button" onClick={() => { setMode("register"); setError(""); }}>Ainda não tenho conta</button>
             : <div className="auth-subscribe-link"><span>Não é assinante?</span><a href="/assinar">Assine agora</a></div>
         ) : (

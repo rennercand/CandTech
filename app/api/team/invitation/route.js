@@ -5,6 +5,7 @@ import { acceptOrganizationInvitation, appendAuditEvent, findOrganizationInvitat
 import { publicAccess } from "@/lib/organization-access";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
+import { TEAM_AREAS } from "@/lib/team-permissions";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,8 @@ export async function PUT(request) {
         organizationName: invitation.organization_name,
         inviterName: invitation.inviter_name,
         role: invitation.role,
+        jobTitle: invitation.job_title || "Colaborador",
+        permissionLabels: TEAM_AREAS.filter((area) => invitation.permissions.includes(area.id)).map((area) => area.label),
         expiresAt: invitation.expires_at,
       },
     }, { headers: { "Cache-Control": "private, no-store" } });

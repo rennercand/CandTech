@@ -31,6 +31,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, sempre com prévia e conferência por SKU.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
+- Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.
 
 ## Tecnologias
 
@@ -120,6 +121,15 @@ DATABASE_URL=postgresql://usuario:senha@host/banco
 ```
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
+
+Para entregar convites de colaboradores diretamente por e-mail, verifique o domínio remetente no Resend e configure somente no servidor:
+
+```env
+RESEND_API_KEY=re_...
+TEAM_INVITE_FROM="CandTech <convites@candtech.com.br>"
+```
+
+Sem essas variáveis, o convite continua seguro e copiável, mas o proprietário precisa enviar o link manualmente. O aceite sempre exige autenticação com o mesmo e-mail que foi convidado.
 
 Inicie o projeto:
 

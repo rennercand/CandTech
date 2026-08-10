@@ -21,13 +21,17 @@ import {
   closeDatabaseForTests,
   createHistory,
   createOrganizationInvitation,
+  createOrganizationJob,
   createUser,
   ensureOwnedOrganization,
   findHistoryById,
+  findOrganizationJob,
   findOrganizationAccess,
   getWorkspace,
   listOrganizationTeam,
+  removeOrganizationJob,
   saveWorkspace,
+  updateOrganizationJob,
   updateOrganizationMember,
 } from "../lib/db.js";
 
@@ -329,6 +333,62 @@ test("convite empresarial vincula o funcionário sem transferir a propriedade", 
   }
 });
 
+test("empresa cria cargos reutilizáveis e alterações atualizam os acessos vinculados", async () => {
+  const previousCwd = process.cwd();
+  const previousEnvironment = process.env.NODE_ENV;
+  const directory = mkdtempSync(join(tmpdir(), "candtech-jobs-"));
+  process.chdir(directory);
+  process.env.NODE_ENV = "test";
+  try {
+    const owner = await createUser({ name: "Empresa", email: "dono@cargos.test", passwordHash: "hash", accountType: "company" });
+    const employee = await createUser({ name: "Vendedor", email: "vendedor@cargos.test", passwordHash: "hash", accountType: "person" });
+    const organization = await ensureOwnedOrganization({ userId: owner.id, name: "Loja de teste" });
+    const job = await createOrganizationJob({
+      organizationId: organization.organizationId,
+      name: "Vendedor",
+      role: "attendant",
+      permissions: ["commerce", "inventory"],
+    });
+    assert.equal((await findOrganizationJob({ organizationId: organization.organizationId, jobId: job.id })).name, "Vendedor");
+    await assert.rejects(
+      createOrganizationJob({ organizationId: organization.organizationId, name: "vendedor", role: "manager", permissions: [] }),
+      (error) => error.code === "JOB_ALREADY_EXISTS",
+    );
+
+    await createOrganizationInvitation({
+      organizationId: organization.organizationId,
+      email: employee.email,
+      role: job.role,
+      jobTitle: job.name,
+      permissions: job.permissions,
+      tokenHash: "e".repeat(64),
+      invitedBy: owner.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    await acceptOrganizationInvitation({ tokenHash: "e".repeat(64), userId: employee.id, email: employee.email });
+    await updateOrganizationJob({
+      organizationId: organization.organizationId,
+      jobId: job.id,
+      name: "Consultor de vendas",
+      role: "manager",
+      permissions: ["commerce", "cashflow"],
+    });
+    const team = await listOrganizationTeam(organization.organizationId);
+    const updatedMember = team.members.find((member) => member.id === employee.id);
+    assert.equal(updatedMember.job_title, "Consultor de vendas");
+    assert.equal(updatedMember.role, "manager");
+    assert.deepEqual(updatedMember.permissions, ["commerce", "cashflow"]);
+    assert.equal(await removeOrganizationJob({ organizationId: organization.organizationId, jobId: job.id }), true);
+    assert.equal((await listOrganizationTeam(organization.organizationId)).members.some((member) => member.id === employee.id), true);
+  } finally {
+    await closeDatabaseForTests();
+    process.chdir(previousCwd);
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousEnvironment;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("conta empresarial existente só migra para uma equipe quando seu espaço automático está vazio", async () => {
   const previousCwd = process.cwd();
   const previousEnvironment = process.env.NODE_ENV;
@@ -354,6 +414,16 @@ test("conta empresarial existente só migra para uma equipe quando seu espaço a
       (error) => error.code === "OWNED_ORGANIZATION_NOT_EMPTY",
     );
     assert.equal((await findOrganizationAccess(protectedAccount.id)).role, "owner");
+
+    const configuredAccount = await createUser({ name: "Empresa com cargos", email: "cargos@empresa.test", passwordHash: "hash", accountType: "company" });
+    const configuredOrganization = await ensureOwnedOrganization({ userId: configuredAccount.id, name: "Empresa com cargos" });
+    await createOrganizationJob({ organizationId: configuredOrganization.organizationId, name: "Caixa", role: "attendant", permissions: ["commerce"] });
+    await createOrganizationInvitation({ organizationId: organization.organizationId, email: configuredAccount.email, role: "attendant", permissions: ["commerce"], tokenHash: "f".repeat(64), invitedBy: owner.id, expiresAt: new Date(Date.now() + 60_000) });
+    await assert.rejects(
+      acceptOrganizationInvitation({ tokenHash: "f".repeat(64), userId: configuredAccount.id, email: configuredAccount.email }),
+      (error) => error.code === "OWNED_ORGANIZATION_NOT_EMPTY",
+    );
+    assert.equal((await findOrganizationAccess(configuredAccount.id)).organizationId, configuredOrganization.organizationId);
   } finally {
     await closeDatabaseForTests();
     process.chdir(previousCwd);

@@ -2,12 +2,13 @@
 
 Aplicação web para análise e organização financeira, construída com Next.js. A CandTech reúne calculadoras de investimentos, sistemas de amortização, formação de preço, organização de custos, importação de extratos bancários em PDF e histórico privado por conta.
 
-**Produção:** [finance-app-indol-alpha.vercel.app](https://finance-app-indol-alpha.vercel.app/)
+**Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
 ## Funcionalidades
 
 - Cadastro e login com sessão individual.
 - Workspace inicial com resumo do negócio, documentos recentes e modelos para novos trabalhos; gráficos e controles detalhados ficam recolhidos para preservar a praticidade.
+- Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Visão geral financeira integrada ao workspace de cada usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
@@ -205,7 +206,7 @@ O menu de exportação diferencia download local e envio ao Google Drive, inclus
 - `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` ativa o GA4 somente depois do consentimento explícito para cookies analíticos;
 - recusar não bloqueia nenhuma função da CandTech, e a preferência pode ser alterada pelo botão “Cookies”;
 - eventos de marketing usam uma lista fechada de nomes e parâmetros e não aceitam e-mail, nome, documentos ou valores financeiros;
-- `NEXT_PUBLIC_SITE_URL` define canonical, sitemap e endereço informado aos buscadores;
+- o domínio canônico, sitemap e robots usam `https://www.candtech.com.br`, evitando que previews concorram com a produção;
 - `NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL` publica o canal de privacidade quando a empresa responsável o definir;
 - `/privacidade` descreve a configuração técnica atual, mas ainda precisa dos dados da empresa responsável e revisão jurídica antes da comercialização.
 

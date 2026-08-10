@@ -29,6 +29,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - formulário de contas a receber simplificado, sem exigir descrição redundante além do cliente e da categoria;
 - cargos personalizados por empresa, permissões reutilizáveis e convite de colaborador vinculado ao e-mail autenticado;
 - envio transacional de convite preparado para Resend, com idempotência e alternativa de link copiável quando o provedor não estiver configurado.
+- página inicial indexável sem JavaScript, com title e description adequados, canonical no domínio oficial, hierarquia H1/H2 e links internos para planos e privacidade.
 
 ## Antes de um teste privado pequeno
 
@@ -48,7 +49,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 ## Marketing e medição antes do lançamento
 
 - criar a propriedade GA4 e informar apenas o Measurement ID `G-...` em `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`;
-- configurar `NEXT_PUBLIC_SITE_URL` com o domínio comercial definitivo;
+- confirmar que `https://www.candtech.com.br` continua sendo o domínio comercial e canônico definitivo;
 - definir `NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL` e completar a identificação da empresa responsável;
 - revisar juridicamente a página de privacidade e publicar termos de uso, política de cookies e canal de suporte;
 - cadastrar sitemap e domínio no Google Search Console;

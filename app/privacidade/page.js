@@ -1,8 +1,10 @@
 import styles from "./page.module.css";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata = {
   title: "Privacidade e cookies",
-  description: "Informações sobre dados, cookies necessários e Google Analytics na CandTech.",
+  description: "Saiba como a CandTech trata dados de cadastro, sessão, documentos e cookies do Google Analytics, além de como alterar o consentimento.",
+  alternates: { canonical: `${SITE_URL}/privacidade` },
 };
 
 export default function PrivacyPage() {

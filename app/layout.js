@@ -1,17 +1,15 @@
 import "./globals.css";
 import AnalyticsConsent from "./analytics-consent";
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://finance-app-indol-alpha.vercel.app";
+import { HOME_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 export const metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: { default: "CandTech | Gestão financeira para pequenos negócios", template: "%s | CandTech" },
-  description: "Organize financeiro, estoque, vendas, compras, documentos e cálculos da sua empresa em um único espaço.",
-  alternates: { canonical: "/" },
+  description: HOME_DESCRIPTION,
   openGraph: {
     title: "CandTech | Gestão financeira para pequenos negócios",
-    description: "Financeiro, estoque, pedidos, documentos e relatórios em um único espaço.",
-    url: "/",
+    description: HOME_DESCRIPTION,
+    url: SITE_URL,
     siteName: "CandTech",
     locale: "pt_BR",
     type: "website",

@@ -13,7 +13,7 @@ import {
   undoInventoryBatch,
 } from "../lib/inventory-db.js";
 import { normalizeMovementLines, validateProducts } from "../lib/inventory.js";
-import { matchInventoryEntry, parseInventoryText } from "../lib/inventory-import.js";
+import { matchInventoryEntry, parseInventoryRows, parseInventoryText } from "../lib/inventory-import.js";
 import { canExportInventory, inventoryCsv, inventoryXlsx } from "../lib/inventory-report.js";
 import { strFromU8, unzipSync } from "fflate";
 
@@ -91,6 +91,34 @@ test("prévia CSV agrupa variações e preserva lote e validade", () => {
   assert.equal(preview.products[0].variants[1].expiresOn, "2027-11-30");
   const excelDate = parseInventoryText("Produto;SKU;Quantidade;Validade\nBolo;BOLO-1;2;46752");
   assert.match(excelDate.products[0].variants[0].expiresOn, /^202\d-\d{2}-\d{2}$/);
+});
+
+test("catálogo comercial encontra cabeçalho abaixo do título e aceita saldo inicial zero", () => {
+  const csv = parseInventoryText([
+    "Cadastro de Bichos e Pelúcias;;;",
+    ";;;",
+    "SKU;Nome;Valor;Fornecedor",
+    "PEL-001;Urso de Pelúcia Marrom;R$ 59,90;Mundo Fofo",
+    "PEL-002;Coelho de Pelúcia Branco;R$ 1.249,50;Encanto Brinquedos",
+  ].join("\n"));
+  assert.equal(csv.products.length, 2);
+  assert.equal(csv.products[0].variants[0].quantity, 0);
+  assert.equal(csv.products[0].variants[0].salePrice, 59.9);
+  assert.equal(csv.products[1].variants[0].salePrice, 1249.5);
+  assert.equal(csv.hasQuantityColumn, false);
+  assert.match(csv.warnings.join(" "), /linha 3/i);
+  assert.match(csv.warnings.join(" "), /Fornecedor/);
+
+  const xlsxRows = parseInventoryRows([
+    ["Cadastro de Bichos e Pelúcias", "", "", ""],
+    ["", "", "", ""],
+    ["SKU", "Nome", "Valor", "Fornecedor"],
+    ["PEL-001", "Urso de Pelúcia Marrom", "59.9", "Mundo Fofo"],
+  ]);
+  assert.equal(xlsxRows.variantCount, 1);
+  assert.equal(xlsxRows.products[0].variants[0].salePrice, 59.9);
+  const entry = matchInventoryEntry(xlsxRows, [{ id: "variant-1", sku: "PEL-001" }]);
+  assert.match(entry.errors.join(" "), /coluna Quantidade/);
 });
 
 test("entrada por planilha associa somente SKUs existentes e exige quantidade recebida", () => {

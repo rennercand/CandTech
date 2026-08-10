@@ -21,23 +21,21 @@ import TeamAccess from "./team-access";
 import InventoryOperations from "./inventory-operations";
 import { trackMarketingEvent } from "../lib/analytics";
 
-async function hydrateAuthenticatedUser(inviteToken = "") {
-  let inviteMessage = "";
-  if (inviteToken) {
-    const response = await fetch("/api/team/invitation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: inviteToken }),
-    });
-    const body = await response.json();
-    inviteMessage = response.ok
-      ? `Convite aceito. Você entrou em ${body.access.organizationName}.`
-      : body.error || "Não foi possível aceitar o convite.";
-    if (response.ok) window.history.replaceState({}, "", window.location.pathname);
-  }
+async function hydrateAuthenticatedUser() {
   const response = await fetch("/api/auth/me", { cache: "no-store" });
   const body = response.ok ? await response.json() : null;
-  return { user: body?.user || null, inviteMessage };
+  return body?.user || null;
+}
+
+async function acceptInvitation(inviteToken) {
+  const response = await fetch("/api/team/invitation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: inviteToken }),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || "Não foi possível aceitar o convite.");
+  return body.access;
 }
 
 function invitationTokenFromLocation() {
@@ -292,39 +290,91 @@ function CashFlowChart({ rows }) {
   );
 }
 
-function AuthScreen({ onAuthenticated, inviteToken }) {
+function InvitationDetails({ invitation }) {
+  if (!invitation) return null;
+  return (
+    <div className="invite-company-card">
+      <div><span>Empresa</span><strong>{invitation.organizationName}</strong></div>
+      <div><span>Cargo</span><strong>{invitation.jobTitle}</strong></div>
+      <div><span>E-mail convidado</span><strong>{invitation.maskedEmail}</strong></div>
+      <div className="invite-permission-summary">
+        <span>Áreas liberadas</span>
+        <p>{invitation.permissionLabels.length ? invitation.permissionLabels.join(" · ") : "Acesso básico"}</p>
+      </div>
+    </div>
+  );
+}
+
+function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, onSwitchAccount }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [invitePreview, setInvitePreview] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(Boolean(inviteToken));
+  const [inviteError, setInviteError] = useState("");
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
     if (!inviteToken) return;
     setMode("register");
     setForm((current) => ({ ...current, accountType: "person" }));
+    let active = true;
+    fetch("/api/team/invitation/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: inviteToken }),
+    })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Não foi possível consultar o convite.");
+        if (active) setInvitePreview(body.invitation);
+      })
+      .catch((previewError) => {
+        if (active) setInviteError(previewError.message);
+      })
+      .finally(() => {
+        if (active) setInviteLoading(false);
+      });
+    return () => { active = false; };
   }, [inviteToken]);
   async function submit(event) {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const response = await fetch(
-      `/api/auth/${mode === "login" ? "login" : "register"}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      },
-    );
-    const data = await response.json();
-    setLoading(false);
-    if (!response.ok)
-      return setError(data.error || "Não foi possível continuar.");
-    trackMarketingEvent(mode === "login" ? "login" : "sign_up", {
-      method: "email",
-      account_type: data.user?.accountType || form.accountType,
-    });
-    onAuthenticated(data.user);
+    try {
+      const response = await fetch(
+        `/api/auth/${mode === "login" ? "login" : "register"}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível continuar.");
+      trackMarketingEvent(mode === "login" ? "login" : "sign_up", {
+        method: "email",
+        account_type: data.user?.accountType || form.accountType,
+      });
+      await onAuthenticated(data.user);
+    } catch (submitError) {
+      setError(submitError.message || "Não foi possível continuar.");
+    } finally {
+      setLoading(false);
+    }
   }
+  async function confirmAuthenticatedAccount() {
+    setLoading(true);
+    setError("");
+    try {
+      await onAuthenticated(authenticatedUser);
+    } catch (confirmationError) {
+      setError(confirmationError.message || "Não foi possível aceitar o convite.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  const isInvitation = Boolean(inviteToken);
   return (
     <main className="auth-layout">
       <section className="auth-aside">
@@ -332,19 +382,26 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
           <i>CT</i> CandTech
         </div>
         <div className="auth-message">
-          <span className="auth-badge">FINANÇAS CLARAS, DECISÕES MELHORES</span>
-          <h1>Seu espaço financeiro, organizado do seu jeito.</h1>
+          <span className="auth-badge">{isInvitation ? "CONVITE DE ACESSO" : "FINANÇAS CLARAS, DECISÕES MELHORES"}</span>
+          <h1>{isInvitation ? `Você foi convidado para ${invitePreview?.organizationName || "uma empresa"}.` : "Seu espaço financeiro, organizado do seu jeito."}</h1>
         </div>
         <p>
-          Crie análises, acompanhe números e encontre seus documentos sempre
-          que precisar — tudo em uma única conta.
+          {isInvitation
+            ? "Confira o cargo e as áreas liberadas. O vínculo só será criado depois que seu e-mail for autenticado."
+            : "Crie análises, acompanhe números e encontre seus documentos sempre que precisar — tudo em uma única conta."}
         </p>
         <div className="auth-points">
-          <span><i>01</i><b>Documentos organizados</b><small>Histórico privado e salvamento automático.</small></span>
-          <span><i>02</i><b>Análises confiáveis</b><small>Cálculos auditados e memória detalhada.</small></span>
-          <span><i>03</i><b>Exporte como preferir</b><small>Excel, CSV, PDF ou Google Drive.</small></span>
+          {isInvitation ? <>
+            <span><i>01</i><b>Empresa identificada</b><small>{invitePreview?.organizationName || "Consultando o convite..."}</small></span>
+            <span><i>02</i><b>Cargo definido</b><small>{invitePreview?.jobTitle || "Aguardando validação"}</small></span>
+            <span><i>03</i><b>Acesso limitado</b><small>Você verá somente as áreas permitidas pelo cargo.</small></span>
+          </> : <>
+            <span><i>01</i><b>Documentos organizados</b><small>Histórico privado e salvamento automático.</small></span>
+            <span><i>02</i><b>Análises confiáveis</b><small>Cálculos auditados e memória detalhada.</small></span>
+            <span><i>03</i><b>Exporte como preferir</b><small>Excel, CSV, PDF ou Google Drive.</small></span>
+          </>}
         </div>
-        <small className="auth-footnote">Seus dados pertencem à sua conta.</small>
+        <small className="auth-footnote">{isInvitation ? "O convite não concede acesso antes da autenticação." : "Seus dados pertencem à sua conta."}</small>
       </section>
       <section className="auth-card">
         <div className="auth-product-visual" aria-hidden="true">
@@ -363,14 +420,32 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
           </div>
         </div>
         <div className="auth-mobile-brand brand"><i>CT</i> CandTech</div>
-        <p className="eyebrow">{mode === "login" ? "BEM-VINDO DE VOLTA" : "COMECE AGORA"}</p>
-        <h2>{mode === "login" ? "Entre no seu espaço" : "Crie seu espaço financeiro"}</h2>
+        <p className="eyebrow">{isInvitation ? "INGRESSAR NA EMPRESA" : mode === "login" ? "BEM-VINDO DE VOLTA" : "COMECE AGORA"}</p>
+        <h2>{isInvitation ? (authenticatedUser ? "Confirme sua conta" : mode === "login" ? "Entre com sua conta" : "Crie seu acesso") : mode === "login" ? "Entre no seu espaço" : "Crie seu espaço financeiro"}</h2>
         <p className="auth-subtitle">
-          {mode === "login"
+          {isInvitation
+            ? authenticatedUser
+              ? "Confirme que deseja entrar na empresa com a conta conectada abaixo."
+              : mode === "login"
+                ? "Use a conta que possui o mesmo e-mail do convite."
+                : "Defina seu nome e uma senha para acessar a empresa."
+            : mode === "login"
             ? "Continue de onde parou e acesse seus documentos."
             : "Organize suas decisões financeiras em poucos minutos."}
         </p>
-        {inviteToken && <div className="invite-auth-banner"><strong>Você recebeu um convite de empresa</strong><span>Entre ou crie uma conta usando exatamente o e-mail que recebeu o convite. Depois da autenticação, o servidor confirmará o cargo e as áreas liberadas.</span></div>}
+        {inviteLoading && <div className="invite-auth-banner"><strong>Consultando convite…</strong><span>Estamos validando a empresa e o cargo antes de pedir seus dados.</span></div>}
+        {inviteError && <div className="invite-auth-banner error"><strong>Não foi possível abrir o convite</strong><span>{inviteError}</span><a href="/">Voltar para a CandTech</a></div>}
+        {invitePreview && <InvitationDetails invitation={invitePreview} />}
+        {authenticatedUser && invitePreview && !inviteError ? (
+          <div className="invite-confirm-account">
+            <span>Conta conectada</span>
+            <strong>{authenticatedUser.name}</strong>
+            <small>{authenticatedUser.email}</small>
+            {error && <p className="form-error">{error}</p>}
+            <button type="button" className="primary-button" disabled={loading} onClick={confirmAuthenticatedAccount}>{loading ? "Ingressando…" : `Entrar em ${invitePreview.organizationName}`}</button>
+            <button type="button" className="text-button" disabled={loading} onClick={onSwitchAccount}>Usar outra conta</button>
+          </div>
+        ) : !inviteLoading && !inviteError && (
         <form onSubmit={submit}>
           {mode === "register" && (
             <>
@@ -393,7 +468,7 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
             </>
           )}
           <label>
-            E-mail
+            {isInvitation ? "E-mail que recebeu o convite" : "E-mail"}
             <input
               required
               type="email"
@@ -423,19 +498,20 @@ function AuthScreen({ onAuthenticated, inviteToken }) {
           {error && <p className="form-error">{error}</p>}
           <button className="primary-button" disabled={loading}>
             {loading
-              ? "Aguarde..."
+              ? isInvitation ? "Validando e ingressando…" : "Aguarde..."
               : mode === "login"
-                ? "Entrar"
-                : "Criar conta"}
+                ? isInvitation ? "Entrar e aceitar convite" : "Entrar"
+                : isInvitation ? "Criar acesso e entrar" : "Criar conta"}
           </button>
         </form>
-        {mode === "login" ? (
+        )}
+        {!authenticatedUser && !inviteLoading && !inviteError && (mode === "login" ? (
           inviteToken
             ? <button className="text-button" onClick={() => { setMode("register"); setError(""); }}>Ainda não tenho conta</button>
             : <div className="auth-subscribe-link"><span>Não é assinante?</span><a href="/assinar">Assine agora</a></div>
         ) : (
           <button className="text-button" onClick={() => { setMode("login"); setError(""); }}>Já possui conta? Entrar</button>
-        )}
+        ))}
       </section>
     </main>
   );
@@ -483,6 +559,7 @@ export default function CandTechApp({ publicFallback = null }) {
   const [isAdministrator, setIsAdministrator] = useState(false);
   const [showExportCenter, setShowExportCenter] = useState(false);
   const [inviteToken] = useState(invitationTokenFromLocation);
+  const [inviteComplete, setInviteComplete] = useState(() => !inviteToken);
   const [exportSections, setExportSections] = useState({ calculations: true, finance: true, inventory: true, commerce: true });
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
@@ -533,16 +610,17 @@ export default function CandTechApp({ publicFallback = null }) {
   );
   const canAccess = (permission) => {
     const access = user?.access;
-    return !access || ["owner", "personal"].includes(access.role) || access.permissions?.includes(permission);
+    // Sem o contexto de acesso confirmado pelo servidor, a interface também
+    // nega as áreas. As APIs repetem a mesma validação no lado seguro.
+    return Boolean(access && (["owner", "personal"].includes(access.role) || access.permissions?.includes(permission)));
   };
   useEffect(() => {
-    hydrateAuthenticatedUser(inviteToken)
-      .then((data) => {
-        if (data.user) setUser(data.user);
-        if (data.inviteMessage) setNotice(data.inviteMessage);
+    hydrateAuthenticatedUser()
+      .then((authenticatedUser) => {
+        if (authenticatedUser) setUser(authenticatedUser);
       })
       .finally(() => setChecking(false));
-  }, [inviteToken]);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -550,9 +628,35 @@ export default function CandTechApp({ publicFallback = null }) {
   }, [inviteToken]);
 
   async function completeAuthentication(baseUser) {
-    const hydrated = await hydrateAuthenticatedUser(inviteToken);
-    setUser(hydrated.user || baseUser);
-    if (hydrated.inviteMessage) setNotice(hydrated.inviteMessage);
+    let acceptedAccess = null;
+    if (inviteToken) acceptedAccess = await acceptInvitation(inviteToken);
+    const hydratedUser = await hydrateAuthenticatedUser();
+    const confirmedUser = hydratedUser || (acceptedAccess && baseUser
+      ? { ...baseUser, access: acceptedAccess }
+      : null);
+    if (!confirmedUser) throw new Error("Não foi possível confirmar sua sessão.");
+    // Interrompe qualquer salvamento do workspace anterior antes de trocar a
+    // organização que será resolvida pelas APIs.
+    setWorkspaceReady(false);
+    lastSavedWorkspace.current = "";
+    setUser(confirmedUser);
+    if (acceptedAccess) {
+      setNotice(`Convite aceito. Você entrou em ${acceptedAccess.organizationName} como ${acceptedAccess.jobTitle || "colaborador"}.`);
+      setInviteComplete(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }
+
+  async function switchInvitationAccount() {
+    try {
+      await fetch("/api/auth/me", { method: "DELETE" });
+    } finally {
+      // Mesmo que a rede falhe, a interface deixa de reutilizar a identidade
+      // anterior e permite informar novamente a conta que recebeu o convite.
+      setUser(null);
+      setWorkspaceReady(false);
+      setNotice("");
+    }
   }
 
   useEffect(() => {
@@ -618,7 +722,7 @@ export default function CandTechApp({ publicFallback = null }) {
 
   useEffect(() => {
     if (user) loadAdminOverview();
-  }, [user?.id]);
+  }, [user?.id, user?.access?.organizationId]);
 
   useEffect(() => {
     if (!user) {
@@ -656,7 +760,7 @@ export default function CandTechApp({ publicFallback = null }) {
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.access?.organizationId]);
 
   useEffect(() => {
     if (!user || !workspaceReady) return;
@@ -1513,6 +1617,15 @@ export default function CandTechApp({ publicFallback = null }) {
   // JavaScript recebem conteúdo útil enquanto a sessão é verificada.
   if (checking)
     return publicFallback || <div className="loading">Verificando sua sessão…</div>;
+  if (inviteToken && !inviteComplete)
+    return (
+      <AuthScreen
+        onAuthenticated={completeAuthentication}
+        inviteToken={inviteToken}
+        authenticatedUser={user}
+        onSwitchAccount={switchInvitationAccount}
+      />
+    );
   if (user && !workspaceReady)
     return <div className="loading">Carregando os dados da sua conta…</div>;
   if (!user) {

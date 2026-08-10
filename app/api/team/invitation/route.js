@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { acceptOrganizationInvitation, appendAuditEvent, findOrganizationInvitation } from "@/lib/db";
@@ -6,16 +5,9 @@ import { publicAccess } from "@/lib/organization-access";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { TEAM_AREAS } from "@/lib/team-permissions";
+import { hashInvitationToken, validInvitationToken } from "@/lib/team-invitation";
 
 export const runtime = "nodejs";
-
-function tokenHash(value) {
-  return createHash("sha256").update(String(value || "")).digest("hex");
-}
-
-function validToken(value) {
-  return typeof value === "string" && /^[A-Za-z0-9_-]{40,60}$/.test(value);
-}
 
 export async function PUT(request) {
   const blocked = guardMutation(request);
@@ -26,8 +18,8 @@ export async function PUT(request) {
   if (!user) return NextResponse.json({ error: "Entre para consultar este convite." }, { status: 401 });
   try {
     const { token } = await readLimitedJson(request, { maxBytes: 2_048, maxDepth: 2, maxNodes: 8, maxStringLength: 100 });
-    if (!validToken(token)) return NextResponse.json({ error: "Convite inválido." }, { status: 400 });
-    const invitation = await findOrganizationInvitation(tokenHash(token));
+    if (!validInvitationToken(token)) return NextResponse.json({ error: "Convite inválido." }, { status: 400 });
+    const invitation = await findOrganizationInvitation(hashInvitationToken(token));
     if (!invitation || invitation.email !== String(user.email).toLowerCase()) {
       return NextResponse.json({ error: "Convite inválido, cancelado ou expirado." }, { status: 404 });
     }
@@ -58,8 +50,8 @@ export async function POST(request) {
   if (!user) return NextResponse.json({ error: "Entre ou crie sua conta para aceitar o convite." }, { status: 401 });
   try {
     const { token } = await readLimitedJson(request, { maxBytes: 2_048, maxDepth: 2, maxNodes: 8, maxStringLength: 100 });
-    if (!validToken(token)) return NextResponse.json({ error: "Convite inválido." }, { status: 400 });
-    const access = await acceptOrganizationInvitation({ tokenHash: tokenHash(token), userId: user.id, email: user.email });
+    if (!validInvitationToken(token)) return NextResponse.json({ error: "Convite inválido." }, { status: 400 });
+    const access = await acceptOrganizationInvitation({ tokenHash: hashInvitationToken(token), userId: user.id, email: user.email });
     if (!access) {
       return NextResponse.json({ error: "O convite não corresponde a este e-mail, expirou ou a conta já pertence a outra empresa." }, { status: 409 });
     }

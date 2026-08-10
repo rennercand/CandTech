@@ -20,7 +20,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - vínculo do OAuth do Drive à sessão iniciadora;
 - auditoria inicial de conta, sessão e perfil;
 - exclusão explícita dos segredos no pacote de deploy;
-- estoque relacional por empresa, com produtos, variações, SKU, entrada rápida, cadastro e entrada por planilha com prévia, pedidos multi-item, movimentações e desfazimento;
+- estoque relacional por empresa, com produtos, variações, SKU, entrada rápida, cadastro e entrada por planilha com prévia, leitura de catálogos comerciais com títulos e saldo inicial zero, pedidos multi-item, movimentações e desfazimento;
 - visão de valor do estoque por categoria, alertas de mínimo/validade e relatórios CSV/XLSX com envio opcional ao Google Drive;
 - guia de capacitação de estoque e ajuda incorporada à interface;
 - pré-nota identificada como documento sem validade fiscal.
@@ -28,6 +28,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - categorias financeiras cadastráveis e reutilizáveis em contas e lançamentos, salvas conforme a permissão do painel financeiro;
 - formulário de contas a receber simplificado, sem exigir descrição redundante além do cliente e da categoria;
 - cargos personalizados por empresa, permissões reutilizáveis e convite de colaborador vinculado ao e-mail autenticado;
+- convite com tela própria de ingresso, prévia segura da empresa e do cargo, criação ou login da conta e abertura direta do workspace conforme as permissões recebidas;
 - envio transacional de convite preparado para Resend, com idempotência e alternativa de link copiável quando o provedor não estiver configurado.
 - página inicial indexável sem JavaScript, com title e description adequados, canonical no domínio oficial, hierarquia H1/H2 e links internos para planos e privacidade.
 

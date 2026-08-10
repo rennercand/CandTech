@@ -2647,6 +2647,18 @@ body {
 .pending-invites > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .invite-auth-banner { display: grid; gap: 5px; margin: 16px 0; padding: 13px 14px; border-radius: 12px; background: #f1edff; color: #49369c; }
 .invite-auth-banner span { font-size: .86rem; line-height: 1.45; }
+.invite-auth-banner.error { background: #fff0f2; color: #a92c43; }
+.invite-auth-banner a { color: inherit; font-weight: 800; }
+.invite-company-card { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+.invite-company-card > div { display: grid; gap: 4px; min-width: 0; padding: 12px 13px; border: 1px solid #e4e0f7; border-radius: 11px; background: #faf9ff; }
+.invite-company-card span, .invite-confirm-account > span { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.invite-company-card strong { overflow: hidden; color: #342c60; font-size: .85rem; text-overflow: ellipsis; }
+.invite-company-card .invite-permission-summary { grid-column: 1 / -1; }
+.invite-permission-summary p { margin: 1px 0 0; color: #514872; font-size: .78rem; line-height: 1.5; }
+.invite-confirm-account { display: grid; gap: 6px; }
+.invite-confirm-account > strong { font-size: 1rem; }
+.invite-confirm-account > small { margin-bottom: 12px; color: var(--muted); }
+.invite-confirm-account .text-button { justify-self: center; }
 
 @media (max-width: 720px) {
   .team-job-form, .team-invite-form, .team-role-row { grid-template-columns: 1fr; }

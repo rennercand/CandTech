@@ -7,6 +7,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 ## Funcionalidades
 
 - Cadastro e login com sessão individual.
+- Convites de equipe abrem uma jornada própria: mostram empresa, cargo, e-mail mascarado e áreas permitidas; após cadastro ou login, o colaborador entra diretamente no workspace empresarial.
 - Workspace inicial com resumo do negócio, documentos recentes e modelos para novos trabalhos; gráficos e controles detalhados ficam recolhidos para preservar a praticidade.
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
@@ -29,7 +30,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Página de futura assinatura em `/assinar`, sem preços ou cobrança ativa.
 - Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
-- Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, sempre com prévia e conferência por SKU.
+- Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.

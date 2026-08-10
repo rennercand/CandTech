@@ -20,7 +20,8 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - vínculo do OAuth do Drive à sessão iniciadora;
 - auditoria inicial de conta, sessão e perfil;
 - exclusão explícita dos segredos no pacote de deploy;
-- estoque com busca, filtros, ordenação, alertas e ajuste rápido;
+- estoque relacional por empresa, com produtos, variações, SKU, entrada rápida, importação com prévia, pedidos multi-item, movimentações e desfazimento;
+- guia de capacitação de estoque e ajuda incorporada à interface;
 - pré-nota identificada como documento sem validade fiscal.
 
 ## Antes de um teste privado pequeno

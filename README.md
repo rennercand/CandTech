@@ -142,11 +142,15 @@ app/
   api/auth/          cadastro, login e sessão
   api/history/       histórico, exclusão e CSV
   api/workspace/     restauração, autosave e rascunho automático
+  api/inventory/     estoque relacional, entradas, pedidos e desfazimento
   advanced-tools.js  financiamento, preço e leitor de PDF
+  inventory-operations.js operação guiada e treinamento de estoque
   page.js            dashboard, cálculos e organização financeira
 lib/
   auth.js            criação e validação do JWT
   db.js              PostgreSQL/Neon e fallback SQLite
+  inventory-db.js    produtos, variações e movimentos transacionais
+  inventory-import.js leitura local de CSV/TSV/TXT/XLSX
   finance-calculations.js
   request-security.js valida origem e formato das mutações
 next.config.mjs       cabeçalhos de segurança do navegador
@@ -164,6 +168,9 @@ As tabelas são criadas automaticamente na primeira utilização:
 - `workspaces`: estado mais recente da interface, revisão e controle de arquivamento.
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
 - `google_drive_connections`: refresh token cifrado e vinculado ao usuário.
+- `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa;
+- `inventory_batches` e `inventory_movements`: livro auditável de entradas, vendas, compras e reversões;
+- `inventory_orders` e `inventory_order_items`: pedidos com vários produtos.
 
 ### Como o banco atual funciona
 
@@ -194,6 +201,8 @@ O menu de exportação diferencia download local e envio ao Google Drive. Cada u
 A evolução comercial — conciliação por regras, estoque, rastreamento, Reforma Tributária e split payment — está organizada em [ROADMAP-PRODUTO.md](./docs/ROADMAP-PRODUTO.md). A inteligência artificial foi retirada do escopo atual. O plano conceitual de proteção está em [ROADMAP-SEGURANCA.md](./docs/ROADMAP-SEGURANCA.md), enquanto os achados verificados no código ficam em [ROADMAP-CORRECOES-SEGURANCA.md](./docs/ROADMAP-CORRECOES-SEGURANCA.md). Esses documentos são planejamento: não indicam que as funções ou controles já foram implementados.
 
 As pendências operacionais e externas anteriores à cobrança estão em [CHECKLIST-ANTES-DE-VENDER.md](./docs/CHECKLIST-ANTES-DE-VENDER.md).
+
+A rotina de capacitação para proprietários e funcionários está em [GUIA-OPERACAO-ESTOQUE.md](./docs/GUIA-OPERACAO-ESTOQUE.md).
 
 O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
 

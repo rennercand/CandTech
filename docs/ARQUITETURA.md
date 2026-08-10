@@ -20,12 +20,14 @@ flowchart LR
     API --> SEC[Validação de origem e rate limit]
     SEC --> AUTH[JWT revogável + identidade atual do banco]
     SEC --> HISTORY[Histórico e workspace]
+    SEC --> INVENTORY[Estoque relacional e pedidos]
     SEC --> REPORTS[Gerador PDF/CSV/XLSX]
     SEC --> DRIVE[Integração Google Drive]
   end
 
   AUTH --> DB[(PostgreSQL / Neon)]
   HISTORY --> DB
+  INVENTORY --> DB
   SEC --> DB
   DRIVE --> TOKENS[Tokens OAuth cifrados no banco]
   TOKENS --> DB
@@ -106,6 +108,9 @@ mindmap
 | `auth_sessions` | sessões ativas, expiração e revogação | `user_id` + hash da sessão |
 | `billing_profiles` | identificação e endereço de cobrança | uma linha por `user_id` |
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
+| `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | `tenant_id` derivado da sessão e da organização |
+| `inventory_batches` / `inventory_movements` | livro de movimentos e reversões | `tenant_id` + autor autenticado |
+| `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | `tenant_id` + lote de movimentação |
 
 O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extrai o identificador do usuário e consulta o Neon usando esse identificador. A credencial do banco permanece no servidor.
 

@@ -13,13 +13,12 @@ import { ordersFromCashEntries } from "../lib/business-calculations";
 import {
   FinancialCommitments,
   AdminOverview,
-  InventoryLogistics,
-  SalesPurchases,
   emptyCommerceOrder,
   emptyFinancialAccount,
   emptyInventoryState,
 } from "./business-tools";
 import TeamAccess from "./team-access";
+import InventoryOperations from "./inventory-operations";
 import { trackMarketingEvent } from "../lib/analytics";
 
 async function hydrateAuthenticatedUser(inviteToken = "") {
@@ -1689,17 +1688,8 @@ export default function Page() {
               onSave={saveCashFlow} />
           </div>
         )}
-        {view === "inventory" && <InventoryLogistics state={inventoryState} setState={setInventoryState} />}
-        {view === "commerce" && <SalesPurchases
-          orders={commerceOrders}
-          setOrders={setCommerceOrders}
-          products={inventoryState.products}
-          issuer={invoiceIssuer}
-          setIssuer={setInvoiceIssuer}
-          onStatusChange={changeOrderStatus}
-          onTestInvoice={downloadTestInvoice}
-          onSuggestFromCash={suggestOrdersFromCash}
-        />}
+        {view === "inventory" && <InventoryOperations onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "commerce" && <InventoryOperations initialSection="orders" onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
         {view === "team" && user.access?.role === "owner" && <TeamAccess />}
         {view === "history" && (

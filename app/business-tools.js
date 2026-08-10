@@ -34,10 +34,23 @@ function Field({ label, children }) {
   return <label className="operation-field"><span>{label}</span>{children}</label>;
 }
 
-export function FinancialCommitments({ accounts, setAccounts, onStatusChange, onScanRequest }) {
+export function FinancialCommitments({ accounts, setAccounts, categories = ["Geral"], onCreateCategory, onStatusChange, onScanRequest }) {
   const summary = useMemo(() => summarizeAccounts(accounts), [accounts]);
+  const [newCategory, setNewCategory] = useState("");
+  const availableCategories = useMemo(() => [...new Set([
+    ...categories,
+    ...accounts.map((account) => account.category),
+  ].map((category) => String(category || "").trim()).filter(Boolean))], [categories, accounts]);
   const update = (index, field, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
+  const changeType = (index, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index
+    ? { ...row, type: value, ...(value === "receber" ? { description: "" } : {}) }
+    : row));
   const remove = (index) => setAccounts((current) => current.filter((_, rowIndex) => rowIndex !== index));
+  function createCategory() {
+    const value = newCategory.trim();
+    if (!value) return;
+    if (onCreateCategory?.(value) !== false) setNewCategory("");
+  }
   return <section className="panel operations-panel">
     <div className="panel-heading"><div><span className="eyebrow">CONTAS E COBRANÇAS</span><h2>Controle de pagamentos e recebimentos</h2><p>Acompanhe vencimentos e dê baixa diretamente no fluxo de caixa.</p></div><div className="module-actions"><label className="secondary-button file-button">Digitalizar conta<input type="file" accept="image/*" capture="environment" onChange={(event) => onScanRequest?.(event.target.files?.[0])} /></label><button className="primary-button" onClick={() => setAccounts((current) => [...current, { ...emptyFinancialAccount(), id: newId() }])}>+ Nova conta</button></div></div>
     <Summary items={[
@@ -45,11 +58,12 @@ export function FinancialCommitments({ accounts, setAccounts, onStatusChange, on
       { label: "A pagar", value: signedMoney(summary.payable, "saida"), tone: "negative", caption: "Obrigações ainda pendentes" },
       { label: "Vencidas", value: summary.overdue, caption: "Itens que pedem atenção" },
     ]} />
-    <div className="operation-list">{accounts.map((account, index) => <article className="operation-row" key={account.id || `account-${index}`}>
-      <Field label="Tipo"><select value={account.type} onChange={(e) => update(index, "type", e.target.value)}><option value="pagar">A pagar</option><option value="receber">A receber</option></select></Field>
-      <Field label="Descrição"><input value={account.description} onChange={(e) => update(index, "description", e.target.value)} placeholder="Ex.: aluguel" /></Field>
+    <div className="financial-category-manager"><div><strong>Categorias financeiras</strong><span>Crie uma vez e selecione nas contas e nos lançamentos.</span></div><label><span>Nova categoria</span><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} placeholder="Ex.: Fornecedores" maxLength="50" /></label><button type="button" className="secondary-button" onClick={createCategory} disabled={!newCategory.trim()}>+ Criar categoria</button></div>
+    <div className="operation-list">{accounts.map((account, index) => <article className={`operation-row ${account.type === "receber" ? "receiving-row" : ""}`} key={account.id || `account-${index}`}>
+      <Field label="Tipo"><select value={account.type} onChange={(e) => changeType(index, e.target.value)}><option value="pagar">A pagar</option><option value="receber">A receber</option></select></Field>
+      {account.type === "pagar" && <Field label="Descrição"><input value={account.description} onChange={(e) => update(index, "description", e.target.value)} placeholder="Ex.: aluguel" /></Field>}
       <Field label="Cliente / fornecedor"><input value={account.party} onChange={(e) => update(index, "party", e.target.value)} placeholder="Nome" /></Field>
-      <Field label="Categoria"><input value={account.category} onChange={(e) => update(index, "category", e.target.value)} /></Field>
+      <Field label="Categoria"><select value={account.category || "Geral"} onChange={(e) => update(index, "category", e.target.value)}>{availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select></Field>
       <Field label="Vencimento"><input type="date" value={account.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field>
       <Field label="Valor"><div className={`signed-amount-field ${account.type === "receber" ? "income" : "expense"}`}><span>{account.type === "receber" ? "+" : "-"}</span><input type="number" min="0" step="0.01" value={account.amount} onChange={(e) => update(index, "amount", e.target.value)} placeholder="0,00" /></div></Field>
       <Field label="Status"><select value={account.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="pendente">Pendente</option><option value={account.type === "pagar" ? "pago" : "recebido"}>{account.type === "pagar" ? "Pago" : "Recebido"}</option></select></Field>

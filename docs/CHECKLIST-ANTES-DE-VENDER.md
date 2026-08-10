@@ -24,6 +24,9 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - visão de valor do estoque por categoria, alertas de mínimo/validade e relatórios CSV/XLSX com envio opcional ao Google Drive;
 - guia de capacitação de estoque e ajuda incorporada à interface;
 - pré-nota identificada como documento sem validade fiscal.
+- workspace inicial com o resumo do negócio integrado e detalhes operacionais recolhíveis;
+- categorias financeiras cadastráveis e reutilizáveis em contas e lançamentos, salvas conforme a permissão do painel financeiro;
+- formulário de contas a receber simplificado, sem exigir descrição redundante além do cliente e da categoria.
 
 ## Antes de um teste privado pequeno
 

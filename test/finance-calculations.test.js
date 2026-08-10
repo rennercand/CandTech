@@ -228,6 +228,20 @@ test("salvamento parcial não apaga áreas ocultas do espaço empresarial", () =
   });
 });
 
+test("categorias financeiras seguem a permissão do painel financeiro", () => {
+  const access = { role: "attendant", permissions: ["cashflow"] };
+  const workspace = {
+    financialCategories: ["Serviços recorrentes"],
+    cashEntries: [{ description: "Mensalidade", amount: 200 }],
+    inventoryState: { products: [{ name: "Produto oculto" }] },
+  };
+
+  assert.deepEqual(filterWorkspaceForAccess(workspace, access), {
+    financialCategories: workspace.financialCategories,
+    cashEntries: workspace.cashEntries,
+  });
+});
+
 test("histórico e permissões desconhecidas são negados por padrão", () => {
   const access = { role: "attendant", permissions: normalizePermissions(["inventory", "area-inventada"], "attendant") };
   assert.deepEqual(access.permissions, ["inventory"]);

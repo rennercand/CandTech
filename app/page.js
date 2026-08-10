@@ -99,6 +99,26 @@ const blankCashRow = () => ({
   amount: "",
 });
 
+const DEFAULT_FINANCIAL_CATEGORIES = [
+  "Geral", "Vendas", "Compras", "Fornecedores", "Aluguel", "Impostos e taxas", "Salários", "Outros",
+];
+
+function normalizeFinancialCategories(payload = {}) {
+  const values = [
+    ...DEFAULT_FINANCIAL_CATEGORIES,
+    ...(Array.isArray(payload.financialCategories) ? payload.financialCategories : []),
+    ...(Array.isArray(payload.cashEntries) ? payload.cashEntries.map((entry) => entry?.category) : []),
+    ...(Array.isArray(payload.financialAccounts) ? payload.financialAccounts.map((account) => account?.category) : []),
+  ];
+  const seen = new Set();
+  return values.map((value) => String(value || "").trim().slice(0, 50)).filter((value) => {
+    const key = value.toLocaleLowerCase("pt-BR");
+    if (!value || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 const emptyInputs = () => ({
   investment: "",
   investmentDate: today(),
@@ -136,6 +156,7 @@ function normalizeWorkspacePayload(payload = {}) {
     calculationType: "VPL",
     cashEntries: [blankCashRow()],
     cashFilters: { month: "", type: "todos", category: "todos" },
+    financialCategories: DEFAULT_FINANCIAL_CATEGORIES,
     organizationName: "Minha organização",
     saveTitle: "Simulação financeira",
     financeState: emptyFinanceState(),
@@ -162,6 +183,7 @@ function normalizeWorkspacePayload(payload = {}) {
         ? payload.cashEntries
         : defaults.cashEntries,
     cashFilters: { ...defaults.cashFilters, ...(payload.cashFilters || {}) },
+    financialCategories: normalizeFinancialCategories(payload),
     financeState: {
       ...defaults.financeState,
       ...(payload.financeState || {}),
@@ -445,6 +467,7 @@ export default function Page() {
     type: "todos",
     category: "todos",
   });
+  const [financialCategories, setFinancialCategories] = useState(DEFAULT_FINANCIAL_CATEGORIES);
   const [organizationName, setOrganizationName] = useState("Minha organização");
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -488,6 +511,7 @@ export default function Page() {
       calculationType,
       cashEntries,
       cashFilters,
+      financialCategories,
       organizationName,
       saveTitle,
       financeState,
@@ -504,6 +528,7 @@ export default function Page() {
       calculationType,
       cashEntries,
       cashFilters,
+      financialCategories,
       organizationName,
       saveTitle,
       financeState,
@@ -680,11 +705,17 @@ export default function Page() {
     if (view === "team" && user?.access?.role !== "owner") setView("home");
   }, [view, user?.access?.role, user?.access?.permissions?.join(",")]);
 
-  function applyWorkspace(payload) {
+  function applyWorkspace(payload, { preserveFinancialCategories = false } = {}) {
     setInputs(payload.inputs);
     setCalculationType(payload.calculationType);
     setCashEntries(payload.cashEntries);
     setCashFilters(payload.cashFilters);
+    setFinancialCategories((current) => preserveFinancialCategories
+      ? normalizeFinancialCategories({
+        ...payload,
+        financialCategories: [...current, ...(payload.financialCategories || [])],
+      })
+      : payload.financialCategories);
     setOrganizationName(payload.organizationName);
     setSaveTitle(payload.saveTitle);
     setFinanceState(payload.financeState);
@@ -724,6 +755,21 @@ export default function Page() {
     if (response.ok) lastSavedWorkspace.current = JSON.stringify(workspacePayload);
     return response.ok;
   }
+
+  function createFinancialCategory(value) {
+    const category = String(value || "").trim().slice(0, 50);
+    if (!category) {
+      setNotice("Informe um nome para criar a categoria.");
+      return false;
+    }
+    if (financialCategories.some((item) => item.toLocaleLowerCase("pt-BR") === category.toLocaleLowerCase("pt-BR"))) {
+      setNotice(`A categoria ${category} já existe.`);
+      return false;
+    }
+    setFinancialCategories((current) => [...current, category]);
+    setNotice(`Categoria ${category} criada e disponível no Financeiro.`);
+    return true;
+  }
   async function loadHistory(type) {
     setHistoryLoading(true);
     try {
@@ -746,7 +792,7 @@ export default function Page() {
     // Antes de limpar a área atual, preserva sua última revisão no histórico da conta.
     await archiveCurrentWorkspace();
     // "Novo documento" limpa todo o workspace e é a única ação que remove o ID ativo.
-    applyWorkspace(normalizeWorkspacePayload());
+    applyWorkspace(normalizeWorkspacePayload({ financialCategories }));
     if (type === "calculator") {
       setSaveTitle("Nova simulação financeira");
     } else if (type === "cashflow") {
@@ -783,7 +829,9 @@ export default function Page() {
       ...blankCashRow(),
       date: account.dueDate || today(),
       category: account.category || "Geral",
-      description: account.description || account.party || "Baixa de conta",
+      description: account.type === "receber"
+        ? account.party || "Recebimento"
+        : account.description || account.party || "Pagamento",
       type: cashType,
       amount: account.amount,
     }]);
@@ -1236,7 +1284,10 @@ export default function Page() {
     setActiveDocumentId(item.id);
     if (item.payload.workspace) {
       // Documentos novos carregam o workspace completo e continuam usando o mesmo ID ao salvar.
-      applyWorkspace(normalizeWorkspacePayload({ ...item.payload.workspace, activeDocumentId: item.id }));
+      applyWorkspace(
+        normalizeWorkspacePayload({ ...item.payload.workspace, activeDocumentId: item.id }),
+        { preserveFinancialCategories: true },
+      );
       const targetView = {
         "tabela-financeira": "financing",
         "preco-produto": "pricing",
@@ -1448,9 +1499,20 @@ export default function Page() {
   }
   function restoreAutomaticDraft(item) {
     const restored = normalizeWorkspacePayload(item.payload);
-    applyWorkspace(restored);
+    applyWorkspace(restored, { preserveFinancialCategories: true });
     setNotice("Rascunho restaurado. As alterações voltarão a ser salvas automaticamente.");
-    setView("dashboard");
+    setView("home");
+  }
+  function resetOperationalSections(sections) {
+    // A limpeza é voluntária e afeta somente as áreas marcadas do documento atual.
+    if (sections.finance) {
+      setCashEntries([blankCashRow()]);
+      setFinancialAccounts([emptyFinancialAccount()]);
+      setCashFilters({ month: "", type: "todos", category: "todos" });
+    }
+    if (sections.inventory) setInventoryState(emptyInventoryState());
+    if (sections.commerce) setCommerceOrders([emptyCommerceOrder()]);
+    setNotice("Novo ciclo iniciado nas áreas selecionadas. O salvamento automático atualizará este documento.");
   }
   if (checking || (user && !workspaceReady))
     return <div className="loading">Carregando os dados da sua conta…</div>;
@@ -1486,8 +1548,7 @@ export default function Page() {
         <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
         <nav aria-label="Navegação principal">
           {[
-            ["home", "Documentos", "⌂"],
-            ...(canAccess("dashboard") ? [["dashboard", "Visão geral", "◈"]] : []),
+            ["home", "Início", "⌂"],
             ...(canAccess("calculator") ? [["calculator", "Calculadoras", "⌁"]] : []),
             ...(canAccess("financing") ? [["financing", "Tabela financeira", "▦"]] : []),
             ...(canAccess("pricing") ? [["pricing", "Preço do produto", "◇"]] : []),
@@ -1539,9 +1600,9 @@ export default function Page() {
             </p>
             <h1>
               {view === "home"
-                ? "Seus documentos"
+                ? "Workspace"
                 : view === "dashboard"
-                ? "Visão geral"
+                ? "Workspace"
                 : view === "calculator"
                   ? "Calculadoras"
                   : view === "financing"
@@ -1623,27 +1684,16 @@ export default function Page() {
             onViewAll={() => setView("history")}
             allowedViews={new Set(["calculator", "financing", "pricing", "cashflow", "inventory", "commerce"].filter((area) => canAccess(area)))}
             showHistory={canAccess("history")}
-          />
-        )}
-        {view === "dashboard" && (
-          <Dashboard
-            cashEntries={cashEntries}
-            financialAccounts={financialAccounts}
-            inventoryState={inventoryState}
-            commerceOrders={commerceOrders}
-            access={{ finance: canAccess("cashflow"), inventory: canAccess("inventory"), commerce: canAccess("commerce") }}
-            onOpen={(target) => setView(target)}
-            onReset={(sections) => {
-              // A limpeza é voluntária e afeta somente as áreas marcadas do documento atual.
-              if (sections.finance) {
-                setCashEntries([blankCashRow()]);
-                setFinancialAccounts([emptyFinancialAccount()]);
-                setCashFilters({ month: "", type: "todos", category: "todos" });
-              }
-              if (sections.inventory) setInventoryState(emptyInventoryState());
-              if (sections.commerce) setCommerceOrders([emptyCommerceOrder()]);
-              setNotice("Novo ciclo iniciado nas áreas selecionadas. O salvamento automático atualizará este documento.");
-            }}
+            overview={canAccess("dashboard") ? <Dashboard
+              embedded
+              cashEntries={cashEntries}
+              financialAccounts={financialAccounts}
+              inventoryState={inventoryState}
+              commerceOrders={commerceOrders}
+              access={{ finance: canAccess("cashflow"), inventory: canAccess("inventory"), commerce: canAccess("commerce") }}
+              onOpen={(target) => setView(target)}
+              onReset={resetOperationalSections}
+            /> : null}
           />
         )}
         {view === "calculator" && (
@@ -1686,10 +1736,11 @@ export default function Page() {
         {view === "cashflow" && (
           <div className="business-stack">
             <FinancialCommitments accounts={financialAccounts} setAccounts={setFinancialAccounts}
+              categories={financialCategories} onCreateCategory={createFinancialCategory}
               onStatusChange={changeAccountStatus} onScanRequest={scanBillImage} />
             <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}
               entries={cashEntries} filteredEntries={filteredCashEntries} filters={cashFilters}
-              setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals}
+              setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals} categories={financialCategories}
               onSave={saveCashFlow} />
           </div>
         )}
@@ -1737,7 +1788,7 @@ const DOCUMENT_TEMPLATES = [
   { id: "commerce", title: "Vendas e compras", text: "Pedidos, clientes e fornecedores", icon: "⇄", tone: "orange" },
 ];
 
-function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll, allowedViews, showHistory }) {
+function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll, allowedViews, showHistory, overview }) {
   const recentItems = items.slice(0, 6);
 
   return (
@@ -1759,6 +1810,8 @@ function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAl
           <span>＋</span> Novo documento
         </button>
       </section>
+
+      {overview && <section className="home-section workspace-overview-section"><div className="home-section-heading"><div><span className="eyebrow">VISÃO GERAL</span><h2>Resumo do seu negócio</h2></div></div>{overview}</section>}
 
       <section className="home-section" id="document-templates">
         <div className="home-section-heading">
@@ -1868,7 +1921,7 @@ function CommerceOverviewChart({ orders }) {
   </div></div>;
 }
 
-function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrders, access, onOpen, onReset }) {
+function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrders, access, onOpen, onReset, embedded = false }) {
   const [period, setPeriod] = useState("90");
   const [resetSections, setResetSections] = useState({ finance: false, inventory: false, commerce: false });
   const cutoff = period === "all" ? null : new Date(Date.now() - Number(period) * 86_400_000);
@@ -1892,21 +1945,22 @@ function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrd
     onReset(resetSections);
     setResetSections({ finance: false, inventory: false, commerce: false });
   }
+  const charts = <section className="overview-chart-grid">
+    {access.finance && <article className="panel chart-panel"><div className="panel-heading"><div><span className="eyebrow">FINANCEIRO</span><h2>Entradas e saídas realizadas</h2><p>Movimentos cadastrados no caixa dentro do período escolhido.</p></div><button className="secondary-button" onClick={() => onOpen("cashflow")}>Abrir Financeiro</button></div>{flowRows.length ? <CashFlowChart rows={flowRows} /> : <p className="overview-empty">Adicione movimentos no Financeiro para formar o gráfico.</p>}</article>}
+    {access.inventory && <article className="panel"><div className="panel-heading"><div><span className="eyebrow">ESTOQUE</span><h2>Quantidade por produto</h2><p>Um gráfico diferente do caixa, com alerta para o nível mínimo.</p></div><button className="secondary-button" onClick={() => onOpen("inventory")}>Abrir Estoque</button></div><InventoryOverviewChart products={inventoryState.products} /></article>}
+    {access.commerce && <article className="panel overview-commerce-panel"><div className="panel-heading"><div><span className="eyebrow">VENDAS E COMPRAS</span><h2>Evolução comercial</h2><p>Compras ficam negativas em vermelho; cada venda acrescenta valor em verde.</p></div><button className="secondary-button" onClick={() => onOpen("commerce")}>Abrir pedidos</button></div><CommerceOverviewChart orders={orderRows} /></article>}
+  </section>;
+  const resetControl = <details className="panel reset-operation-panel"><summary>Iniciar um novo ciclo da loja</summary><p>Use apenas quando quiser limpar uma ou mais áreas do documento atual e começar novos gráficos. O histórico salvo permanece disponível.</p><div className="reset-operation-checks">{access.finance && <label><input type="checkbox" checked={resetSections.finance} onChange={(event) => setResetSections((current) => ({ ...current, finance: event.target.checked }))} /> Financeiro</label>}{access.inventory && <label><input type="checkbox" checked={resetSections.inventory} onChange={(event) => setResetSections((current) => ({ ...current, inventory: event.target.checked }))} /> Estoque</label>}{access.commerce && <label><input type="checkbox" checked={resetSections.commerce} onChange={(event) => setResetSections((current) => ({ ...current, commerce: event.target.checked }))} /> Vendas e compras</label>}</div><button className="secondary-button danger-button" disabled={!allowedReset} onClick={resetSelected}>Limpar áreas selecionadas</button></details>;
   return (
-    <div className="business-stack operational-dashboard">
-      <section className="panel overview-toolbar"><div><span className="eyebrow">OPERAÇÃO DA EMPRESA</span><h2>Status atual da loja</h2><p>Os valores abaixo vêm diretamente do Financeiro, Estoque e Vendas e compras.</p></div><label>Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="all">Todo o período</option></select></label></section>
+    <div className={`business-stack operational-dashboard ${embedded ? "workspace-dashboard" : ""}`}>
+      <section className={embedded ? "workspace-overview-controls" : "panel overview-toolbar"}><div>{!embedded && <><span className="eyebrow">OPERAÇÃO DA EMPRESA</span><h2>Status atual da loja</h2></>}<p>Os valores abaixo vêm diretamente do Financeiro, Estoque e Vendas e compras.</p></div><label>Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="all">Todo o período</option></select></label></section>
       <section className="stats-grid">
         {access.finance && <StatCard label="Caixa realizado" value={`${cash > 0 ? "+" : cash < 0 ? "-" : ""}${money.format(Math.abs(cash))}`} positive={cash > 0} neutral={cash === 0} caption={cash > 0 ? "A operação está com entrada líquida" : cash < 0 ? "As saídas superam as entradas" : "Entradas e saídas estão equilibradas"} />}
         {access.finance && <StatCard label="Contas pendentes" value={`${pending > 0 ? "+" : pending < 0 ? "-" : ""}${money.format(Math.abs(pending))}`} positive={pending > 0} neutral={pending === 0} caption={pending > 0 ? "Há mais valores a receber" : pending < 0 ? "Há mais valores a pagar" : "Sem diferença entre contas pendentes"} />}
         {access.inventory && <StatCard label="Valor em estoque" value={money.format(stockValue)} positive={stockValue >= 0} caption={`${inventoryState.products.filter((item) => item.name || item.sku).length} produtos cadastrados`} />}
         {access.commerce && <StatCard label="Saldo comercial" value={`${commerce > 0 ? "+" : commerce < 0 ? "-" : ""}${money.format(Math.abs(commerce))}`} positive={commerce > 0} neutral={commerce === 0} caption="Vendas menos compras no período" />}
       </section>
-      <section className="overview-chart-grid">
-        {access.finance && <article className="panel chart-panel"><div className="panel-heading"><div><span className="eyebrow">FINANCEIRO</span><h2>Entradas e saídas realizadas</h2><p>Movimentos cadastrados no caixa dentro do período escolhido.</p></div><button className="secondary-button" onClick={() => onOpen("cashflow")}>Abrir Financeiro</button></div>{flowRows.length ? <CashFlowChart rows={flowRows} /> : <p className="overview-empty">Adicione movimentos no Financeiro para formar o gráfico.</p>}</article>}
-        {access.inventory && <article className="panel"><div className="panel-heading"><div><span className="eyebrow">ESTOQUE</span><h2>Quantidade por produto</h2><p>Um gráfico diferente do caixa, com alerta para o nível mínimo.</p></div><button className="secondary-button" onClick={() => onOpen("inventory")}>Abrir Estoque</button></div><InventoryOverviewChart products={inventoryState.products} /></article>}
-        {access.commerce && <article className="panel overview-commerce-panel"><div className="panel-heading"><div><span className="eyebrow">VENDAS E COMPRAS</span><h2>Evolução comercial</h2><p>Compras ficam negativas em vermelho; cada venda acrescenta valor em verde.</p></div><button className="secondary-button" onClick={() => onOpen("commerce")}>Abrir pedidos</button></div><CommerceOverviewChart orders={orderRows} /></article>}
-      </section>
-      <details className="panel reset-operation-panel"><summary>Iniciar um novo ciclo da loja</summary><p>Use apenas quando quiser limpar uma ou mais áreas do documento atual e começar novos gráficos. O histórico salvo permanece disponível.</p><div className="reset-operation-checks">{access.finance && <label><input type="checkbox" checked={resetSections.finance} onChange={(event) => setResetSections((current) => ({ ...current, finance: event.target.checked }))} /> Financeiro</label>}{access.inventory && <label><input type="checkbox" checked={resetSections.inventory} onChange={(event) => setResetSections((current) => ({ ...current, inventory: event.target.checked }))} /> Estoque</label>}{access.commerce && <label><input type="checkbox" checked={resetSections.commerce} onChange={(event) => setResetSections((current) => ({ ...current, commerce: event.target.checked }))} /> Vendas e compras</label>}</div><button className="secondary-button danger-button" disabled={!allowedReset} onClick={resetSelected}>Limpar áreas selecionadas</button></details>
+      {embedded ? <details className="panel workspace-overview-details"><summary>Ver gráficos e controles da operação</summary><div className="workspace-overview-expanded">{charts}{resetControl}</div></details> : <>{charts}{resetControl}</>}
     </div>
   );
 }
@@ -2121,12 +2175,14 @@ function CashFlow({
   setFilters,
   setEntries,
   totals,
+  categories,
   onSave,
 }) {
   const [pdfState, setPdfState] = useState({ loading: false, message: "" });
-  const categories = [
-    ...new Set(entries.map((entry) => entry.category).filter(Boolean)),
-  ];
+  const availableCategories = [...new Set([
+    ...(categories || []),
+    ...entries.map((entry) => entry.category),
+  ].map((category) => String(category || "").trim()).filter(Boolean))];
   function edit(index, field, value) {
     setEntries((current) => {
       const copy = [...current];
@@ -2340,7 +2396,7 @@ function CashFlow({
               }
             >
               <option value="todos">Todas as categorias</option>
-              {categories.map((category) => (
+              {availableCategories.map((category) => (
                 <option key={category} value={category}>
                   {category}
                 </option>
@@ -2388,13 +2444,12 @@ function CashFlow({
                     />
                   </td>
                   <td>
-                    <input
-                      list="financial-categories"
-                      value={entry.category}
+                    <select
+                      value={entry.category || "Geral"}
                       onChange={(e) =>
                         edit(entry.originalIndex, "category", e.target.value)
                       }
-                    />
+                    >{availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select>
                   </td>
                   <td>
                     <input
@@ -2449,17 +2504,6 @@ function CashFlow({
               ))}
             </tbody>
           </table>
-          <datalist id="financial-categories">
-            <option value="Alimentação" />
-            <option value="Moradia" />
-            <option value="Transporte" />
-            <option value="Saúde" />
-            <option value="Educação" />
-            <option value="Lazer" />
-            <option value="Impostos e taxas" />
-            <option value="Receitas" />
-            <option value="Outros" />
-          </datalist>
         </div>
       </article>
     </>

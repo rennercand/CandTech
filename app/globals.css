@@ -673,6 +673,14 @@ select:focus {
   font-size: 19px;
   letter-spacing: -0.6px;
 }
+.workspace-overview-section { gap: 12px; }
+.workspace-dashboard { gap: 14px; }
+.workspace-overview-controls { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding: 0 2px; }
+.workspace-overview-controls p { margin: 0; color: var(--muted); }
+.workspace-overview-controls > label { display: grid; gap: 6px; min-width: 190px; font-size: 12px; font-weight: 750; }
+.workspace-overview-details { padding: 16px 18px; }
+.workspace-overview-details > summary { cursor: pointer; color: #4338a8; font-weight: 850; }
+.workspace-overview-expanded { display: grid; gap: 17px; margin-top: 17px; }
 .template-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1984,6 +1992,11 @@ select:focus {
   border-radius: 14px;
   background: #fbfcff;
 }
+.operation-row.receiving-row { grid-template-columns: .8fr 1.4fr 1fr 1fr 1fr 1fr auto; }
+.financial-category-manager { display: grid; grid-template-columns: minmax(210px, 1fr) minmax(220px, .8fr) auto; gap: 12px; align-items: end; padding: 14px; border: 1px solid #dfe4f5; border-radius: 13px; background: #f8f9ff; }
+.financial-category-manager > div, .financial-category-manager label { display: grid; gap: 5px; }
+.financial-category-manager > div span, .financial-category-manager label span { color: var(--muted); font-size: 12px; }
+.financial-category-manager input { width: 100%; }
 .operation-row.product-row { grid-template-columns: 1.5fr 1fr .75fr .8fr 1fr 1fr auto; }
 .operation-row.delivery-row { grid-template-columns: .8fr 1.4fr 1.2fr 1fr 1fr 1fr auto; }
 .operation-row.order-row { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
@@ -2128,7 +2141,7 @@ select:focus {
   .inventory-toolbar { grid-template-columns: 1fr 1fr; }
   .inventory-search { grid-column: 1 / -1; }
   .inventory-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .operation-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
+  .operation-row, .operation-row.receiving-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .operation-row .remove-row { grid-column: 1 / -1; justify-self: end; }
@@ -2142,9 +2155,12 @@ select:focus {
   .inventory-search { grid-column: auto; }
   .operations-panel .panel-heading { display: grid; gap: 14px; }
   .operations-panel .panel-heading button { width: 100%; }
-  .operation-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
+  .operation-row, .operation-row.receiving-row, .operation-row.product-row, .operation-row.delivery-row, .operation-row.order-row {
     grid-template-columns: 1fr;
   }
+  .financial-category-manager { grid-template-columns: 1fr; }
+  .workspace-overview-controls { align-items: stretch; flex-direction: column; }
+  .workspace-overview-controls > label { min-width: 0; }
 }
 
 /*

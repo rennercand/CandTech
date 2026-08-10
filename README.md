@@ -7,14 +7,14 @@ Aplicação web para análise e organização financeira, construída com Next.j
 ## Funcionalidades
 
 - Cadastro e login com sessão individual.
-- Central inicial com documentos recentes e modelos para novos trabalhos.
+- Workspace inicial com resumo do negócio, documentos recentes e modelos para novos trabalhos; gráficos e controles detalhados ficam recolhidos para preservar a praticidade.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
-- Dashboard financeiro por usuário.
+- Visão geral financeira integrada ao workspace de cada usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
 - Fluxos de caixa com datas, entradas, saídas e detalhes interativos.
 - Tabelas de amortização PRICE, SAF, SAA e SAC com memória de cálculo.
 - Formação de preço unitário a partir de despesas, unidades e margem de lucro.
-- Organização financeira com categorias e gráfico de distribuição de custos.
+- Organização financeira com categorias reutilizáveis criadas pelo usuário, seletores padronizados e gráfico de distribuição de custos.
 - Importação local de extratos bancários em PDF.
 - Salvamento automático do workspace vinculado à conta.
 - Rascunho automático no histórico quando a pessoa sai sem salvar manualmente.
@@ -86,7 +86,7 @@ Cada usuário possui um workspace próprio no banco. Após uma pequena pausa na 
 - fluxos e organização financeira;
 - tabela financeira selecionada;
 - despesas e parâmetros de formação de preço;
-- filtros e nomes utilizados na organização.
+- filtros, nomes e categorias financeiras criadas pelo usuário.
 
 Ao entrar novamente, o workspace e o documento ativo são restaurados. Salvar atualiza esse documento em vez de criar uma cópia. Somente a ação “Novo documento” limpa o vínculo atual; o servidor limita cada conta a 10 documentos manuais. Se a pessoa sair com uma revisão que não foi salva manualmente, o sistema cria ou atualiza um único item do tipo `rascunho-automatico`, que não entra nessa cota. Revisões já arquivadas não são duplicadas.
 

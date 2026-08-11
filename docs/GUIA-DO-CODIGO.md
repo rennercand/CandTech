@@ -144,7 +144,7 @@ Prefira JSDoc em funções exportadas que representam fronteiras importantes. Co
 
 ## Histórico identificado de commits
 
-Este catálogo cobre todos os commits existentes até `e5d34e3`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
+Este catálogo cobre os commits funcionais existentes até `6ea1094`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
 
 ### Fundação e persistência — 30 e 31 de julho de 2026
 
@@ -240,13 +240,15 @@ Este catálogo cobre todos os commits existentes até `e5d34e3`. O hash curto id
 | `3ac4ddc` | 11/08 | `feat` Stripe inicial | Criou Checkout, portal, webhook, tabelas de assinatura e documentação segura da integração. |
 | `cc46e9d` | 11/08 | `feat/security` finalização comercial | Consolidou mensalidade e implantação, bloqueio controlado, testes de SQL injection, melhorias de convite/importação e a nova identidade visual. |
 | `e5d34e3` | 11/08 | `docs` manutenção | Atualizou README, arquitetura e Stripe; criou este guia, o padrão de commits e comentários nas fronteiras críticas. |
+| `243553e` | 11/08 | `docs` catálogo | Identificou e explicou no guia todos os commits publicados até então. |
+| `6ea1094` | 11/08 | `feat` operação organizada | Separou Visão geral e Workspace, reordenou pedidos/logística/movimentações, criou Clientes e Kanban e ampliou o painel executivo com permissões e persistência. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log e5d34e3..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 6ea1094..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

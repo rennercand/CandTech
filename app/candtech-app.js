@@ -305,6 +305,29 @@ function InvitationDetails({ invitation }) {
   );
 }
 
+function EmailVerificationScreen({ user, onVerified, onLogout }) {
+  const [status, setStatus] = useState("idle");
+  const [message, setMessage] = useState("Enviamos um link de confirmação. Confira também sua caixa de spam.");
+  async function resend() {
+    setStatus("loading");
+    try {
+      const response = await fetch("/api/auth/resend-verification", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Não foi possível reenviar.");
+      setMessage(body.message); setStatus("success");
+    } catch (error) { setMessage(error.message); setStatus("error"); }
+  }
+  async function check() {
+    setStatus("loading");
+    try {
+      const refreshed = await hydrateAuthenticatedUser();
+      if (!refreshed?.emailVerified) throw new Error("O e-mail ainda não foi confirmado. Abra o link recebido e tente novamente.");
+      await onVerified(refreshed);
+    } catch (error) { setMessage(error.message); setStatus("error"); }
+  }
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><i>CT</i> CandTech</div><div className="auth-message"><span className="auth-badge">PROTEÇÃO DA CONTA</span><h1>Confirme que este e-mail pertence a você.</h1></div><p>Essa etapa impede que outra pessoa cadastre seu endereço e protege o acesso aos dados da empresa.</p></section><section className="auth-card"><p className="eyebrow">CONFIRMAÇÃO DE E-MAIL</p><h2>Abra o link que enviamos</h2><p className="auth-subtitle">Enviado para <strong>{user.email}</strong>. O link funciona uma vez e expira em 24 horas.</p><p className={status === "error" ? "form-error" : "password-hint"}>{message}</p><button type="button" className="primary-button" disabled={status === "loading"} onClick={check}>{status === "loading" ? "Conferindo…" : "Já confirmei meu e-mail"}</button><button type="button" className="text-button" disabled={status === "loading"} onClick={resend}>Reenviar e-mail</button><button type="button" className="text-button" disabled={status === "loading"} onClick={onLogout}>Usar outra conta</button></section></main>;
+}
+
 function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, onSwitchAccount }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person" });
@@ -631,9 +654,13 @@ export default function CandTechApp({ publicFallback = null }) {
   }, [inviteToken]);
 
   async function completeAuthentication(baseUser) {
+    const hydratedUser = await hydrateAuthenticatedUser();
+    if (hydratedUser && !hydratedUser.emailVerified) {
+      setUser(hydratedUser);
+      return;
+    }
     let acceptedAccess = null;
     if (inviteToken) acceptedAccess = await acceptInvitation(inviteToken);
-    const hydratedUser = await hydrateAuthenticatedUser();
     const confirmedUser = hydratedUser || (acceptedAccess && baseUser
       ? { ...baseUser, access: acceptedAccess }
       : null);
@@ -725,7 +752,7 @@ export default function CandTechApp({ publicFallback = null }) {
 
   useEffect(() => {
     if (user) loadAdminOverview();
-  }, [user?.id, user?.access?.organizationId]);
+  }, [user?.id, user?.emailVerified, user?.access?.organizationId]);
 
   useEffect(() => {
     if (!user) {
@@ -763,7 +790,7 @@ export default function CandTechApp({ publicFallback = null }) {
     return () => {
       active = false;
     };
-  }, [user?.id, user?.access?.organizationId]);
+  }, [user?.id, user?.emailVerified, user?.access?.organizationId]);
 
   useEffect(() => {
     if (!user || !workspaceReady) return;
@@ -1620,6 +1647,8 @@ export default function CandTechApp({ publicFallback = null }) {
   // JavaScript recebem conteúdo útil enquanto a sessão é verificada.
   if (checking)
     return publicFallback || <div className="loading">Verificando sua sessão…</div>;
+  if (user && !user.emailVerified)
+    return <EmailVerificationScreen user={user} onVerified={completeAuthentication} onLogout={switchInvitationAccount} />;
   if (inviteToken && !inviteComplete)
     return (
       <AuthScreen

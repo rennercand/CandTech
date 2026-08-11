@@ -56,7 +56,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - As senhas são transformadas com `bcrypt`, salt automático e custo 12 antes de serem armazenadas. A senha original não é gravada.
 - A sessão usa um JWT assinado, com duração absoluta de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. O identificador da sessão também é persistido para permitir revogação.
 - Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
-- Novos cadastros recebem confirmação de e-mail; recuperação de senha usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
+- Novos cadastros recebem confirmação de e-mail e só acessam as APIs do ERP após confirmar; contas anteriores são preservadas como verificadas. A recuperação usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
 - Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
 - Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
 - Todas as APIs privadas exigem sessão. Cadastro, login, solicitação de recuperação, redefinição e confirmação de e-mail são públicos por necessidade do fluxo, com proteção de origem, limites de corpo e rate limit.

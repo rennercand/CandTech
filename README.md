@@ -4,6 +4,8 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
+**Estado atual:** ERP web funcional com autenticação por e-mail, workspace multiempresa, estoque relacional, equipe por cargos, documentos jurídicos, integração Google Drive e cobrança Stripe preparada. A ativação obrigatória da assinatura permanece controlada pela variável `BILLING_ENFORCEMENT_ENABLED`.
+
 ## Funcionalidades
 
 - Cadastro e login com sessão individual.
@@ -28,7 +30,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Valores de entrada exibidos com sinal positivo e verde; saídas e gastos com sinal negativo e vermelho.
 - Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
 - Cadastro diferenciado para pessoa física e empresa.
-- Página de futura assinatura em `/assinar`, sem preços ou cobrança ativa.
+- Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Checkout hospedado, portal do cliente e confirmação por webhook assinado.
 - Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
@@ -123,6 +125,18 @@ Preencha `.env.local` sem enviar esse arquivo ao Git:
 JWT_SECRET=gere-um-segredo-longo-e-aleatorio
 DATABASE_URL=postgresql://usuario:senha@host/banco
 ```
+
+Para testar a cobrança, use exclusivamente chaves de teste fora de produção:
+
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PRICE_ID=price_...
+STRIPE_SETUP_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+BILLING_ENFORCEMENT_ENABLED=false
+```
+
+As chaves `live` devem existir somente no ambiente Production da Vercel. Ative `BILLING_ENFORCEMENT_ENABLED=true` apenas depois de configurar o webhook, aplicar as migrations e concluir uma compra de teste de ponta a ponta.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -223,6 +237,10 @@ As pendências operacionais e externas anteriores à cobrança estão em [CHECKL
 A rotina de capacitação para proprietários e funcionários está em [GUIA-OPERACAO-ESTOQUE.md](./docs/GUIA-OPERACAO-ESTOQUE.md).
 
 O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
+
+Para entender responsabilidades dos arquivos, autenticação, IDOR, Stripe, planilhas e critérios de comentários, leia [GUIA-DO-CODIGO.md](./docs/GUIA-DO-CODIGO.md).
+
+O padrão de branches, mensagens de commit e checklist de publicação está em [CONTRIBUINDO.md](./docs/CONTRIBUINDO.md).
 
 As fórmulas, premissas, testes de referência e limitações estão registradas em [AUDITORIA-FINANCEIRA.md](./docs/AUDITORIA-FINANCEIRA.md).
 

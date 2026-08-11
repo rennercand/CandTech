@@ -150,15 +150,19 @@ flowchart TB
   end
 ```
 
-## Cadastro, assinatura e cobrança futura
+## Cadastro, assinatura e cobrança
 
-- `/assinar` apresenta os planos sem preço e sem iniciar pagamento;
+- `/assinar` apresenta o plano de R$ 60/mês e a implantação única de R$ 120;
+- `/api/stripe/checkout` cria uma sessão hospedada com os preços definidos no servidor;
+- `/api/stripe/portal` abre o portal de gestão da assinatura para o proprietário;
+- `/api/stripe/webhook` valida a assinatura do evento, deduplica e consulta o estado mais recente da assinatura antes de persistir;
 - `/api/profile` grava somente nome, contato e endereço do usuário autenticado; não coleta CPF/CNPJ nesta preparação;
-- `billing_profiles` reserva referências futuras ao provedor, mas não armazena cartão, senha bancária ou credencial de conta;
+- `billing_profiles` e o estado da assinatura armazenam apenas referências do provedor; cartão, senha bancária e credenciais de conta não entram na CandTech;
 - `auth_sessions` permite expiração absoluta e revogação no logout;
 - `audit_events` registra inicialmente conta, sessão e perfil sem copiar documentos completos para os metadados;
 - a migração PostgreSQL correspondente está em `migrations/20260806_security_and_billing.sql`;
 - a migration `migrations/20260809_history_public_ids.sql` cria, preenche e torna obrigatório o UUID público usado nas URLs de documentos;
-- quando houver cobrança, o navegador deverá ser direcionado ao componente seguro do provedor e o servidor confirmará o resultado por webhook assinado e idempotente.
+- a tela de sucesso não libera acesso; o servidor confirma o resultado pelo webhook assinado e idempotente;
+- `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 
 Preview recebe sua própria `DATABASE_URL` sensível e não recebe as credenciais da branch de Production. A branch `preview-test` foi criada com schema somente, sem copiar usuários, históricos ou dados financeiros reais. Development não possui credenciais PostgreSQL na Vercel e usa o fallback SQLite, salvo quando o desenvolvedor configura conscientemente uma URL local separada.

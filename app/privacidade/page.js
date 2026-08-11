@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <h2>3. Finalidades e bases legais</h2>
     <p>Tratamos dados para criar e autenticar contas, cumprir o contrato, salvar e exportar conteúdo, atender solicitações, proteger o serviço, cumprir obrigações legais, exercer direitos e melhorar estabilidade. As bases podem ser execução de contrato e procedimentos preliminares, obrigação legal, exercício regular de direitos, legítimo interesse com avaliação e salvaguardas, e consentimento para análise opcional.</p>
     <h2>4. Compartilhamento</h2>
-    <p>Somente o necessário pode ser compartilhado com infraestrutura e banco de dados, envio de e-mail, Google Drive por autorização, Google Analytics por consentimento e Mercado Pago quando a cobrança for ativada. Também poderá haver compartilhamento por obrigação legal, ordem válida ou proteção de direitos. Prestadores não recebem autorização para usar dados do ERP para finalidades próprias incompatíveis.</p>
+    <p>Somente o necessário pode ser compartilhado com infraestrutura e banco de dados, envio de e-mail, Google Drive por autorização, Google Analytics por consentimento e Stripe quando a cobrança for ativada. Também poderá haver compartilhamento por obrigação legal, ordem válida ou proteção de direitos. Prestadores não recebem autorização para usar dados do ERP para finalidades próprias incompatíveis.</p>
     <h2>5. Transferência internacional</h2>
     <p>Alguns fornecedores podem processar dados fora do Brasil. A CandTech selecionará serviços com medidas contratuais e técnicas compatíveis e observará os mecanismos previstos na LGPD e pela ANPD.</p>
     <h2>6. Retenção e eliminação</h2>

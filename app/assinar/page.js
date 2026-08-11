@@ -8,6 +8,7 @@ const emptyProfile = {
   accountType: "person", legalName: "", phone: "", postalCode: "",
   address: "", addressNumber: "", complement: "", district: "", city: "", state: "",
   subscriptionStatus: "not_subscriber",
+  paymentProvider: "",
 };
 
 const plans = [
@@ -24,6 +25,9 @@ export default function SubscribePage() {
 
   useEffect(() => {
     trackMarketingEvent("view_subscription", { source: "subscription_page" });
+    const checkoutResult = new URLSearchParams(window.location.search).get("checkout");
+    if (checkoutResult === "success") setMessage("Checkout concluído. O acesso será atualizado após a confirmação assinada da Stripe.");
+    if (checkoutResult === "cancelled") setMessage("Checkout cancelado. Nenhuma nova assinatura foi criada.");
     Promise.all([
       fetch("/api/auth/me", { cache: "no-store" }),
       fetch("/api/profile", { cache: "no-store" }),
@@ -49,14 +53,25 @@ export default function SubscribePage() {
     trackMarketingEvent("generate_lead", { source: "billing_profile", account_type: data.profile?.accountType || profile.accountType });
     setMessage("Dados de cobrança preparados. Nenhuma cobrança foi realizada.");
   }
+  async function openStripe(path) {
+    setStatus("redirecting"); setMessage("");
+    try {
+      const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const data = await response.json();
+      if (!response.ok || !data.url) throw new Error(data.error || "Não foi possível abrir a Stripe.");
+      window.location.assign(data.url);
+    } catch (error) {
+      setMessage(error.message); setStatus("ready");
+    }
+  }
 
   return <main className={styles.page}>
     <nav className={styles.nav}><a href="/" className={styles.brand}><i>CT</i> CandTech</a><a href="/" className={styles.back}>Voltar ao painel</a></nav>
     <header className={styles.hero}>
       <span>ASSINATURAS CANDTECH</span>
       <h1>Escolha o espaço que acompanha sua evolução.</h1>
-      <p>Os planos já estão estruturados, mas preços e cobrança ainda não foram ativados. Você pode preparar seu cadastro sem pagar nada.</p>
-      <div className={styles.statusPill}>Pagamento ainda não habilitado</div>
+      <p>Os planos já estão estruturados. A cobrança será processada no Checkout hospedado da Stripe, sem a CandTech armazenar os dados completos do cartão.</p>
+      <div className={styles.statusPill}>{profile.subscriptionStatus === "active" ? "Assinatura ativa" : "Stripe em configuração"}</div>
     </header>
 
     <section className={styles.plans} aria-label="Opções futuras de assinatura">
@@ -70,9 +85,9 @@ export default function SubscribePage() {
     <section className={styles.billingSection}>
       <div className={styles.billingIntro}>
         <span>DADOS DE COBRANÇA</span><h2>Deixe seu cadastro preparado</h2>
-        <p>Guardamos somente nome, contato e endereço. CPF/CNPJ e dados de pagamento só serão solicitados pelo ambiente seguro do provedor se forem realmente necessários para concluir a cobrança ou emitir o documento correspondente.</p>
-        <div className={styles.paymentPreview} aria-label="Métodos de pagamento planejados">
-          <div><b>PIX</b><small>Planejado</small></div><div><b>Cartão</b><small>Planejado</small></div><div><b>Boleto</b><small>Planejado</small></div>
+        <p>Guardamos somente nome, contato, endereço e o status da assinatura. Os dados de pagamento são informados diretamente no ambiente da Stripe.</p>
+        <div className={styles.paymentPreview} aria-label="Proteções do pagamento">
+          <div><b>Checkout</b><small>Hospedado</small></div><div><b>Cartão</b><small>Na Stripe</small></div><div><b>Portal</b><small>Cancelamento</small></div>
         </div>
       </div>
       {!user && status === "ready" ? <div className={styles.signInCard}>
@@ -87,9 +102,12 @@ export default function SubscribePage() {
         <label>Endereço<input value={profile.address} onChange={(e) => update("address", e.target.value)} /></label>
         <div className={styles.threeColumns}><label>Número<input value={profile.addressNumber} onChange={(e) => update("addressNumber", e.target.value)} /></label><label>Bairro<input value={profile.district} onChange={(e) => update("district", e.target.value)} /></label><label>Complemento<input value={profile.complement} onChange={(e) => update("complement", e.target.value)} /></label></div>
         <div className={styles.twoColumns}><label>Cidade<input value={profile.city} onChange={(e) => update("city", e.target.value)} /></label><label>UF<input maxLength="2" value={profile.state} onChange={(e) => update("state", e.target.value.toUpperCase())} /></label></div>
-        {message && <p className={message.startsWith("Dados") ? styles.success : styles.error}>{message}</p>}
+        {message && <p className={message.startsWith("Dados") || message.startsWith("Checkout concluído") ? styles.success : styles.error}>{message}</p>}
         <button className={styles.save} disabled={status !== "ready"}>{status === "saving" ? "Salvando…" : "Salvar dados de cobrança"}</button>
-        <small className={styles.notice}>Salvar estes dados não cria assinatura, não redireciona para pagamento e não realiza cobrança.</small>
+        {profile.paymentProvider === "stripe" && profile.subscriptionStatus !== "not_subscriber"
+          ? <button type="button" className={styles.save} disabled={status !== "ready"} onClick={() => openStripe("/api/stripe/portal")}>Gerenciar assinatura na Stripe</button>
+          : <button type="button" className={styles.save} disabled={status !== "ready"} onClick={() => openStripe("/api/stripe/checkout")}>{status === "redirecting" ? "Abrindo Stripe…" : "Continuar para checkout seguro"}</button>}
+        <small className={styles.notice}>Salvar o cadastro não cobra nada. O checkout mostra o preço e a periodicidade antes da confirmação, e o retorno do navegador nunca libera acesso sozinho.</small>
       </form>}
     </section>
   </main>;

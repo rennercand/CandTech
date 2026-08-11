@@ -42,6 +42,7 @@ test("leitor JSON limita profundidade e chaves perigosas", async () => {
 });
 
 test("toda API privada exige sessão JWT no servidor", () => {
+  const stripeWebhook = join("app", "api", "stripe", "webhook", "route.js");
   const publicRoutes = new Set([
     join("app", "api", "auth", "login", "route.js"),
     join("app", "api", "auth", "register", "route.js"),
@@ -51,11 +52,19 @@ test("toda API privada exige sessão JWT no servidor", () => {
     // A prévia usa um token aleatório, limita requisições e nunca retorna o
     // e-mail completo, IDs ou dados da empresa.
     join("app", "api", "team", "invitation", "preview", "route.js"),
+    // A Stripe não possui a sessão do usuário; o webhook usa corpo bruto,
+    // segredo exclusivo e assinatura com proteção temporal contra replay.
+    stripeWebhook,
   ]);
   for (const file of routeFiles(join(projectRoot, "app", "api"))) {
     const route = relative(projectRoot, file);
-    if (publicRoutes.has(route)) continue;
     const source = readFileSync(file, "utf8");
+    if (route === stripeWebhook) {
+      assert.match(source, /request\.text\s*\(\)/, "webhook Stripe precisa preservar o corpo bruto");
+      assert.match(source, /constructEvent\s*\(/, "webhook Stripe precisa validar a assinatura");
+      assert.match(source, /stripe-signature/, "webhook Stripe precisa exigir Stripe-Signature");
+    }
+    if (publicRoutes.has(route)) continue;
     assert.match(source, /getSession\s*\(/, `${route} precisa validar a sessão JWT`);
   }
 });

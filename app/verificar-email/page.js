@@ -13,5 +13,5 @@ export default function VerifyEmailPage() {
       .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível confirmar o e-mail."); setStatus("success"); setMessage(data.message); })
       .catch((error) => { setStatus("error"); setMessage(error.message); });
   }, []);
-  return <main className={styles.page}><section className={styles.card}><a className={styles.brand} href="/"><i>CT</i> CandTech</a><p className={styles.eyebrow}>CONFIRMAÇÃO DE E-MAIL</p><h1>{status === "loading" ? "Só um instante" : status === "success" ? "E-mail confirmado" : "Não foi possível confirmar"}</h1><p className={status === "error" ? styles.error : styles.success}>{message}</p><a className={styles.back} href="/">Ir para a CandTech</a></section></main>;
+  return <main className={styles.page}><section className={styles.card}><a className={styles.brand} href="/"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</a><p className={styles.eyebrow}>CONFIRMAÇÃO DE E-MAIL</p><h1>{status === "loading" ? "Só um instante" : status === "success" ? "E-mail confirmado" : "Não foi possível confirmar"}</h1><p className={status === "error" ? styles.error : styles.success}>{message}</p><a className={styles.back} href="/">Ir para a CandTech</a></section></main>;
 }

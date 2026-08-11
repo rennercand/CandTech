@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export async function POST(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
-  const user = await getSession(request);
+  const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const limited = await enforceRateLimit(request, { scope: "legal-accept", limit: 10, identifier: user.id });
   if (limited) return limited;

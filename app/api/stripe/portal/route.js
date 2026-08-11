@@ -11,7 +11,8 @@ export const runtime = "nodejs";
 export async function POST(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
-  const user = await getSession(request);
+  const user = await getSession(request, { allowInactiveSubscription: true });
+  if (user && !user.isBillingOwner) return NextResponse.json({ error: "Somente o responsável pela empresa pode gerenciar a assinatura." }, { status: 403 });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const limited = await enforceRateLimit(request, { scope: "stripe-portal", limit: 12, identifier: user.id });
   if (limited) return limited;

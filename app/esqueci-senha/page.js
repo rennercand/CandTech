@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
     } catch (error) { setStatus("error"); setMessage(error.message); }
   }
   return <main className={styles.page}><section className={styles.card}>
-    <a className={styles.brand} href="/"><i>CT</i> CandTech</a>
+    <a className={styles.brand} href="/"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</a>
     <p className={styles.eyebrow}>RECUPERAÇÃO DE ACESSO</p><h1>Esqueceu sua senha?</h1>
     <p className={styles.intro}>Informe o e-mail da conta. Se ele estiver cadastrado, enviaremos um link seguro válido por 30 minutos.</p>
     {message && <p className={status === "success" ? styles.success : styles.error}>{message}</p>}

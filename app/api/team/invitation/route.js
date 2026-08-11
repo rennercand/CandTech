@@ -14,7 +14,7 @@ export async function PUT(request) {
   if (blocked) return blocked;
   const limited = await enforceRateLimit(request, { scope: "team-invitation-read", limit: 30 });
   if (limited) return limited;
-  const user = await getSession(request);
+  const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Entre para consultar este convite." }, { status: 401 });
   try {
     const { token } = await readLimitedJson(request, { maxBytes: 2_048, maxDepth: 2, maxNodes: 8, maxStringLength: 100 });
@@ -46,7 +46,7 @@ export async function POST(request) {
   if (blocked) return blocked;
   const limited = await enforceRateLimit(request, { scope: "team-invitation-accept", limit: 10 });
   if (limited) return limited;
-  const user = await getSession(request);
+  const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Entre ou crie sua conta para aceitar o convite." }, { status: 401 });
   try {
     const { token } = await readLimitedJson(request, { maxBytes: 2_048, maxDepth: 2, maxNodes: 8, maxStringLength: 100 });

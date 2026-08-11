@@ -2,7 +2,7 @@ export default function PublicHome() {
   return (
     <main className="public-home">
       <header className="public-home-header">
-        <a className="public-home-brand" href="/" aria-label="CandTech — página inicial"><span>CT</span>CandTech</a>
+        <a className="public-home-brand" href="/" aria-label="CandTech — página inicial"><img className="brand-mark" src="/candtech-mark.svg" alt="" />CandTech</a>
         <nav aria-label="Navegação pública">
           <a href="#recursos">Recursos</a>
           <a href="/assinar">Planos</a>

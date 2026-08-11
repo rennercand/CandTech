@@ -12,9 +12,12 @@ const emptyProfile = {
 };
 
 const plans = [
-  { name: "Pessoal", eyebrow: "ORGANIZAÇÃO", description: "Para controlar decisões, documentos e rotina financeira em um só lugar.", features: ["Calculadoras e relatórios", "Histórico por conta", "Organização financeira"] },
-  { name: "Negócio", eyebrow: "OPERAÇÃO", description: "Para organizar financeiro, estoque, pedidos e fornecedores da empresa.", features: ["Tudo do plano Pessoal", "Estoque e logística", "Vendas e compras"] },
-  { name: "Empresa", eyebrow: "CONTROLE", description: "Para equipes que precisam de permissões, auditoria e rotinas mais avançadas.", features: ["Tudo do plano Negócio", "Papéis e auditoria", "Integrações futuras"] },
+  {
+    name: "CandTech Negócio", eyebrow: "PLANO ÚNICO", monthlyPrice: "R$ 60/mês",
+    setupPrice: "+ R$ 120 de implantação na primeira cobrança",
+    description: "Preço fixo por empresa, sem cobrança adicional por funcionário convidado.",
+    features: ["Financeiro, estoque e pedidos", "Equipe com cargos e permissões", "Importação e exportação de planilhas", "Histórico e relatórios"],
+  },
 ];
 
 export default function SubscribePage() {
@@ -66,19 +69,21 @@ export default function SubscribePage() {
   }
 
   return <main className={styles.page}>
-    <nav className={styles.nav}><a href="/" className={styles.brand}><i>CT</i> CandTech</a><a href="/" className={styles.back}>Voltar ao painel</a></nav>
+    <nav className={styles.nav}><a href="/" className={styles.brand}><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</a><a href="/" className={styles.back}>Voltar ao painel</a></nav>
     <header className={styles.hero}>
       <span>ASSINATURAS CANDTECH</span>
-      <h1>Escolha o espaço que acompanha sua evolução.</h1>
-      <p>Os planos já estão estruturados. A cobrança será processada no Checkout hospedado da Stripe, sem a CandTech armazenar os dados completos do cartão.</p>
+      <h1>Um preço simples para organizar sua empresa.</h1>
+      <p>Assinatura mensal fixa, com implantação cobrada apenas na primeira contratação. O pagamento acontece no Checkout hospedado da Stripe.</p>
       <div className={styles.statusPill}>{profile.subscriptionStatus === "active" ? "Assinatura ativa" : "Stripe em configuração"}</div>
     </header>
 
-    <section className={styles.plans} aria-label="Opções futuras de assinatura">
+    <section className={styles.plans} style={{ maxWidth: "460px", gridTemplateColumns: "1fr" }} aria-label="Plano de assinatura">
       {plans.map((plan, index) => <article className={styles.planCard} style={{ "--delay": `${index * 180}ms` }} key={plan.name}>
-        <span>{plan.eyebrow}</span><h2>{plan.name}</h2><p>{plan.description}</p>
+        <span>{plan.eyebrow}</span><h2>{plan.name}</h2>
+        <strong style={{ display: "block", color: "#241b55", fontSize: "34px", letterSpacing: "-.04em" }}>{plan.monthlyPrice}</strong>
+        <small style={{ display: "block", margin: "6px 0 18px", color: "#6b54df", fontWeight: 800 }}>{plan.setupPrice}</small><p>{plan.description}</p>
         <ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
-        <button type="button" disabled>Disponível em breve</button>
+        <button type="button" disabled>Contratação pelo checkout seguro abaixo</button>
       </article>)}
     </section>
 

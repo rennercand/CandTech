@@ -325,7 +325,38 @@ function EmailVerificationScreen({ user, onVerified, onLogout }) {
       await onVerified(refreshed);
     } catch (error) { setMessage(error.message); setStatus("error"); }
   }
-  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><i>CT</i> CandTech</div><div className="auth-message"><span className="auth-badge">PROTEÇÃO DA CONTA</span><h1>Confirme que este e-mail pertence a você.</h1></div><p>Essa etapa impede que outra pessoa cadastre seu endereço e protege o acesso aos dados da empresa.</p></section><section className="auth-card"><p className="eyebrow">CONFIRMAÇÃO DE E-MAIL</p><h2>Abra o link que enviamos</h2><p className="auth-subtitle">Enviado para <strong>{user.email}</strong>. O link funciona uma vez e expira em 24 horas.</p><p className={status === "error" ? "form-error" : "password-hint"}>{message}</p><button type="button" className="primary-button" disabled={status === "loading"} onClick={check}>{status === "loading" ? "Conferindo…" : "Já confirmei meu e-mail"}</button><button type="button" className="text-button" disabled={status === "loading"} onClick={resend}>Reenviar e-mail</button><button type="button" className="text-button" disabled={status === "loading"} onClick={onLogout}>Usar outra conta</button></section></main>;
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">PROTEÇÃO DA CONTA</span><h1>Confirme que este e-mail pertence a você.</h1></div><p>Essa etapa impede que outra pessoa cadastre seu endereço e protege o acesso aos dados da empresa.</p></section><section className="auth-card"><p className="eyebrow">CONFIRMAÇÃO DE E-MAIL</p><h2>Abra o link que enviamos</h2><p className="auth-subtitle">Enviado para <strong>{user.email}</strong>. O link funciona uma vez e expira em 24 horas.</p><p className={status === "error" ? "form-error" : "password-hint"}>{message}</p><button type="button" className="primary-button" disabled={status === "loading"} onClick={check}>{status === "loading" ? "Conferindo…" : "Já confirmei meu e-mail"}</button><button type="button" className="text-button" disabled={status === "loading"} onClick={resend}>Reenviar e-mail</button><button type="button" className="text-button" disabled={status === "loading"} onClick={onLogout}>Usar outra conta</button></section></main>;
+}
+
+function LegalLicenseModal({ onClose }) {
+  useEffect(() => {
+    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  return <div className="legal-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="legal-modal" role="dialog" aria-modal="true" aria-labelledby="legal-license-title">
+      <header><div><span className="eyebrow">LICENÇA DE USO</span><h2 id="legal-license-title">Antes de criar sua conta</h2></div><button type="button" className="legal-modal-close" aria-label="Fechar termo" onClick={onClose}>×</button></header>
+      <div className="legal-modal-content">
+        <p>A CandTech concede uma licença limitada, pessoal ou empresarial, revogável e não transferível para uso do ERP conforme os Termos de Uso.</p>
+        <ul>
+          <li><strong>Conta e empresa:</strong> você deve informar dados verdadeiros e proteger sua senha. Quem cadastra uma empresa declara ter autorização para representá-la.</li>
+          <li><strong>Assinatura:</strong> quando a cobrança estiver habilitada, o uso das áreas operacionais dependerá de assinatura ativa confirmada pela Stripe. O retorno visual do checkout sozinho não libera acesso.</li>
+          <li><strong>Dados e resultados:</strong> os dados inseridos continuam sob controle da conta. Relatórios auxiliam a gestão, mas não substituem contabilidade, assessoria jurídica ou documentos fiscais oficiais.</li>
+          <li><strong>Uso permitido:</strong> é proibido invadir, contornar permissões, enviar código malicioso ou usar o serviço para atividade ilegal.</li>
+          <li><strong>Privacidade:</strong> tratamos apenas os dados necessários para autenticação, operação, segurança, suporte e cobrança, conforme o Aviso de Privacidade.</li>
+        </ul>
+        <p>Seu aceite fica registrado com data e versão. Direitos obrigatórios previstos no CDC e na LGPD não são afastados por este resumo.</p>
+        <div className="legal-modal-links"><a href="/termos" target="_blank" rel="noreferrer">Termos completos</a><a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a><a href="/cancelamento" target="_blank" rel="noreferrer">Cobrança e cancelamento</a></div>
+      </div>
+      <footer><button type="button" className="primary-button" onClick={onClose}>Fechar e voltar ao aceite</button></footer>
+    </section>
+  </div>;
+}
+
+function PaymentRequiredScreen({ user, onLogout }) {
+  const owner = user?.isBillingOwner !== false;
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">ASSINATURA NECESSÁRIA</span><h1>O acesso ao ERP é liberado após a confirmação do pagamento.</h1></div><p>A validação acontece no servidor pelo webhook assinado da Stripe, não apenas pela tela de sucesso.</p></section><section className="auth-card"><p className="eyebrow">ACESSO PROTEGIDO</p><h2>{owner ? "Ative sua assinatura" : "A assinatura da empresa está inativa"}</h2><p className="auth-subtitle">{owner ? "Conclua o checkout seguro para liberar as áreas operacionais. Seus dados de cartão ficam na Stripe." : "Peça ao proprietário da empresa para regularizar a assinatura. Seu cargo e suas permissões serão mantidos."}</p>{owner && <a className="primary-button payment-required-link" href="/assinar">Ir para assinatura</a>}<button type="button" className="text-button" onClick={onLogout}>Sair desta conta</button></section></main>;
 }
 
 function LegalAcceptanceScreen({ onAccepted, onLogout }) {
@@ -345,7 +376,7 @@ function LegalAcceptanceScreen({ onAccepted, onLogout }) {
       onAccepted(refreshed);
     } catch (acceptError) { setError(acceptError.message); setLoading(false); }
   }
-  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><i>CT</i> CandTech</div><div className="auth-message"><span className="auth-badge">ATUALIZAÇÃO JURÍDICA</span><h1>Regras claras para proteger sua empresa e seus dados.</h1></div><p>Registramos a versão aceita para que qualquer alteração relevante seja transparente.</p></section><section className="auth-card"><p className="eyebrow">ACEITE NECESSÁRIO</p><h2>Revise os documentos atuais</h2><p className="auth-subtitle">O acesso continua depois de um aceite expresso. Direitos obrigatórios previstos em lei permanecem preservados.</p><form onSubmit={submit}><label className="legal-acceptance"><input type="checkbox" required checked={checked} onChange={(event) => setChecked(event.target.checked)} /><span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span></label>{error && <p className="form-error">{error}</p>}<button className="primary-button" disabled={loading || !checked}>{loading ? "Registrando…" : "Aceitar e continuar"}</button></form><button type="button" className="text-button" disabled={loading} onClick={onLogout}>Sair sem aceitar</button></section></main>;
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">ATUALIZAÇÃO JURÍDICA</span><h1>Regras claras para proteger sua empresa e seus dados.</h1></div><p>Registramos a versão aceita para que qualquer alteração relevante seja transparente.</p></section><section className="auth-card"><p className="eyebrow">ACEITE NECESSÁRIO</p><h2>Revise os documentos atuais</h2><p className="auth-subtitle">O acesso continua depois de um aceite expresso. Direitos obrigatórios previstos em lei permanecem preservados.</p><form onSubmit={submit}><label className="legal-acceptance"><input type="checkbox" required checked={checked} onChange={(event) => setChecked(event.target.checked)} /><span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span></label>{error && <p className="form-error">{error}</p>}<button className="primary-button" disabled={loading || !checked}>{loading ? "Registrando…" : "Aceitar e continuar"}</button></form><button type="button" className="text-button" disabled={loading} onClick={onLogout}>Sair sem aceitar</button></section></main>;
 }
 
 function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, onSwitchAccount }) {
@@ -356,6 +387,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
   const [invitePreview, setInvitePreview] = useState(null);
   const [inviteLoading, setInviteLoading] = useState(Boolean(inviteToken));
   const [inviteError, setInviteError] = useState("");
+  const [showLicense, setShowLicense] = useState(false);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
     if (!inviteToken) return;
@@ -422,7 +454,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
     <main className="auth-layout">
       <section className="auth-aside">
         <div className="brand">
-          <i>CT</i> CandTech
+          <img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech
         </div>
         <div className="auth-message">
           <span className="auth-badge">{isInvitation ? "CONVITE DE ACESSO" : "FINANÇAS CLARAS, DECISÕES MELHORES"}</span>
@@ -462,7 +494,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
             </div>
           </div>
         </div>
-        <div className="auth-mobile-brand brand"><i>CT</i> CandTech</div>
+        <div className="auth-mobile-brand brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div>
         <p className="eyebrow">{isInvitation ? "INGRESSAR NA EMPRESA" : mode === "login" ? "BEM-VINDO DE VOLTA" : "COMECE AGORA"}</p>
         <h2>{isInvitation ? (authenticatedUser ? "Confirme sua conta" : mode === "login" ? "Entre com sua conta" : "Crie seu acesso") : mode === "login" ? "Entre no seu espaço" : "Crie seu espaço financeiro"}</h2>
         <p className="auth-subtitle">
@@ -539,10 +571,13 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
             )}
           </label>
           {mode === "register" && (
-            <label className="legal-acceptance">
-              <input type="checkbox" required checked={form.legalAccepted} onChange={(e) => setForm({ ...form, legalAccepted: e.target.checked })} />
-              <span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span>
-            </label>
+            <div className="legal-register-box">
+              <button type="button" className="legal-review-button" onClick={() => setShowLicense(true)}>Ler licença de uso em tela</button>
+              <label className="legal-acceptance">
+                <input type="checkbox" required checked={form.legalAccepted} onChange={(e) => setForm({ ...form, legalAccepted: e.target.checked })} />
+                <span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span>
+              </label>
+            </div>
           )}
           {mode === "login" && !isInvitation && (
             <a className="text-button" href="/esqueci-senha">Esqueci minha senha</a>
@@ -565,6 +600,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
           <button className="text-button" onClick={() => { setMode("login"); setError(""); }}>Já possui conta? Entrar</button>
         ))}
       </section>
+      {showLicense && <LegalLicenseModal onClose={() => setShowLicense(false)} />}
     </main>
   );
 }
@@ -687,7 +723,10 @@ export default function CandTechApp({ publicFallback = null }) {
     }
     let acceptedAccess = null;
     if (inviteToken) acceptedAccess = await acceptInvitation(inviteToken);
-    const confirmedUser = hydratedUser || (acceptedAccess && baseUser
+    // Depois do convite, consulta novamente o servidor para receber tanto as
+    // permissões da empresa quanto o status de assinatura do proprietário.
+    const refreshedAfterInvite = acceptedAccess ? await hydrateAuthenticatedUser() : null;
+    const confirmedUser = refreshedAfterInvite || hydratedUser || (acceptedAccess && baseUser
       ? { ...baseUser, access: acceptedAccess }
       : null);
     if (!confirmedUser) throw new Error("Não foi possível confirmar sua sessão.");
@@ -743,7 +782,7 @@ export default function CandTechApp({ publicFallback = null }) {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || (user.subscriptionRequired && !user.subscriptionActive)) {
       setDriveStatus({ configured: false, connected: false, loading: false });
       return;
     }
@@ -763,7 +802,7 @@ export default function CandTechApp({ publicFallback = null }) {
     return () => {
       active = false;
     };
-  }, [user?.id, user?.access?.permissions?.join(",")]);
+  }, [user?.id, user?.access?.permissions?.join(","), user?.subscriptionRequired, user?.subscriptionActive]);
 
   async function loadAdminOverview() {
     const response = await fetch("/api/admin/overview");
@@ -777,11 +816,11 @@ export default function CandTechApp({ publicFallback = null }) {
   }
 
   useEffect(() => {
-    if (user) loadAdminOverview();
-  }, [user?.id, user?.emailVerified, user?.access?.organizationId]);
+    if (user && (!user.subscriptionRequired || user.subscriptionActive)) loadAdminOverview();
+  }, [user?.id, user?.emailVerified, user?.access?.organizationId, user?.subscriptionRequired, user?.subscriptionActive]);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || (user.subscriptionRequired && !user.subscriptionActive)) {
       setWorkspaceReady(false);
       return;
     }
@@ -816,7 +855,7 @@ export default function CandTechApp({ publicFallback = null }) {
     return () => {
       active = false;
     };
-  }, [user?.id, user?.emailVerified, user?.access?.organizationId]);
+  }, [user?.id, user?.emailVerified, user?.access?.organizationId, user?.subscriptionRequired, user?.subscriptionActive]);
 
   useEffect(() => {
     if (!user || !workspaceReady) return;
@@ -1686,6 +1725,8 @@ export default function CandTechApp({ publicFallback = null }) {
         onSwitchAccount={switchInvitationAccount}
       />
     );
+  if (user && user.subscriptionRequired && !user.subscriptionActive)
+    return <PaymentRequiredScreen user={user} onLogout={switchInvitationAccount} />;
   if (user && !workspaceReady)
     return <div className="loading">Carregando os dados da sua conta…</div>;
   if (!user) {
@@ -1718,7 +1759,7 @@ export default function CandTechApp({ publicFallback = null }) {
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <i>CT</i> CandTech
+          <img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech
         </div>
         <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
         <nav aria-label="Navegação principal">

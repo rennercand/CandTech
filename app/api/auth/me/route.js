@@ -8,7 +8,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "session", limit: 120 });
   if (limited) return limited;
-  const user = await getSession(request, { allowUnverified: true });
+  const user = await getSession(request, { allowUnverified: true, allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const { sessionHash: _sessionHash, ...safeUser } = user;
   const access = await getOrganizationAccess(user);
@@ -23,7 +23,7 @@ export async function DELETE(request) {
   if (blocked) return blocked;
   const limited = await enforceRateLimit(request, { scope: "session", limit: 30 });
   if (limited) return limited;
-  const session = await getSession(request, { allowUnverified: true });
+  const session = await getSession(request, { allowUnverified: true, allowInactiveSubscription: true });
   if (session) {
     await revokeSession(session);
     await appendAuditEvent({ userId: session.id, action: "session.revoked" });

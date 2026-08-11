@@ -8,7 +8,7 @@ export default function ErrorPage({ error, reset }) {
   return (
     <main className="recovery-page">
       <section className="recovery-card" role="alert">
-        <span>CT</span>
+        <img className="brand-mark" src="/candtech-mark.svg" alt="CandTech" />
         <p className="eyebrow">NÃO FOI POSSÍVEL CONTINUAR</p>
         <h1>Algo saiu do esperado.</h1>
         <p>Seus dados não foram apagados. Tente carregar esta área novamente ou volte para o início.</p>

@@ -10,7 +10,7 @@ export default function GlobalError({ error, reset }) {
       <body>
         <main className="recovery-page">
           <section className="recovery-card" role="alert">
-            <span>CT</span>
+            <img className="brand-mark" src="/candtech-mark.svg" alt="CandTech" />
             <h1>A CandTech encontrou uma falha inesperada.</h1>
             <p>Tente abrir o sistema novamente. Se a falha continuar, informe o horário ao suporte.</p>
             <div><button onClick={reset}>Tentar novamente</button><a href="/">Reabrir a CandTech</a></div>

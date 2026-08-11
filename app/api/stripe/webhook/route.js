@@ -27,6 +27,16 @@ async function applySubscription(subscription) {
   return true;
 }
 
+async function applyLatestSubscription(subscriptionOrId) {
+  const subscriptionId = stripeObjectId(subscriptionOrId);
+  if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId)) return false;
+  // A Stripe não garante a ordem de entrega dos webhooks. Consultar o objeto
+  // atual impede que um evento atrasado reverta um pagamento ou cancelamento
+  // mais recente já registrado na conta.
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+  return applySubscription(subscription);
+}
+
 export async function POST(request) {
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > MAX_WEBHOOK_BYTES) return NextResponse.json({ error: "Payload muito grande" }, { status: 413 });
@@ -41,12 +51,12 @@ export async function POST(request) {
 
     if (event.type === "checkout.session.completed") {
       const subscriptionId = stripeObjectId(event.data.object.subscription);
-      if (subscriptionId) await applySubscription(await getStripe().subscriptions.retrieve(subscriptionId));
+      if (subscriptionId) await applyLatestSubscription(subscriptionId);
     } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) {
-      await applySubscription(event.data.object);
+      await applyLatestSubscription(event.data.object);
     } else if (["invoice.paid", "invoice.payment_failed"].includes(event.type)) {
       const subscriptionId = invoiceSubscriptionId(event.data.object);
-      if (subscriptionId) await applySubscription(await getStripe().subscriptions.retrieve(subscriptionId));
+      if (subscriptionId) await applyLatestSubscription(subscriptionId);
     }
     await recordStripeEvent({ eventId: event.id, eventType: event.type });
     return NextResponse.json({ received: true });

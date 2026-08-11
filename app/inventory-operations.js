@@ -96,6 +96,9 @@ function ImportPanel({ onImport, onEntryImport, variants, busy }) {
   const [pasted, setPasted] = useState(""); const [preview, setPreview] = useState(null); const [error, setError] = useState("");
   const [entryHeader, setEntryHeader] = useState({ supplier: "", reference: "" });
   const matchedEntry = useMemo(() => preview && mode === "entry" ? matchInventoryEntry(preview, variants) : null, [preview, variants, mode]);
+  const previewRows = useMemo(() => (preview?.products || []).flatMap((product) => product.variants.map((variant) => ({
+    product: product.name, unit: product.unit, ...variant,
+  }))), [preview]);
   function show(result) { setPreview(result); setError(result.errors?.length ? result.errors.slice(0, 8).join(" ") : ""); }
   async function fileChanged(file) { if (!file) return; try { show(await parseInventoryFile(file)); } catch (cause) { setPreview(null); setError(cause.message); } }
   function parsePaste() { try { show(parseInventoryText(pasted)); } catch (cause) { setPreview(null); setError(cause.message); } }
@@ -109,6 +112,7 @@ function ImportPanel({ onImport, onEntryImport, variants, busy }) {
     {error && <div className="inventory-message error">{error}</div>}
     {preview?.warnings?.length > 0 && <div className="inventory-message import-warning"><strong>Ajustes automáticos:</strong> {preview.warnings.join(" ")}</div>}
     {matchedEntry?.errors.length > 0 && <div className="inventory-message error">{matchedEntry.errors.slice(0, 8).join(" ")}</div>}
+    {preview && <div className="import-values-preview"><div className="import-values-head"><span>Produto</span><span>SKU</span><span>Quantidade</span><span>Custo</span><span>Preço de venda</span></div>{previewRows.slice(0, 50).map((row) => <div className="import-values-row" key={row.sku}><span>{row.product}<small>{row.name !== "Padrão" ? row.name : ""}</small></span><strong>{row.sku}</strong><span>{preview.hasQuantityColumn ? `${row.quantity} ${row.unit}` : "Não informada"}</span><span>{money.format(row.unitCost)}</span><span>{money.format(row.salePrice)}</span></div>)}{previewRows.length > 50 && <small className="import-values-more">Mostrando 50 de {previewRows.length} linhas. Todas serão validadas antes da gravação.</small>}</div>}
     {preview && <div className="import-preview"><strong>Prévia antes de gravar</strong><span>{mode === "entry" ? `${matchedEntry?.lines.length || 0} SKUs encontrados no cadastro` : `${preview.variantCount} SKUs em ${preview.products.length} produtos`}</span><small>Nenhuma linha será gravada até sua confirmação.</small><button className="primary-button" disabled={busy || validationErrors.length > 0 || (mode === "entry" && !matchedEntry?.lines.length)} onClick={() => mode === "entry" ? onEntryImport(matchedEntry.lines, entryHeader) : onImport(preview.products)}>{busy ? "Importando…" : mode === "entry" ? "Confirmar entrada" : "Confirmar cadastro"}</button></div>}
   </div>;
 }

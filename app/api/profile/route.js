@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "profile-read", limit: 60 });
   if (limited) return limited;
-  const user = await getSession(request);
+  const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   return NextResponse.json(
     { profile: await getBillingProfile(user.id, user.accountType) },
@@ -24,7 +24,7 @@ export async function PUT(request) {
   if (blocked) return blocked;
   const limited = await enforceRateLimit(request, { scope: "profile-write", limit: 20 });
   if (limited) return limited;
-  const user = await getSession(request);
+  const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   try {
     const input = await readLimitedJson(request, {

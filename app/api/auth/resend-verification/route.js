@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export async function POST(request) {
   const blocked = guardMutation(request);
   if (blocked) return blocked;
-  const session = await getSession(request, { allowUnverified: true });
+  const session = await getSession(request, { allowUnverified: true, allowInactiveSubscription: true });
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const limited = await enforceRateLimit(request, {
     scope: "auth-resend-verification", limit: 3, windowMs: 30 * 60_000, identifier: session.email,

@@ -5,6 +5,7 @@ data/
 .vercel/
 .agents/
 *.log
+.codex-*.png
 audit.json
 SECURITY_REVIEW.md
 skills-lock.json

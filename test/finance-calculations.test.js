@@ -41,6 +41,8 @@ const closeTo = (actual, expected, tolerance = 0.01) =>
 test("workspace vazio não é confundido com dados financeiros", () => {
   assert.equal(hasMeaningfulWorkspaceContent({}), false);
   assert.equal(hasMeaningfulWorkspaceContent({ cashEntries: [{ description: "Venda", amount: 10 }] }), true);
+  assert.equal(hasMeaningfulWorkspaceContent({ clients: [{ name: "Cliente cadastrado" }] }), true);
+  assert.equal(hasMeaningfulWorkspaceContent({ tasks: [{ title: "Confirmar entrega" }] }), true);
 });
 
 test("VPL coincide com o exemplo de referência do Excel", () => {
@@ -229,6 +231,20 @@ test("salvamento parcial não apaga áreas ocultas do espaço empresarial", () =
   assert.deepEqual(mergeWorkspaceForAccess(current, incoming, access), {
     cashEntries: current.cashEntries,
     inventoryState: incoming.inventoryState,
+  });
+});
+
+test("clientes e tarefas respeitam permissões independentes", () => {
+  const workspace = {
+    clients: [{ name: "Cliente visível" }],
+    tasks: [{ title: "Tarefa oculta" }],
+    commerceOrders: [{ number: "PED-1" }],
+  };
+  assert.deepEqual(filterWorkspaceForAccess(workspace, { role: "attendant", permissions: ["clients"] }), {
+    clients: workspace.clients,
+  });
+  assert.deepEqual(filterWorkspaceForAccess(workspace, { role: "attendant", permissions: ["tasks"] }), {
+    tasks: workspace.tasks,
   });
 });
 

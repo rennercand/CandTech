@@ -42,9 +42,9 @@ export default function PublicHome() {
           <p>Cadastre dados uma vez e acompanhe cada área sem planilhas espalhadas. Os módulos compartilham o mesmo workspace e respeitam as permissões definidas pelo proprietário.</p>
         </div>
         <div className="public-home-card-grid">
-          <article><h3>Financeiro organizado</h3><p>Registre contas a pagar e receber. Dê baixa nos compromissos e acompanhe entradas, saídas e saldo por período.</p></article>
+          <article><h3>Movimentações organizadas</h3><p>Registre contas a pagar e receber. Dê baixa nos compromissos e acompanhe entradas, saídas e saldo por período.</p></article>
           <article><h3>Estoque com histórico</h3><p>Controle produtos, SKUs, quantidades, lotes e validades. Cada entrada, venda, compra ou desfazimento deixa um registro para conferência.</p></article>
-          <article><h3>Vendas e compras</h3><p>Monte pedidos com vários produtos. Relacione clientes e fornecedores e mantenha a movimentação comercial próxima do estoque.</p></article>
+          <article><h3>Pedidos e vendas</h3><p>Monte pedidos com vários produtos. Relacione clientes e fornecedores e mantenha a movimentação comercial próxima do estoque.</p></article>
           <article><h3>Preços e cálculos</h3><p>Calcule preço de venda, margem, financiamentos e retorno de investimentos com memória dos valores utilizados.</p></article>
           <article><h3>Relatórios práticos</h3><p>Exporte informações em CSV, Excel ou PDF. Quando autorizado, envie relatórios para a conta Google Drive conectada.</p></article>
           <article><h3>Equipe com acesso controlado</h3><p>Crie cargos, escolha as áreas permitidas e convide cada colaborador pelo próprio e-mail. O aceite exige autenticação.</p></article>

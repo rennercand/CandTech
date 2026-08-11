@@ -19,6 +19,8 @@ import {
 } from "./business-tools";
 import TeamAccess from "./team-access";
 import InventoryOperations from "./inventory-operations";
+import ClientManager from "./client-manager";
+import TaskKanban from "./task-kanban";
 import { trackMarketingEvent } from "../lib/analytics";
 
 async function hydrateAuthenticatedUser() {
@@ -165,6 +167,8 @@ function normalizeWorkspacePayload(payload = {}) {
     activeDocumentId: null,
     savedFinancings: [],
     invoiceIssuer: emptyInvoiceIssuer(),
+    clients: [],
+    tasks: [],
   };
   return {
     ...defaults,
@@ -212,6 +216,9 @@ function normalizeWorkspacePayload(payload = {}) {
       deliveries: Array.isArray(payload.inventoryState?.deliveries)
         ? payload.inventoryState.deliveries
         : defaults.inventoryState.deliveries,
+      orders: Array.isArray(payload.inventoryState?.orders)
+        ? payload.inventoryState.orders
+        : [],
     },
     commerceOrders: Array.isArray(payload.commerceOrders)
       ? payload.commerceOrders.map(({ document: _unneededDocument, ...order }) => order)
@@ -223,6 +230,8 @@ function normalizeWorkspacePayload(payload = {}) {
       ? payload.savedFinancings
       : defaults.savedFinancings,
     invoiceIssuer: { ...defaults.invoiceIssuer, ...(payload.invoiceIssuer || {}) },
+    clients: Array.isArray(payload.clients) ? payload.clients : defaults.clients,
+    tasks: Array.isArray(payload.tasks) ? payload.tasks : defaults.tasks,
   };
 }
 
@@ -643,6 +652,8 @@ export default function CandTechApp({ publicFallback = null }) {
   const [activeDocumentId, setActiveDocumentId] = useState(null);
   const [savedFinancings, setSavedFinancings] = useState([]);
   const [invoiceIssuer, setInvoiceIssuer] = useState(emptyInvoiceIssuer);
+  const [clients, setClients] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [adminOverview, setAdminOverview] = useState(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
   const [showExportCenter, setShowExportCenter] = useState(false);
@@ -677,6 +688,8 @@ export default function CandTechApp({ publicFallback = null }) {
       activeDocumentId,
       savedFinancings,
       invoiceIssuer,
+      clients,
+      tasks,
     }),
     [
       inputs,
@@ -694,6 +707,8 @@ export default function CandTechApp({ publicFallback = null }) {
       activeDocumentId,
       savedFinancings,
       invoiceIssuer,
+      clients,
+      tasks,
     ],
   );
   const canAccess = (permission) => {
@@ -887,13 +902,13 @@ export default function CandTechApp({ publicFallback = null }) {
   }, [user?.id, workspaceReady, workspacePayload]);
 
   useEffect(() => {
-    if (user && canAccess("history") && (view === "home" || view === "history")) loadHistory();
+    if (user && canAccess("history") && (view === "workspace" || view === "history")) loadHistory();
   }, [user, view]);
 
   useEffect(() => {
     const permission = {
       dashboard: "dashboard", calculator: "calculator", financing: "financing", pricing: "pricing",
-      cashflow: "cashflow", inventory: "inventory", commerce: "commerce", history: "history",
+      cashflow: "cashflow", inventory: "inventory", commerce: "commerce", clients: "clients", tasks: "tasks", history: "history",
     }[view];
     if (permission && !canAccess(permission)) setView("home");
     if (view === "team" && user?.access?.role !== "owner") setView("home");
@@ -920,6 +935,8 @@ export default function CandTechApp({ publicFallback = null }) {
     setActiveDocumentId(payload.activeDocumentId);
     setSavedFinancings(payload.savedFinancings);
     setInvoiceIssuer(payload.invoiceIssuer);
+    setClients(payload.clients);
+    setTasks(payload.tasks);
   }
 
   async function persistWorkspace(payload = workspacePayload, markSaved = false) {
@@ -1181,7 +1198,7 @@ export default function CandTechApp({ publicFallback = null }) {
     const rows = [];
     if (exportSections.calculations) {
       result.table.filter((item) => Number(item.flow)).forEach((item) => rows.push({ secao: "Cálculos", descricao: `Período ${item.period}`, data: item.date, valor: item.flow, status: calculationType }));
-      financialTableResult.rows.forEach((item) => rows.push({ secao: "Tabela financeira", descricao: `Parcela ${item.period}`, data: item.date, valor: -Math.abs(Number(item.payment) || 0), status: financeState.system }));
+      financialTableResult.rows.forEach((item) => rows.push({ secao: "Financiamentos", descricao: `Parcela ${item.period}`, data: item.date, valor: -Math.abs(Number(item.payment) || 0), status: financeState.system }));
     }
     if (exportSections.finance) {
       financialAccounts.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Contas e cobranças", descricao: item.description || item.party, data: item.dueDate, valor: item.type === "pagar" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: item.status }));
@@ -1289,7 +1306,7 @@ export default function CandTechApp({ publicFallback = null }) {
         table: financialTableResult.rows,
       },
       workspace: nextWorkspace,
-      success: "Tabela financeira atualizada no documento da sua conta.",
+      success: "Financiamento atualizado no documento da sua conta.",
     });
   }
   async function exportFinancialTableToDrive() {
@@ -1555,7 +1572,7 @@ export default function CandTechApp({ publicFallback = null }) {
         summaryLabel: "Valor estimado do estoque",
       },
       commerce: {
-        filename: "vendas-compras.csv", title: "Vendas e compras", rows: commerceOrders.map((item) => ({ ...item, amount: item.type === "compra" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0) })),
+        filename: "pedidos-vendas.csv", title: "Pedidos e vendas", rows: commerceOrders.map((item) => ({ ...item, amount: item.type === "compra" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0) })),
         totalSpent: -commerceOrders.reduce((sum, item) => sum + (item.type === "compra" && item.status !== "cancelado" ? Number(item.amount) || 0 : 0), 0),
         summaryLabel: "Total dos pedidos de compra",
       },
@@ -1656,7 +1673,7 @@ export default function CandTechApp({ publicFallback = null }) {
           ] } }
         : null,
       commerce: commerceOrders.some((item) => item.number || item.partner || Number(item.amount))
-        ? { title: "Vendas e compras", calculationType: "vendas-compras", payload: { table: commerceOrders } }
+        ? { title: "Pedidos e vendas", calculationType: "vendas-compras", payload: { table: commerceOrders } }
         : null,
     };
     const report = reports[view];
@@ -1764,13 +1781,16 @@ export default function CandTechApp({ publicFallback = null }) {
         <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
         <nav aria-label="Navegação principal">
           {[
-            ["home", "Início", "⌂"],
-            ...(canAccess("calculator") ? [["calculator", "Calculadoras", "⌁"]] : []),
-            ...(canAccess("financing") ? [["financing", "Tabela financeira", "▦"]] : []),
-            ...(canAccess("pricing") ? [["pricing", "Preço do produto", "◇"]] : []),
-            ...(canAccess("cashflow") ? [["cashflow", "Financeiro", "▤"]] : []),
-            ...(canAccess("inventory") ? [["inventory", "Estoque e logística", "▣"]] : []),
-            ...(canAccess("commerce") ? [["commerce", "Vendas e compras", "⇄"]] : []),
+            ["home", "Visão geral", "⌂"],
+            ["workspace", "Workspace", "□"],
+            ...(canAccess("clients") ? [["clients", "Clientes", "♧"]] : []),
+            ...(canAccess("tasks") ? [["tasks", "Tarefas", "✓"]] : []),
+            ...(canAccess("commerce") ? [["commerce", "Pedidos e vendas", "⇄"]] : []),
+            ...(canAccess("inventory") ? [["inventory", "Logística e estoque", "▣"]] : []),
+            ...(canAccess("cashflow") ? [["cashflow", "Movimentações", "▤"]] : []),
+            ...(canAccess("financing") ? [["financing", "Financiamentos", "▦"]] : []),
+            ...(canAccess("calculator") ? [["calculator", "Análises", "⌁"]] : []),
+            ...(canAccess("pricing") ? [["pricing", "Formação de preço", "◇"]] : []),
             ...(user.access?.role === "owner" ? [["team", "Empresa e acessos", "♙"]] : []),
             ...(isAdministrator ? [["admin", "Moderação", "◉"]] : []),
             ...(canAccess("history") ? [["history", "Histórico", "◷"]] : []),
@@ -1812,25 +1832,29 @@ export default function CandTechApp({ publicFallback = null }) {
         <header>
           <div>
             <p className="eyebrow">
-              {view === "home" ? "ESPAÇO DE TRABALHO" : "PAINEL FINANCEIRO"}
+              {view === "home" ? "RELATÓRIO GERAL DA CONTA" : view === "workspace" ? "ESPAÇO DE TRABALHO" : "GESTÃO DA EMPRESA"}
             </p>
             <h1>
               {view === "home"
-                ? "Workspace"
-                : view === "dashboard"
-                ? "Workspace"
+                ? "Visão geral"
+                : view === "workspace"
+                  ? "Workspace"
                 : view === "calculator"
-                  ? "Calculadoras"
+                  ? "Análises"
                   : view === "financing"
-                    ? "Tabela financeira"
+                    ? "Financiamentos"
                     : view === "pricing"
-                      ? "Preço do produto"
+                      ? "Formação de preço"
                       : view === "cashflow"
-                        ? "Financeiro"
+                        ? "Movimentações"
                         : view === "inventory"
-                          ? "Estoque e logística"
+                          ? "Logística e estoque"
                           : view === "commerce"
-                            ? "Vendas e compras"
+                            ? "Pedidos e vendas"
+                            : view === "clients"
+                              ? "Clientes"
+                              : view === "tasks"
+                                ? "Tarefas"
                             : view === "admin"
                               ? "Moderação do sistema"
                               : view === "team"
@@ -1855,7 +1879,7 @@ export default function CandTechApp({ publicFallback = null }) {
                 year: "numeric",
               })}
             </span>
-            {canAccess("exports") && view !== "history" && view !== "home" && view !== "team" && (
+            {canAccess("exports") && view !== "history" && view !== "home" && view !== "workspace" && view !== "team" && view !== "clients" && view !== "tasks" && (
               <div className="context-export-actions" aria-label="Exportar aba atual">
                 <button className="secondary-button compact" onClick={() => setShowExportCenter((current) => !current)}>
                   Exportar seleção
@@ -1884,12 +1908,25 @@ export default function CandTechApp({ publicFallback = null }) {
           <section className="panel export-center" aria-label="Selecionar conteúdo da exportação">
             <div><span className="eyebrow">EXPORTAÇÃO PERSONALIZADA</span><h2>O que deseja incluir?</h2><p>Somente as seções marcadas e com dados preenchidos serão incluídas.</p></div>
             <div className="export-checks">
-              {[["calculations", "Cálculos e tabelas"], ["finance", "Contas, cobranças e caixa"], ["inventory", "Estoque e logística"], ["commerce", "Vendas e compras"]].map(([id, label]) => <label key={id}><input type="checkbox" checked={exportSections[id]} onChange={(event) => setExportSections((current) => ({ ...current, [id]: event.target.checked }))} /> {label}</label>)}
+              {[["calculations", "Análises e financiamentos"], ["finance", "Movimentações e caixa"], ["inventory", "Logística e estoque"], ["commerce", "Pedidos e vendas"]].map(([id, label]) => <label key={id}><input type="checkbox" checked={exportSections[id]} onChange={(event) => setExportSections((current) => ({ ...current, [id]: event.target.checked }))} /> {label}</label>)}
             </div>
             <div className="module-actions"><button className="secondary-button" onClick={() => exportSelected("csv")}>Baixar CSV</button><button className="secondary-button" onClick={() => exportSelected("pdf")}>Baixar PDF</button><button className="primary-button" onClick={() => exportSelected("drive")}>Enviar ao Drive</button></div>
           </section>
         )}
         {view === "home" && (
+          canAccess("dashboard") ? <Dashboard
+            cashEntries={cashEntries}
+            financialAccounts={financialAccounts}
+            inventoryState={inventoryState}
+            commerceOrders={commerceOrders}
+            clients={clients}
+            tasks={tasks}
+            access={{ finance: canAccess("cashflow"), inventory: canAccess("inventory"), commerce: canAccess("commerce"), clients: canAccess("clients"), tasks: canAccess("tasks") }}
+            onOpen={(target) => setView(target)}
+            onReset={resetOperationalSections}
+          /> : <section className="panel"><h2>Bem-vindo à CandTech</h2><p>Seu cargo ainda não possui acesso ao relatório geral. Escolha uma área liberada no menu.</p></section>
+        )}
+        {view === "workspace" && (
           <DocumentHome
             user={user}
             items={history}
@@ -1900,16 +1937,6 @@ export default function CandTechApp({ publicFallback = null }) {
             onViewAll={() => setView("history")}
             allowedViews={new Set(["calculator", "financing", "pricing", "cashflow", "inventory", "commerce"].filter((area) => canAccess(area)))}
             showHistory={canAccess("history")}
-            overview={canAccess("dashboard") ? <Dashboard
-              embedded
-              cashEntries={cashEntries}
-              financialAccounts={financialAccounts}
-              inventoryState={inventoryState}
-              commerceOrders={commerceOrders}
-              access={{ finance: canAccess("cashflow"), inventory: canAccess("inventory"), commerce: canAccess("commerce") }}
-              onOpen={(target) => setView(target)}
-              onReset={resetOperationalSections}
-            /> : null}
           />
         )}
         {view === "calculator" && (
@@ -1962,6 +1989,8 @@ export default function CandTechApp({ publicFallback = null }) {
         )}
         {view === "inventory" && <InventoryOperations canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
         {view === "commerce" && <InventoryOperations initialSection="orders" canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "clients" && <ClientManager clients={clients} setClients={setClients} orders={[...commerceOrders, ...(inventoryState.orders || [])]} />}
+        {view === "tasks" && <TaskKanban tasks={tasks} setTasks={setTasks} clients={clients} />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
         {view === "team" && user.access?.role === "owner" && <TeamAccess />}
         {view === "history" && (
@@ -1989,19 +2018,19 @@ const DOCUMENT_TYPES = {
   VPL: { label: "Análise de investimento", icon: "↗", tone: "violet" },
   TIR: { label: "Análise de investimento", icon: "↗", tone: "violet" },
   Payback: { label: "Análise de investimento", icon: "↗", tone: "violet" },
-  "tabela-financeira": { label: "Tabela financeira", icon: "▦", tone: "blue" },
+  "tabela-financeira": { label: "Financiamentos", icon: "▦", tone: "blue" },
   "preco-produto": { label: "Preço do produto", icon: "◇", tone: "orange" },
-  "organizacao-financeira": { label: "Financeiro", icon: "◫", tone: "green" },
+  "organizacao-financeira": { label: "Movimentações", icon: "◫", tone: "green" },
   "rascunho-automatico": { label: "Rascunho automático", icon: "✎", tone: "gray" },
 };
 
 const DOCUMENT_TEMPLATES = [
   { id: "calculator", title: "Análise de investimento", text: "VPL, TIR, ROI e payback", icon: "↗", tone: "violet" },
-  { id: "financing", title: "Tabela financeira", text: "PRICE, SAF, SAC ou SAA", icon: "▦", tone: "blue" },
+  { id: "financing", title: "Financiamentos", text: "Compare PRICE, SAF, SAC ou SAA", icon: "▦", tone: "blue" },
   { id: "pricing", title: "Preço do produto", text: "Custos, margem e preço unitário", icon: "◇", tone: "orange" },
-  { id: "cashflow", title: "Financeiro", text: "Contas, extratos e fluxo de caixa", icon: "◫", tone: "green" },
-  { id: "inventory", title: "Estoque e logística", text: "Produtos, quantidades e entregas", icon: "▣", tone: "blue" },
-  { id: "commerce", title: "Vendas e compras", text: "Pedidos, clientes e fornecedores", icon: "⇄", tone: "orange" },
+  { id: "cashflow", title: "Movimentações", text: "Contas, extratos e fluxo de caixa", icon: "◫", tone: "green" },
+  { id: "inventory", title: "Logística e estoque", text: "Produtos, quantidades e entregas", icon: "▣", tone: "blue" },
+  { id: "commerce", title: "Pedidos e vendas", text: "Compras, vendas, clientes e fornecedores", icon: "⇄", tone: "orange" },
 ];
 
 function DocumentHome({ user, items, loading, onNew, onOpen, onRestore, onViewAll, allowedViews, showHistory, overview }) {
@@ -2137,13 +2166,15 @@ function CommerceOverviewChart({ orders }) {
   </div></div>;
 }
 
-function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrders, access, onOpen, onReset, embedded = false }) {
+function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrders, clients = [], tasks = [], access, onOpen, onReset, embedded = false }) {
   const [period, setPeriod] = useState("90");
   const [resetSections, setResetSections] = useState({ finance: false, inventory: false, commerce: false });
   const cutoff = period === "all" ? null : new Date(Date.now() - Number(period) * 86_400_000);
   const inPeriod = (date) => !cutoff || !date || new Date(`${date}T12:00:00`) >= cutoff;
   const financeRows = cashEntries.filter((entry) => (entry.description || Number(entry.amount)) && inPeriod(entry.date));
-  const orderRows = commerceOrders.filter((order) => inPeriod(order.date));
+  const allOrders = [...(inventoryState.orders || []), ...commerceOrders]
+    .filter((order, index, rows) => (order.partner || Number(order.amount)) && (!order.id || rows.findIndex((candidate) => candidate.id && String(candidate.id) === String(order.id)) === index));
+  const orderRows = allOrders.filter((order) => inPeriod(order.date));
   const cash = financeRows.reduce((total, entry) => total + (entry.type === "entrada" ? 1 : -1) * (Number(entry.amount) || 0), 0);
   const pending = financialAccounts.reduce((total, account) => {
     if (account.status !== "pendente" || !inPeriod(account.dueDate)) return total;
@@ -2151,6 +2182,20 @@ function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrd
   }, 0);
   const stockValue = inventoryState.products.reduce((sum, product) => sum + (Number(product.quantity) || 0) * (Number(product.unitCost) || 0), 0);
   const commerce = orderRows.reduce((total, order) => order.status === "cancelado" ? total : total + (order.type === "venda" ? 1 : -1) * (Number(order.amount) || 0), 0);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthOrders = allOrders.filter((order) => String(order.date || "").startsWith(currentMonth) && order.status !== "cancelado");
+  const monthCash = cashEntries.filter((entry) => String(entry.date || "").startsWith(currentMonth));
+  const monthlySales = monthOrders.filter((order) => order.type === "venda").reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
+  const monthlyPurchases = monthOrders.filter((order) => order.type === "compra").reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
+  const monthlyRevenue = monthCash.filter((entry) => entry.type === "entrada").reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+  const monthlyExpenses = monthCash.filter((entry) => entry.type === "saida").reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+  // Sem custo por item vendido, o lucro bruto é uma visão operacional: vendas menos compras do mês.
+  const grossProfit = monthlySales - monthlyPurchases;
+  const netProfit = monthlyRevenue - monthlyExpenses;
+  const partnerNames = new Set(allOrders.filter((order) => order.type === "venda" && order.partner).map((order) => order.partner.trim().toLocaleLowerCase("pt-BR")));
+  const clientCount = new Set([...clients.map((client) => client.name?.trim().toLocaleLowerCase("pt-BR")).filter(Boolean), ...partnerNames]).size;
+  const openTasks = tasks.filter((task) => task.status !== "done");
+  const overdueTasks = openTasks.filter((task) => task.dueDate && new Date(`${task.dueDate}T23:59:59`) < new Date());
   const flowRows = financeRows
     .sort((a, b) => String(a.date).localeCompare(String(b.date)))
     .map((entry, index) => ({ period: index + 1, date: entry.date, flow: (entry.type === "entrada" ? 1 : -1) * (Number(entry.amount) || 0) }));
@@ -2162,20 +2207,26 @@ function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrd
     setResetSections({ finance: false, inventory: false, commerce: false });
   }
   const charts = <section className="overview-chart-grid">
-    {access.finance && <article className="panel chart-panel"><div className="panel-heading"><div><span className="eyebrow">FINANCEIRO</span><h2>Entradas e saídas realizadas</h2><p>Movimentos cadastrados no caixa dentro do período escolhido.</p></div><button className="secondary-button" onClick={() => onOpen("cashflow")}>Abrir Financeiro</button></div>{flowRows.length ? <CashFlowChart rows={flowRows} /> : <p className="overview-empty">Adicione movimentos no Financeiro para formar o gráfico.</p>}</article>}
+    {access.finance && <article className="panel chart-panel"><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÕES</span><h2>Entradas e saídas realizadas</h2><p>Movimentos cadastrados no caixa dentro do período escolhido.</p></div><button className="secondary-button" onClick={() => onOpen("cashflow")}>Abrir Movimentações</button></div>{flowRows.length ? <CashFlowChart rows={flowRows} /> : <p className="overview-empty">Adicione movimentações para formar o gráfico.</p>}</article>}
     {access.inventory && <article className="panel"><div className="panel-heading"><div><span className="eyebrow">ESTOQUE</span><h2>Quantidade por produto</h2><p>Um gráfico diferente do caixa, com alerta para o nível mínimo.</p></div><button className="secondary-button" onClick={() => onOpen("inventory")}>Abrir Estoque</button></div><InventoryOverviewChart products={inventoryState.products} /></article>}
-    {access.commerce && <article className="panel overview-commerce-panel"><div className="panel-heading"><div><span className="eyebrow">VENDAS E COMPRAS</span><h2>Evolução comercial</h2><p>Compras ficam negativas em vermelho; cada venda acrescenta valor em verde.</p></div><button className="secondary-button" onClick={() => onOpen("commerce")}>Abrir pedidos</button></div><CommerceOverviewChart orders={orderRows} /></article>}
+    {access.commerce && <article className="panel overview-commerce-panel"><div className="panel-heading"><div><span className="eyebrow">VENDAS DO NEGÓCIO</span><h2>Gráfico de vendas e compras</h2><p>Compras ficam negativas em vermelho; cada venda acrescenta valor em verde.</p></div><button className="secondary-button" onClick={() => onOpen("commerce")}>Abrir pedidos</button></div><CommerceOverviewChart orders={orderRows} /></article>}
   </section>;
-  const resetControl = <details className="panel reset-operation-panel"><summary>Iniciar um novo ciclo da loja</summary><p>Use apenas quando quiser limpar uma ou mais áreas do documento atual e começar novos gráficos. O histórico salvo permanece disponível.</p><div className="reset-operation-checks">{access.finance && <label><input type="checkbox" checked={resetSections.finance} onChange={(event) => setResetSections((current) => ({ ...current, finance: event.target.checked }))} /> Financeiro</label>}{access.inventory && <label><input type="checkbox" checked={resetSections.inventory} onChange={(event) => setResetSections((current) => ({ ...current, inventory: event.target.checked }))} /> Estoque</label>}{access.commerce && <label><input type="checkbox" checked={resetSections.commerce} onChange={(event) => setResetSections((current) => ({ ...current, commerce: event.target.checked }))} /> Vendas e compras</label>}</div><button className="secondary-button danger-button" disabled={!allowedReset} onClick={resetSelected}>Limpar áreas selecionadas</button></details>;
+  const resetControl = <details className="panel reset-operation-panel"><summary>Iniciar um novo ciclo da loja</summary><p>Use apenas quando quiser limpar uma ou mais áreas do documento atual e começar novos gráficos. O histórico salvo permanece disponível.</p><div className="reset-operation-checks">{access.finance && <label><input type="checkbox" checked={resetSections.finance} onChange={(event) => setResetSections((current) => ({ ...current, finance: event.target.checked }))} /> Movimentações</label>}{access.inventory && <label><input type="checkbox" checked={resetSections.inventory} onChange={(event) => setResetSections((current) => ({ ...current, inventory: event.target.checked }))} /> Estoque</label>}{access.commerce && <label><input type="checkbox" checked={resetSections.commerce} onChange={(event) => setResetSections((current) => ({ ...current, commerce: event.target.checked }))} /> Pedidos e vendas</label>}</div><button className="secondary-button danger-button" disabled={!allowedReset} onClick={resetSelected}>Limpar áreas selecionadas</button></details>;
   return (
     <div className={`business-stack operational-dashboard ${embedded ? "workspace-dashboard" : ""}`}>
-      <section className={embedded ? "workspace-overview-controls" : "panel overview-toolbar"}><div>{!embedded && <><span className="eyebrow">OPERAÇÃO DA EMPRESA</span><h2>Status atual da loja</h2></>}<p>Os valores abaixo vêm diretamente do Financeiro, Estoque e Vendas e compras.</p></div><label>Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="all">Todo o período</option></select></label></section>
-      <section className="stats-grid">
+      <section className={embedded ? "workspace-overview-controls" : "panel overview-toolbar"}><div>{!embedded && <><span className="eyebrow">OPERAÇÃO DA EMPRESA</span><h2>Relatório geral da conta</h2></>}<p>Vendas, caixa, estoque, clientes e prazos reunidos para você decidir o que fazer primeiro.</p></div><label>Período dos gráficos<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="all">Todo o período</option></select></label></section>
+      <section className="stats-grid executive-stats">
+        {access.commerce && <StatCard label="Vendas do mês" value={money.format(monthlySales)} positive={monthlySales > 0} neutral={monthlySales === 0} caption={`${monthOrders.filter((order) => order.type === "venda").length} pedido(s) de venda`} />}
+        {access.finance && <StatCard label="Receita recebida" value={money.format(monthlyRevenue)} positive={monthlyRevenue > 0} neutral={monthlyRevenue === 0} caption="Entradas confirmadas neste mês" />}
         {access.finance && <StatCard label="Caixa realizado" value={`${cash > 0 ? "+" : cash < 0 ? "-" : ""}${money.format(Math.abs(cash))}`} positive={cash > 0} neutral={cash === 0} caption={cash > 0 ? "A operação está com entrada líquida" : cash < 0 ? "As saídas superam as entradas" : "Entradas e saídas estão equilibradas"} />}
+        {access.commerce && <StatCard label="Lucro bruto estimado" value={`${grossProfit < 0 ? "-" : ""}${money.format(Math.abs(grossProfit))}`} positive={grossProfit > 0} neutral={grossProfit === 0} caption="Vendas menos compras do mês" />}
+        {access.finance && <StatCard label="Lucro líquido operacional" value={`${netProfit < 0 ? "-" : ""}${money.format(Math.abs(netProfit))}`} positive={netProfit > 0} neutral={netProfit === 0} caption="Receitas recebidas menos saídas do mês" />}
+        {access.clients && <StatCard label="Clientes" value={clientCount} positive={clientCount > 0} neutral={clientCount === 0} caption="Cadastrados e encontrados nas vendas" />}
         {access.finance && <StatCard label="Contas pendentes" value={`${pending > 0 ? "+" : pending < 0 ? "-" : ""}${money.format(Math.abs(pending))}`} positive={pending > 0} neutral={pending === 0} caption={pending > 0 ? "Há mais valores a receber" : pending < 0 ? "Há mais valores a pagar" : "Sem diferença entre contas pendentes"} />}
         {access.inventory && <StatCard label="Valor em estoque" value={money.format(stockValue)} positive={stockValue >= 0} caption={`${inventoryState.products.filter((item) => item.name || item.sku).length} produtos cadastrados`} />}
-        {access.commerce && <StatCard label="Saldo comercial" value={`${commerce > 0 ? "+" : commerce < 0 ? "-" : ""}${money.format(Math.abs(commerce))}`} positive={commerce > 0} neutral={commerce === 0} caption="Vendas menos compras no período" />}
+        {access.tasks && <StatCard label="Tarefas abertas" value={openTasks.length} positive={overdueTasks.length === 0} neutral={openTasks.length === 0} caption={overdueTasks.length ? `${overdueTasks.length} tarefa(s) atrasada(s)` : "Nenhuma tarefa atrasada"} />}
       </section>
+      <section className="panel dashboard-shortcuts"><div><span className="eyebrow">ATALHOS</span><h2>O que precisa de atenção?</h2></div><div>{access.commerce && <button className="secondary-button" onClick={() => onOpen("commerce")}>Novo pedido</button>}{access.inventory && <button className="secondary-button" onClick={() => onOpen("inventory")}>Conferir estoque</button>}{access.finance && <button className="secondary-button" onClick={() => onOpen("cashflow")}>Ver contas</button>}{access.clients && <button className="secondary-button" onClick={() => onOpen("clients")}>Falar com cliente</button>}{access.tasks && <button className="primary-button" onClick={() => onOpen("tasks")}>Abrir tarefas</button>}</div></section>
       {embedded ? <details className="panel workspace-overview-details"><summary>Ver gráficos e controles da operação</summary><div className="workspace-overview-expanded">{charts}{resetControl}</div></details> : <>{charts}{resetControl}</>}
     </div>
   );

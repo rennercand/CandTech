@@ -17,7 +17,7 @@ test("prévia pública do convite mascara o e-mail e expõe somente contexto nec
   assert.equal(preview.maskedEmail, "fu********@exemplo.com.br");
   assert.equal(preview.organizationName, "Loja Exemplo");
   assert.equal(preview.jobTitle, "Vendedor");
-  assert.deepEqual(preview.permissionLabels, ["Estoque e logística", "Vendas e compras"]);
+  assert.deepEqual(preview.permissionLabels, ["Logística e estoque", "Pedidos e vendas"]);
   assert.equal("email" in preview, false);
   assert.equal("id" in preview, false);
   assert.equal("organizationId" in preview, false);

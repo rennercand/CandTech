@@ -16,6 +16,8 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 | Caminho | Responsabilidade |
 | --- | --- |
 | `app/candtech-app.js` | Fluxo principal da interface: autenticação, aceite jurídico, assinatura e workspace |
+| `app/client-manager.js` | Carteira de clientes, busca, status e atalhos seguros de contato |
+| `app/task-kanban.js` | Quadro de tarefas com prazos, prioridade, cliente e etapas |
 | `app/api/auth/` | Cadastro, login, sessão, confirmação de e-mail e recuperação de senha |
 | `app/api/stripe/` | Criação do Checkout, portal do cliente e recepção de webhooks |
 | `app/api/inventory/` | Operações e exportações do estoque relacional |
@@ -81,6 +83,21 @@ Regras importantes:
 - entrada em SKU existente exige coluna de quantidade e valor maior que zero;
 - valores brasileiros como `1.234,56` são normalizados antes da prévia;
 - nenhuma linha é persistida antes da confirmação do usuário.
+
+## Navegação e relatório geral
+
+A página autenticada abre em `home`, que representa a Visão geral. O `workspace` é uma área separada para documentos e modelos. A ordem operacional do menu é intencional: clientes e tarefas → pedidos → logística e estoque → movimentações → financiamentos → análises → formação de preço.
+
+Clientes e tarefas pertencem ao workspace da organização e passam pelos filtros de `lib/team-permissions.js`. Um colaborador só recebe e grava essas chaves se o cargo possuir `clients` ou `tasks`. Os atalhos de WhatsApp e e-mail abrem o aplicativo escolhido pela pessoa; a CandTech não envia mensagens automaticamente nem entrega a lista de clientes a um provedor de marketing.
+
+O relatório geral diferencia métricas que não significam a mesma coisa:
+
+- vendas do mês: total de pedidos de venda não cancelados;
+- receita recebida: entradas de caixa confirmadas no mês;
+- lucro bruto estimado: vendas menos compras do mês, até existir custo por item vendido;
+- lucro líquido operacional: entradas menos saídas realizadas no mês.
+
+Esses indicadores apoiam gestão e não substituem demonstrativo contábil ou apuração fiscal.
 
 ## Banco e migrations
 

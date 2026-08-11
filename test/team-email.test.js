@@ -20,7 +20,7 @@ test("e-mail de convite informa cargo, permissões e usa envio idempotente", asy
       organizationName: "Loja <Teste>",
       inviterName: "Renner",
       jobTitle: "Vendedor",
-      permissionLabels: ["Vendas e compras", "Estoque e logística"],
+      permissionLabels: ["Pedidos e vendas", "Logística e estoque"],
       inviteUrl: "https://candtech.com.br/#invite=seguro",
       invitationId: 42,
     });
@@ -29,7 +29,7 @@ test("e-mail de convite informa cargo, permissões e usa envio idempotente", asy
     assert.equal(request.url, "https://api.resend.com/emails");
     assert.equal(request.options.headers["Idempotency-Key"], "team-invitation-42");
     assert.match(body.subject, /Vendedor/);
-    assert.match(body.html, /Vendas e compras/);
+    assert.match(body.html, /Pedidos e vendas/);
     assert.match(body.html, /Aceitar convite/);
     assert.doesNotMatch(body.html, /Loja <Teste>/);
   } finally {

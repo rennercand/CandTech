@@ -10,7 +10,11 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 - Cadastro e login com sessão individual.
 - Convites de equipe abrem uma jornada própria: mostram empresa, cargo, e-mail mascarado e áreas permitidas; após cadastro ou login, o colaborador entra diretamente no workspace empresarial.
-- Workspace inicial com resumo do negócio, documentos recentes e modelos para novos trabalhos; gráficos e controles detalhados ficam recolhidos para preservar a praticidade.
+- Início com relatório geral da conta: vendas do mês, receita recebida, caixa, lucro operacional, estoque, contas pendentes, clientes e tarefas.
+- Workspace separado para documentos recentes e modelos, evitando misturar arquivos com a rotina diária do comércio.
+- Menu ordenado pelo fluxo da operação: clientes e tarefas, pedidos, logística, movimentações, financiamentos, análises e formação de preço.
+- Carteira de clientes com status e atalhos diretos para WhatsApp e e-mail.
+- Quadro Kanban com tarefas, prioridade, prazo, cliente relacionado e etapas “A fazer”, “Em andamento” e “Concluído”.
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
@@ -94,6 +98,7 @@ Cada usuário possui um workspace próprio no banco. Após uma pequena pausa na 
 - tabela financeira selecionada;
 - despesas e parâmetros de formação de preço;
 - filtros, nomes e categorias financeiras criadas pelo usuário.
+- carteira de clientes e quadro de tarefas com prazos.
 
 Ao entrar novamente, o workspace e o documento ativo são restaurados. Salvar atualiza esse documento em vez de criar uma cópia. Somente a ação “Novo documento” limpa o vínculo atual; o servidor limita cada conta a 10 documentos manuais. Se a pessoa sair com uma revisão que não foi salva manualmente, o sistema cria ou atualiza um único item do tipo `rascunho-automatico`, que não entra nessa cota. Revisões já arquivadas não são duplicadas.
 
@@ -175,7 +180,9 @@ app/
   api/workspace/     restauração, autosave e rascunho automático
   api/inventory/     estoque relacional, entradas, pedidos, relatórios e desfazimento
   advanced-tools.js  financiamento, preço e leitor de PDF
+  client-manager.js  carteira de clientes e atalhos de contato
   inventory-operations.js operação guiada e treinamento de estoque
+  task-kanban.js      quadro de tarefas, prioridades e prazos
   page.js            dashboard, cálculos e organização financeira
 lib/
   auth.js            criação e validação do JWT

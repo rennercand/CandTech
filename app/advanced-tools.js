@@ -57,7 +57,7 @@ export function FinanceTables({ state, setState, onSave, onNew, onExportDrive })
         <span className="eyebrow">SIMULADOR DE FINANCIAMENTO</span>
         <div className="panel-heading">
           <div>
-            <h2>Tabela financeira</h2>
+            <h2>Financiamentos</h2>
             <p>{systemText}</p>
           </div>
           <div className="module-toolbar">

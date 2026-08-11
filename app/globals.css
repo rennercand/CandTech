@@ -2763,3 +2763,87 @@ body {
   .public-home-footer { align-items: flex-start; flex-direction: column; }
   .public-home-footer nav { align-items: flex-start; flex-direction: column; gap: 8px; }
 }
+/* Clientes, tarefas e painel executivo compartilham o mesmo ritmo visual dos
+   módulos financeiros para reduzir a curva de treinamento da equipe. */
+.client-toolbar,
+.task-toolbar,
+.dashboard-shortcuts {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.client-toolbar > label { min-width: min(360px, 100%); }
+.client-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.client-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: end; }
+.client-form .client-notes { grid-column: span 3; }
+.client-form label,
+.task-create-form label,
+.kanban-card label { display: grid; gap: 7px; font-size: .78rem; font-weight: 700; color: var(--muted); }
+.client-form input,
+.client-form select,
+.client-toolbar input,
+.task-create-form input,
+.task-create-form select,
+.kanban-card select,
+.client-card select { width: 100%; }
+.client-suggestions { display: flex; justify-content: space-between; gap: 24px; align-items: center; }
+.client-suggestions > div:last-child { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
+.client-list { display: grid; gap: 10px; }
+.client-card { display: grid; grid-template-columns: 44px minmax(180px, 1fr) 150px auto; gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+.client-avatar { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 13px; color: white; background: linear-gradient(145deg, #6239e8, #2f80ed); font-weight: 800; }
+.client-card-copy { display: grid; gap: 3px; min-width: 0; }
+.client-card-copy span,
+.client-card-copy small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-actions { display: flex; gap: 7px; align-items: center; }
+
+.task-totals { text-align: center; min-width: 110px; padding: 12px 18px; border-radius: 16px; background: #f2efff; color: #5034c9; }
+.task-totals strong { display: block; font-size: 1.7rem; }
+.task-totals span { font-size: .75rem; }
+.task-create-form { display: grid; grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(145px, 1fr)) auto; gap: 14px; align-items: end; }
+.kanban-board { display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 16px; align-items: start; overflow-x: auto; padding-bottom: 4px; }
+.kanban-column { min-width: 260px; border: 1px solid var(--line); border-radius: 18px; background: #f7f8fc; padding: 14px; }
+.kanban-column > header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.kanban-column > header h3 { margin: 0 0 3px; }
+.kanban-column > header small { color: var(--muted); }
+.kanban-column > header > strong { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: white; }
+.kanban-list { display: grid; gap: 10px; }
+.kanban-list > p { color: var(--muted); text-align: center; padding: 26px 8px; font-size: .84rem; }
+.kanban-card { display: grid; gap: 10px; background: white; border: 1px solid var(--line); border-left: 4px solid #e4a72c; border-radius: 13px; padding: 13px; box-shadow: 0 4px 16px rgba(30, 35, 60, .04); }
+.kanban-card.priority-high { border-left-color: #e05268; }
+.kanban-card.priority-low { border-left-color: #48a989; }
+.kanban-card.overdue { background: #fff7f8; }
+.kanban-card.soon { background: #fffaf0; }
+.kanban-card-top,
+.kanban-card-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .72rem; }
+.kanban-card-top button { border: 0; background: transparent; cursor: pointer; color: var(--muted); font-size: 1rem; }
+.kanban-card.overdue .kanban-card-meta { color: #c63450; font-weight: 800; }
+
+.executive-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-shortcuts > div:last-child { display: flex; gap: 9px; flex-wrap: wrap; justify-content: end; }
+
+@media (max-width: 1050px) {
+  .client-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .client-form .client-notes { grid-column: span 1; }
+  .task-create-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .executive-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .client-toolbar,
+  .task-toolbar,
+  .dashboard-shortcuts,
+  .client-suggestions { align-items: stretch; flex-direction: column; }
+  .client-summary-grid,
+  .client-form,
+  .task-create-form,
+  .executive-stats { grid-template-columns: 1fr; }
+  .client-form .client-notes { grid-column: auto; }
+  .client-card { grid-template-columns: 44px 1fr; }
+  .client-card > select,
+  .client-actions { grid-column: 2; }
+  .client-actions { flex-wrap: wrap; }
+  .dashboard-shortcuts > div:last-child,
+  .client-suggestions > div:last-child { justify-content: start; }
+}

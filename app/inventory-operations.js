@@ -151,7 +151,22 @@ export default function InventoryOperations({ initialSection = "overview", onSna
   const largestCategoryValue = categoryValues[0]?.value || 1;
   useEffect(() => { setSection(initialSection); }, [initialSection]);
   useEffect(() => { fetch("/api/inventory", { cache: "no-store" }).then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error); setInventory(body.inventory); }).catch((cause) => { setError(true); setMessage(cause.message || "Não foi possível carregar o estoque."); }).finally(() => setLoading(false)); }, []);
-  useEffect(() => { if (!onSnapshot || loading) return; onSnapshot({ products: variants.map((item) => ({ id: item.id, name: `${item.product.name}${item.name === "Padrão" ? "" : ` · ${item.name}`}`, sku: item.sku, quantity: item.quantity, minimum: item.minimumQuantity, unitCost: item.unitCost, location: item.location, lockedAt: "relational" })) }); }, [inventory, loading]);
+  useEffect(() => {
+    if (!onSnapshot || loading) return;
+    // O resumo fica no workspace para a Visão geral abrir imediatamente; o
+    // cadastro oficial e as movimentações continuam protegidos pela API.
+    onSnapshot({
+      products: variants.map((item) => ({ id: item.id, name: `${item.product.name}${item.name === "Padrão" ? "" : ` · ${item.name}`}`, sku: item.sku, quantity: item.quantity, minimum: item.minimumQuantity, unitCost: item.unitCost, location: item.location, lockedAt: "relational" })),
+      orders: (inventory.orders || []).map((order) => ({
+        id: order.id,
+        type: order.type === "sale" ? "venda" : "compra",
+        amount: Number(order.total) || 0,
+        partner: order.partner || "",
+        date: String(order.created_at || "").slice(0, 10),
+        status: "concluido",
+      })),
+    });
+  }, [inventory, loading]);
   useEffect(() => {
     if (loading || !canUseDrive || sessionStorage.getItem("candtech_pending_inventory_drive") !== "1") return;
     sessionStorage.removeItem("candtech_pending_inventory_drive");

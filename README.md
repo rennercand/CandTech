@@ -56,9 +56,10 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - As senhas são transformadas com `bcrypt`, salt automático e custo 12 antes de serem armazenadas. A senha original não é gravada.
 - A sessão usa um JWT assinado, com duração absoluta de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. O identificador da sessão também é persistido para permitir revogação.
 - Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
+- Novos cadastros recebem confirmação de e-mail; recuperação de senha usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
 - Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
 - Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
-- Todas as APIs privadas exigem sessão; somente cadastro e login são públicos.
+- Todas as APIs privadas exigem sessão. Cadastro, login, solicitação de recuperação, redefinição e confirmação de e-mail são públicos por necessidade do fluxo, com proteção de origem, limites de corpo e rate limit.
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
 - APIs possuem rate limit compartilhado no PostgreSQL/Neon; o IP é armazenado somente como hash e limites excedidos retornam `429`.
 - O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
@@ -130,9 +131,10 @@ Para entregar convites de colaboradores diretamente por e-mail, verifique o dom�
 ```env
 RESEND_API_KEY=re_...
 TEAM_INVITE_FROM="CandTech <convites@candtech.com.br>"
+PUBLIC_APP_URL=https://candtech.com.br
 ```
 
-Sem essas variáveis, o convite continua seguro e copiável, mas o proprietário precisa enviar o link manualmente. O aceite sempre exige autenticação com o mesmo e-mail que foi convidado.
+`TEAM_INVITE_FROM` também é reutilizado para confirmação e recuperação. Se quiser separar os remetentes, configure `AUTH_EMAIL_FROM`. Sem Resend, o convite continua copiável, mas confirmação e recuperação por e-mail não podem ser entregues. O aceite de convite sempre exige autenticação com o mesmo e-mail que foi convidado.
 
 Inicie o projeto:
 

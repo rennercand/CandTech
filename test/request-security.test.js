@@ -45,6 +45,9 @@ test("toda API privada exige sessão JWT no servidor", () => {
   const publicRoutes = new Set([
     join("app", "api", "auth", "login", "route.js"),
     join("app", "api", "auth", "register", "route.js"),
+    join("app", "api", "auth", "forgot-password", "route.js"),
+    join("app", "api", "auth", "reset-password", "route.js"),
+    join("app", "api", "auth", "verify-email", "route.js"),
     // A prévia usa um token aleatório, limita requisições e nunca retorna o
     // e-mail completo, IDs ou dados da empresa.
     join("app", "api", "team", "invitation", "preview", "route.js"),

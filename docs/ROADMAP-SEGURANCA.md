@@ -103,19 +103,19 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 
 ## Fase 3 — Sessões e autenticação
 
-**Decisão de produto em 9 de agosto de 2026:** passkeys ficam adiadas e não bloqueiam o piloto comercial controlado. Verificação de e-mail e recuperação segura continuam prioritárias; MFA deverá ser reavaliado antes da venda empresarial ampla e de ações administrativas sensíveis.
+**Atualização em 10 de agosto de 2026:** passkeys continuam adiadas. Verificação de e-mail e recuperação segura foram implementadas com token de uso único armazenado somente como hash, expiração, resposta anti-enumeração, rate limit e revogação das sessões após redefinição. MFA deverá ser reavaliado antes da venda empresarial ampla e de ações administrativas sensíveis.
 
 - adicionar identificador único de sessão;
 - manter sessões ativas no servidor ou uma lista de revogação;
 - permitir encerrar uma sessão ou todas as sessões;
-- revogar sessões ao trocar senha;
+- [x] revogar sessões ao redefinir a senha;
 - considerar access token curto com renovação segura;
 - rotacionar tokens de renovação e detectar reutilização;
 - preservar cookies HttpOnly, Secure e SameSite;
 - aplicar proteção CSRF adequada ao fluxo;
-- adicionar verificação de e-mail;
+- [x] adicionar verificação de e-mail;
 - oferecer MFA, preferencialmente TOTP ou passkeys;
-- proteger recuperação de senha contra enumeração e abuso;
+- [x] proteger recuperação de senha contra enumeração e abuso;
 - notificar login novo ou alteração sensível.
 
 ### Critérios de aceite

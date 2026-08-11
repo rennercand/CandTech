@@ -10,6 +10,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - CPF/CNPJ não é solicitado antes de existir uma finalidade real de cobrança ou emissão;
 - nenhum campo de cartão, senha bancária ou conta é armazenado diretamente;
 - sessão revogável no servidor e expiração absoluta;
+- confirmação de e-mail e recuperação de senha com tokens de uso único, hash no banco, expiração, resposta anti-enumeração e encerramento das sessões anteriores;
 - APIs privadas protegidas por sessão JWT, com teste que detecta rota privada criada sem validação de sessão;
 - documentos identificados externamente por UUID aleatório e consultas sempre vinculadas ao proprietário obtido da sessão;
 - teste automatizado de IDOR entre duas empresas para leitura, sobrescrita e administração cruzadas;
@@ -39,7 +40,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 
 - revisar o diff e versionar somente os arquivos pretendidos;
 - configurar `OAUTH_STATE_SECRET` diferente de `JWT_SECRET` na Vercel;
-- verificar o domínio remetente no Resend, configurar `RESEND_API_KEY` e `TEAM_INVITE_FROM` e confirmar a chegada de um convite real;
+- verificar o domínio remetente no Resend, configurar `RESEND_API_KEY`, `TEAM_INVITE_FROM` e `PUBLIC_APP_URL`, e confirmar a chegada de convite, verificação de cadastro e recuperação de senha reais;
 - confirmar novamente que Production e Preview usam bancos separados;
 - rotacionar credenciais que possam ter sido copiadas ou enviadas no passado;
 - publicar primeiro na branch `test` e verificar cadastro, login, logout, Drive, perfil e estoque;

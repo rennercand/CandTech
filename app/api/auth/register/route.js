@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { authCookie, createToken } from "@/lib/auth";
+import { sendEmailVerification } from "@/lib/auth-email";
 import { appendAuditEvent, createUser, isUniqueConstraintError } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
@@ -50,12 +51,22 @@ export async function POST(request) {
     const user = await createUser({ name: cleanName, email: cleanEmail, passwordHash, accountType });
     await appendAuditEvent({ userId: user.id, action: "account.created", metadata: { accountType } });
 
+    // O cadastro continua utilizável mesmo se o provedor de e-mail estiver
+    // temporariamente indisponível; o usuário poderá solicitar um novo envio.
+    let emailVerificationSent = false;
+    try {
+      emailVerificationSent = (await sendEmailVerification({ user, request })).sent;
+    } catch (emailError) {
+      reportServerError(emailError, { request, route: "/api/auth/register", operation: "send-verification-email" });
+    }
+
     // O cookie recebe um JWT assinado para autenticar as próximas requisições.
     const safeUser = {
       id: user.id, name: user.name, email: user.email,
       accountType: user.accountType || user.account_type || accountType,
+      emailVerified: false,
     };
-    const response = NextResponse.json({ user: safeUser }, { status: 201 });
+    const response = NextResponse.json({ user: safeUser, emailVerificationSent }, { status: 201 });
     response.cookies.set("finsight_token", await createToken(safeUser), authCookie);
     return response;
   } catch (error) {

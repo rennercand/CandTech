@@ -41,7 +41,10 @@ export async function POST(request) {
     }
 
     // safeUser remove o hash antes de criar a resposta e o token.
-    const safeUser = { id: user.id, name: user.name, email: user.email, accountType: user.account_type || "person" };
+    const safeUser = {
+      id: user.id, name: user.name, email: user.email, accountType: user.account_type || "person",
+      emailVerified: !user.email_verification_required || Boolean(user.email_verified_at),
+    };
     await appendAuditEvent({ userId: user.id, action: "session.created" });
     const response = NextResponse.json({ user: safeUser });
     response.cookies.set("finsight_token", await createToken(safeUser), authCookie);

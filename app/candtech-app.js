@@ -495,6 +495,9 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
               </small>
             )}
           </label>
+          {mode === "login" && !isInvitation && (
+            <a className="text-button" href="/esqueci-senha">Esqueci minha senha</a>
+          )}
           {error && <p className="form-error">{error}</p>}
           <button className="primary-button" disabled={loading}>
             {loading

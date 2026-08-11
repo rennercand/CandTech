@@ -1,0 +1,12 @@
+import LegalDocument from "../legal-document";
+import { SITE_URL } from "@/lib/site";
+
+export const metadata = { title: "Tratamento de Dados B2B", description: "Regras de tratamento de dados entre a CandTech e empresas clientes.", alternates: { canonical: `${SITE_URL}/tratamento-de-dados` } };
+export default function DataTermsPage() { return <LegalDocument eyebrow="CONTROLADOR E OPERADOR" title="Termos de Tratamento de Dados" summary="Estas regras complementam os Termos quando uma empresa cliente insere dados pessoais de terceiros no ERP. Elas não substituem obrigações próprias do cliente como controlador.">
+  <h2>Instruções e finalidade</h2><p>A CandTech tratará os dados do ERP somente para hospedar, organizar, proteger, exportar, recuperar e prestar suporte conforme as instruções documentadas do cliente e a legislação. Instrução ilegal ou incompatível poderá ser recusada com justificativa.</p>
+  <h2>Deveres do cliente</h2><p>O cliente define finalidades e bases legais, informa titulares, limita acessos, mantém dados corretos, evita dados excessivos e responde às solicitações que dependam de sua decisão. Deve orientar colaboradores a não inserir CPF ou dados sensíveis sem necessidade comprovada.</p>
+  <h2>Deveres da CandTech</h2><p>A CandTech limita o acesso a pessoas autorizadas e comprometidas com confidencialidade, mantém controles técnicos proporcionais, auxilia razoavelmente no atendimento a titulares e incidentes e disponibiliza informações necessárias para demonstrar o tratamento.</p>
+  <h2>Suboperadores</h2><p>Podem ser usados provedores de hospedagem, banco, e-mail, observabilidade e integrações indispensáveis. Eles receberão somente dados necessários e estarão sujeitos a compromissos compatíveis. Alterações materiais serão informadas quando exigido.</p>
+  <h2>Incidentes, devolução e eliminação</h2><p>A CandTech comunicará ao cliente incidente confirmado que envolva seus dados sem demora indevida, com as informações disponíveis. No encerramento, permitirá exportação conforme os recursos contratados e eliminará ou devolverá dados, ressalvadas retenções legais, defesa de direitos e ciclos de backup.</p>
+  <h2>Auditoria</h2><p>Solicitações de evidência devem ser razoáveis, preservar a segurança de outros clientes e priorizar documentos e relatórios existentes. Auditorias invasivas exigem acordo prévio de escopo, confidencialidade, horário e custos.</p>
+</LegalDocument>; }

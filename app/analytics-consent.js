@@ -42,7 +42,7 @@ export default function AnalyticsConsent() {
           <div>
             <strong>Cookies de análise opcionais</strong>
             <p>Usamos o Google Analytics somente com sua autorização para entender visitas e interesse nos planos. Não enviamos dados financeiros nem campos do seu cadastro.</p>
-            <a href="/privacidade">Privacidade e cookies</a>
+            <a href="/cookies">Política de Cookies</a>
           </div>
           <div className="cookie-actions">
             <button type="button" className="secondary-button" onClick={() => choose("denied")}>Usar só o necessário</button>

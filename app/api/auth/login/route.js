@@ -5,6 +5,7 @@ import { appendAuditEvent, findUserByEmail } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/observability";
+import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 
 // Mantém a rota no runtime Node.js, compatível com bcrypt e o banco.
 export const runtime = "nodejs";
@@ -44,6 +45,7 @@ export async function POST(request) {
     const safeUser = {
       id: user.id, name: user.name, email: user.email, accountType: user.account_type || "person",
       emailVerified: !user.email_verification_required || Boolean(user.email_verified_at),
+      legalAccepted: Boolean(user.legal_accepted_at) && user.terms_version === TERMS_VERSION && user.privacy_version === PRIVACY_VERSION,
     };
     await appendAuditEvent({ userId: user.id, action: "session.created" });
     const response = NextResponse.json({ user: safeUser });

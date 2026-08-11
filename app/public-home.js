@@ -6,7 +6,7 @@ export default function PublicHome() {
         <nav aria-label="Navegação pública">
           <a href="#recursos">Recursos</a>
           <a href="/assinar">Planos</a>
-          <a href="/privacidade">Privacidade</a>
+          <a href="/juridico">Jurídico</a>
           <a href="/?entrar=1">Entrar</a>
         </nav>
       </header>
@@ -65,7 +65,7 @@ export default function PublicHome() {
 
       <footer className="public-home-footer">
         <span>© CandTech — gestão financeira e operacional.</span>
-        <nav aria-label="Links institucionais"><a href="/privacidade">Privacidade e cookies</a><a href="/assinar">Planos e cadastro</a></nav>
+        <nav aria-label="Links institucionais"><a href="/termos">Termos</a><a href="/privacidade">Privacidade</a><a href="/cookies">Cookies</a><a href="/seguranca">Segurança</a><a href="/assinar">Planos</a></nav>
       </footer>
     </main>
   );

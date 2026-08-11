@@ -214,7 +214,7 @@ function normalizeWorkspacePayload(payload = {}) {
         : defaults.inventoryState.deliveries,
     },
     commerceOrders: Array.isArray(payload.commerceOrders)
-      ? payload.commerceOrders
+      ? payload.commerceOrders.map(({ document: _unneededDocument, ...order }) => order)
       : defaults.commerceOrders,
     activeDocumentId: /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(payload.activeDocumentId || ""))
       ? String(payload.activeDocumentId)
@@ -328,9 +328,29 @@ function EmailVerificationScreen({ user, onVerified, onLogout }) {
   return <main className="auth-layout"><section className="auth-aside"><div className="brand"><i>CT</i> CandTech</div><div className="auth-message"><span className="auth-badge">PROTEÇÃO DA CONTA</span><h1>Confirme que este e-mail pertence a você.</h1></div><p>Essa etapa impede que outra pessoa cadastre seu endereço e protege o acesso aos dados da empresa.</p></section><section className="auth-card"><p className="eyebrow">CONFIRMAÇÃO DE E-MAIL</p><h2>Abra o link que enviamos</h2><p className="auth-subtitle">Enviado para <strong>{user.email}</strong>. O link funciona uma vez e expira em 24 horas.</p><p className={status === "error" ? "form-error" : "password-hint"}>{message}</p><button type="button" className="primary-button" disabled={status === "loading"} onClick={check}>{status === "loading" ? "Conferindo…" : "Já confirmei meu e-mail"}</button><button type="button" className="text-button" disabled={status === "loading"} onClick={resend}>Reenviar e-mail</button><button type="button" className="text-button" disabled={status === "loading"} onClick={onLogout}>Usar outra conta</button></section></main>;
 }
 
+function LegalAcceptanceScreen({ onAccepted, onLogout }) {
+  const [checked, setChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  async function submit(event) {
+    event.preventDefault();
+    if (!checked) return;
+    setLoading(true); setError("");
+    try {
+      const response = await fetch("/api/legal/accept", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accepted: true }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Não foi possível registrar o aceite.");
+      const refreshed = await hydrateAuthenticatedUser();
+      if (!refreshed?.legalAccepted) throw new Error("O aceite não pôde ser confirmado.");
+      onAccepted(refreshed);
+    } catch (acceptError) { setError(acceptError.message); setLoading(false); }
+  }
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><i>CT</i> CandTech</div><div className="auth-message"><span className="auth-badge">ATUALIZAÇÃO JURÍDICA</span><h1>Regras claras para proteger sua empresa e seus dados.</h1></div><p>Registramos a versão aceita para que qualquer alteração relevante seja transparente.</p></section><section className="auth-card"><p className="eyebrow">ACEITE NECESSÁRIO</p><h2>Revise os documentos atuais</h2><p className="auth-subtitle">O acesso continua depois de um aceite expresso. Direitos obrigatórios previstos em lei permanecem preservados.</p><form onSubmit={submit}><label className="legal-acceptance"><input type="checkbox" required checked={checked} onChange={(event) => setChecked(event.target.checked)} /><span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span></label>{error && <p className="form-error">{error}</p>}<button className="primary-button" disabled={loading || !checked}>{loading ? "Registrando…" : "Aceitar e continuar"}</button></form><button type="button" className="text-button" disabled={loading} onClick={onLogout}>Sair sem aceitar</button></section></main>;
+}
+
 function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, onSwitchAccount }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person", legalAccepted: false });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [invitePreview, setInvitePreview] = useState(null);
@@ -518,6 +538,12 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
               </small>
             )}
           </label>
+          {mode === "register" && (
+            <label className="legal-acceptance">
+              <input type="checkbox" required checked={form.legalAccepted} onChange={(e) => setForm({ ...form, legalAccepted: e.target.checked })} />
+              <span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span>
+            </label>
+          )}
           {mode === "login" && !isInvitation && (
             <a className="text-button" href="/esqueci-senha">Esqueci minha senha</a>
           )}
@@ -1069,8 +1095,8 @@ export default function CandTechApp({ publicFallback = null }) {
       setNotice("O documento comercial de produto é emitido para pedidos de venda.");
       return;
     }
-    if (!invoiceIssuer.legalName || !invoiceIssuer.document || !order.partner || !order.document || !(Number(order.amount) > 0) || !(Number(order.quantity) > 0)) {
-      setNotice("Preencha emitente, CPF/CNPJ do cliente, quantidade e valor antes de gerar o PDF.");
+    if (!invoiceIssuer.legalName || !order.partner || !(Number(order.amount) > 0) || !(Number(order.quantity) > 0)) {
+      setNotice("Preencha emitente, cliente, quantidade e valor antes de gerar o PDF.");
       return;
     }
     const product = inventoryState.products.find((item) =>
@@ -1081,7 +1107,7 @@ export default function CandTechApp({ publicFallback = null }) {
       calculationType: "pre-nota-produto",
       payload: { commercialDocument: {
         issuer: invoiceIssuer,
-        customer: { name: order.partner, document: order.document, contact: order.contact },
+        customer: { name: order.partner, contact: order.contact },
         orderNumber: order.number || "Sem número",
         issueDate: order.date || today(),
         items: [{
@@ -1649,6 +1675,8 @@ export default function CandTechApp({ publicFallback = null }) {
     return publicFallback || <div className="loading">Verificando sua sessão…</div>;
   if (user && !user.emailVerified)
     return <EmailVerificationScreen user={user} onVerified={completeAuthentication} onLogout={switchInvitationAccount} />;
+  if (user && !user.legalAccepted)
+    return <LegalAcceptanceScreen onAccepted={setUser} onLogout={switchInvitationAccount} />;
   if (inviteToken && !inviteComplete)
     return (
       <AuthScreen

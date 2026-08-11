@@ -7,7 +7,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - cadastro de pessoa física ou empresa;
 - página de assinatura sem preço e sem cobrança;
 - perfil cadastral de cobrança separado por usuário;
-- CPF/CNPJ não é solicitado antes de existir uma finalidade real de cobrança ou emissão;
+- CPF não é solicitado no cadastro nem na pré-nota atual; CNPJ do emitente é opcional e dados exigidos na cobrança ficam no ambiente do provedor;
 - nenhum campo de cartão, senha bancária ou conta é armazenado diretamente;
 - sessão revogável no servidor e expiração absoluta;
 - confirmação de e-mail e recuperação de senha com tokens de uso único, hash no banco, expiração, resposta anti-enumeração e encerramento das sessões anteriores;

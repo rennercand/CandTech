@@ -16,8 +16,16 @@ test("confirmação de e-mail e recuperação usam tokens únicos, expiráveis e
   process.env.NODE_ENV = "test";
   process.env.SQLITE_DATABASE_PATH = join(directory, "auth.sqlite");
   try {
-    const user = await createUser({ name: "Cliente", email: "cliente@email.test", passwordHash: "hash-antigo" });
+    const acceptedAt = new Date().toISOString();
+    const user = await createUser({
+      name: "Cliente", email: "cliente@email.test", passwordHash: "hash-antigo",
+      legalAcceptance: { acceptedAt, termsVersion: "2026-08-11", privacyVersion: "2026-08-11" },
+    });
     assert.equal(user.email_verification_required, 1);
+    const storedUser = await findUserByEmail(user.email);
+    assert.equal(storedUser.legal_accepted_at, acceptedAt);
+    assert.equal(storedUser.terms_version, "2026-08-11");
+    assert.equal(storedUser.privacy_version, "2026-08-11");
 
     await createAuthActionToken({ userId: user.id, purpose: "verify_email", tokenHash: "hash-verificacao", expiresAt: new Date(Date.now() + 60_000) });
     const verified = await consumeEmailVerificationToken("hash-verificacao");

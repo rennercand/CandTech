@@ -383,6 +383,15 @@ select:focus {
   display: grid;
   gap: 16px;
 }
+.auth-card .legal-acceptance {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
+  gap: 9px;
+  line-height: 1.45;
+}
+.legal-acceptance input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: var(--violet); }
+.legal-acceptance a { color: var(--violet); }
 .auth-card label,
 .field-grid label,
 .filters label {

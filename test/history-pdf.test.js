@@ -12,7 +12,7 @@ test("pré-nota comercial gera um PDF válido sem se apresentar como documento f
         number: "PED-001",
         issueDate: "2026-08-06",
         issuer: { legalName: "CandTech Teste", document: "00.000.000/0001-00" },
-        customer: { name: "Cliente Teste", document: "000.000.000-00" },
+        customer: { name: "Cliente Teste", contact: "cliente@teste.com" },
         items: [{ description: "Produto A", sku: "SKU-A", quantity: 2, unitPrice: 50, total: 100 }],
         total: 100,
       },

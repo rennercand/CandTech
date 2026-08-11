@@ -6,6 +6,7 @@ import { appendAuditEvent, createUser, isUniqueConstraintError } from "@/lib/db"
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/observability";
+import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 
 // Força o uso do runtime Node.js, necessário para bcrypt e para o banco.
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export async function POST(request) {
 
   try {
     // Normaliza os campos para salvar dados consistentes e validar limites.
-    const { name, email, password, accountType = "person" } = await readLimitedJson(request, {
+    const { name, email, password, accountType = "person", legalAccepted = false } = await readLimitedJson(request, {
       maxBytes: 8_192, maxDepth: 3, maxNodes: 20, maxStringLength: 254,
     });
     const rawName = String(name || "");
@@ -40,6 +41,9 @@ export async function POST(request) {
         { status: 400 },
       );
     }
+    if (legalAccepted !== true) {
+      return NextResponse.json({ error: "Aceite os Termos de Uso e o Aviso de Privacidade para criar a conta." }, { status: 400 });
+    }
 
     // bcrypt adiciona um salt e transforma a senha em um hash irreversível.
     const passwordHash = await bcrypt.hash(cleanPassword, 12);
@@ -48,8 +52,12 @@ export async function POST(request) {
       scope: "auth-register-account", limit: 3, identifier: cleanEmail,
     });
     if (accountLimited) return accountLimited;
-    const user = await createUser({ name: cleanName, email: cleanEmail, passwordHash, accountType });
-    await appendAuditEvent({ userId: user.id, action: "account.created", metadata: { accountType } });
+    const acceptedAt = new Date().toISOString();
+    const user = await createUser({
+      name: cleanName, email: cleanEmail, passwordHash, accountType,
+      legalAcceptance: { acceptedAt, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION },
+    });
+    await appendAuditEvent({ userId: user.id, action: "account.created", metadata: { accountType, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION } });
 
     // O cadastro continua utilizável mesmo se o provedor de e-mail estiver
     // temporariamente indisponível; o usuário poderá solicitar um novo envio.
@@ -65,6 +73,7 @@ export async function POST(request) {
       id: user.id, name: user.name, email: user.email,
       accountType: user.accountType || user.account_type || accountType,
       emailVerified: false,
+      legalAccepted: true,
     };
     const response = NextResponse.json({ user: safeUser, emailVerificationSent }, { status: 201 });
     response.cookies.set("finsight_token", await createToken(safeUser), authCookie);

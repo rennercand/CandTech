@@ -32,3 +32,14 @@ test("política de marca está ligada aos termos, rodapé e sitemap", () => {
   assert.match(publicHome, /© 2026 CandTech/);
   assert.match(sitemap, /propriedade-intelectual/);
 });
+
+test("mapa do sistema apresenta áreas públicas e mantém módulos privados fora das URLs indexadas", () => {
+  const systemMap = readFileSync(join(projectRoot, "app", "mapa-do-sistema", "page.js"), "utf8");
+  const sitemap = readFileSync(join(projectRoot, "app", "sitemap.js"), "utf8");
+
+  assert.match(systemMap, /Páginas abertas/);
+  assert.match(systemMap, /Módulos da empresa/);
+  assert.match(systemMap, /Disponível após login/);
+  assert.match(sitemap, /mapa-do-sistema/);
+  assert.doesNotMatch(sitemap, /\/api\//);
+});

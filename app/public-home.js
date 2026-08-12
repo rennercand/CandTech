@@ -65,7 +65,7 @@ export default function PublicHome() {
 
       <footer className="public-home-footer">
         <span>© 2026 CandTech — conteúdo visual protegido. <a href="/propriedade-intelectual">Consulte as regras de uso.</a></span>
-        <nav aria-label="Links institucionais"><a href="/termos">Termos</a><a href="/propriedade-intelectual">Marca e imagens</a><a href="/privacidade">Privacidade</a><a href="/cookies">Cookies</a><a href="/seguranca">Segurança</a><a href="/assinar">Planos</a></nav>
+        <nav aria-label="Links institucionais"><a href="/mapa-do-sistema">Mapa do sistema</a><a href="/termos">Termos</a><a href="/propriedade-intelectual">Marca e imagens</a><a href="/privacidade">Privacidade</a><a href="/cookies">Cookies</a><a href="/seguranca">Segurança</a><a href="/assinar">Planos</a></nav>
       </footer>
     </main>
   );

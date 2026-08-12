@@ -1,0 +1,24 @@
+.page { min-height: 100vh; padding: 30px 20px 72px; color: #211c34; background: #f6f4fb; }
+.top, .hero, .section { width: min(1100px, 100%); margin-inline: auto; }
+.top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.top a, .legal a { color: #563bd1; font-weight: 780; }
+.hero { padding: clamp(28px, 6vw, 64px); border: 1px solid #e2ddf0; border-radius: 26px; background: linear-gradient(145deg, #fff 55%, #eeebff); box-shadow: 0 20px 60px rgba(56, 42, 102, .08); }
+.hero span, .heading span { color: #674ce0; font-size: .75rem; font-weight: 850; letter-spacing: .13em; }
+.hero h1 { max-width: 720px; margin: 12px 0; font-size: clamp(2.1rem, 6vw, 4rem); line-height: 1.02; }
+.hero p, .heading p, .card p { color: #625b73; line-height: 1.65; }
+.hero p { max-width: 790px; font-size: 1.04rem; }
+.section { padding-top: 52px; }
+.heading { margin-bottom: 18px; }
+.heading h2 { margin: 7px 0; font-size: clamp(1.55rem, 4vw, 2.2rem); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.card { display: grid; align-content: start; min-height: 166px; padding: 22px; border: 1px solid #e2ddf0; border-radius: 18px; background: #fff; color: inherit; text-decoration: none; transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+a.card:hover { transform: translateY(-3px); border-color: #bfb3f4; box-shadow: 0 12px 30px rgba(74, 54, 143, .1); }
+.card strong { font-size: 1.05rem; }
+.card p { margin: 9px 0 16px; }
+.card i { margin-top: auto; color: #6044dc; font-size: .78rem; font-style: normal; font-weight: 800; }
+.primary { display: inline-flex; margin-top: 20px; padding: 13px 18px; border-radius: 10px; background: #6548df; color: #fff; font-weight: 800; text-decoration: none; }
+.legal { display: flex; flex-wrap: wrap; gap: 10px; }
+.legal a { padding: 10px 13px; border: 1px solid #ddd6f3; border-radius: 10px; background: #fff; }
+@media (max-width: 850px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .top { align-items: flex-start; flex-direction: column; } .grid { grid-template-columns: 1fr; } .card { min-height: auto; } }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }

@@ -144,7 +144,7 @@ Prefira JSDoc em funções exportadas que representam fronteiras importantes. Co
 
 ## Histórico identificado de commits
 
-Este catálogo cobre os commits funcionais existentes até `7d4eb6c`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
+Este catálogo cobre os commits funcionais existentes até `3fc66c0`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
 
 ### Fundação e persistência — 30 e 31 de julho de 2026
 
@@ -246,13 +246,15 @@ Este catálogo cobre os commits funcionais existentes até `7d4eb6c`. O hash cur
 | `c9991ef` | 11/08 | `feat` transição do menu | Fez o destaque roxo deslizar entre as abas no computador e no celular, respeitando a preferência de movimento reduzido. |
 | `94c9013` | 11/08 | `docs` transição | Registrou no catálogo a implementação do indicador animado de navegação. |
 | `7d4eb6c` | 11/08 | `feat/legal` copyright | Criou a política de propriedade intelectual e uso da marca, integrou-a aos Termos, rodapé, central jurídica e sitemap e passou a exigir a nova versão contratual. |
+| `dfc90f0` | 11/08 | `docs` copyright | Registrou no catálogo a política de propriedade intelectual e uso da marca. |
+| `3fc66c0` | 11/08 | `feat` mapa do sistema | Criou uma página pública com as áreas abertas, os módulos autenticados e os documentos jurídicos, mantendo APIs e rotas privadas fora do índice. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 7d4eb6c..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 3fc66c0..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

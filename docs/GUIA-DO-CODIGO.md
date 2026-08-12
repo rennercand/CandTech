@@ -99,6 +99,19 @@ O relatório geral diferencia métricas que não significam a mesma coisa:
 
 Esses indicadores apoiam gestão e não substituem demonstrativo contábil ou apuração fiscal.
 
+## Movimento visual e fluxo de caixa
+
+O arquivo `design-system/candtech-erp/MASTER.md` guarda a referência visual gerada com a habilidade UI/UX Pro Max. A implementação preserva a identidade clara e roxa já utilizada pela CandTech; recomendações genéricas que exigiriam trocar toda a interface por um tema escuro não são aplicadas automaticamente.
+
+As animações usam principalmente `transform` e `opacity`, durações curtas e a curva `--ease-out`. A troca de módulo anima o contêiner `.view-stage`, enquanto os cartões de resumo recebem um pequeno atraso progressivo. A regra global `prefers-reduced-motion` reduz essas transições para pessoas sensíveis a movimento. Novos efeitos devem manter foco visível, não bloquear cliques e não animar propriedades que provoquem recálculo frequente do layout.
+
+Na aba Movimentações existem duas leituras complementares:
+
+- barras de entradas e saídas: mostram a magnitude de cada lançamento;
+- saldo acumulado: começa em zero dentro do filtro selecionado e mostra como cada lançamento altera o caixa, além do maior saldo, menor saldo e saldo final.
+
+O saldo acumulado não representa automaticamente o saldo bancário anterior ao período. Essa premissa aparece ao lado do gráfico para evitar uma interpretação contábil incorreta, e a tabela de lançamentos permanece como alternativa detalhada e acessível.
+
 ## Banco e migrations
 
 Em produção, `DATABASE_URL` aponta para PostgreSQL/Neon. No desenvolvimento sem essa variável, o projeto usa SQLite. Mudanças estruturais destinadas à produção devem ganhar uma migration em `migrations/`; inicializações automáticas existem para compatibilidade, mas não substituem o histórico versionado.
@@ -144,7 +157,7 @@ Prefira JSDoc em funções exportadas que representam fronteiras importantes. Co
 
 ## Histórico identificado de commits
 
-Este catálogo cobre os commits funcionais existentes até `3fc66c0`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
+Este catálogo cobre os commits funcionais existentes até `f4144ea`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
 
 ### Fundação e persistência — 30 e 31 de julho de 2026
 
@@ -248,13 +261,15 @@ Este catálogo cobre os commits funcionais existentes até `3fc66c0`. O hash cur
 | `7d4eb6c` | 11/08 | `feat/legal` copyright | Criou a política de propriedade intelectual e uso da marca, integrou-a aos Termos, rodapé, central jurídica e sitemap e passou a exigir a nova versão contratual. |
 | `dfc90f0` | 11/08 | `docs` copyright | Registrou no catálogo a política de propriedade intelectual e uso da marca. |
 | `3fc66c0` | 11/08 | `feat` mapa do sistema | Criou uma página pública com as áreas abertas, os módulos autenticados e os documentos jurídicos, mantendo APIs e rotas privadas fora do índice. |
+| `8322932` | 11/08 | `docs` mapa do sistema | Registrou o mapa público do sistema e sua separação do sitemap técnico destinado aos buscadores. |
+| `f4144ea` | 11/08 | `feat` movimento e caixa | Instalou e aplicou a referência UI/UX Pro Max, adicionou transições acessíveis e criou o gráfico de saldo acumulado com resumo do fluxo de caixa. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 3fc66c0..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log f4144ea..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

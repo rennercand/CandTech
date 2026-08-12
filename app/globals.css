@@ -9,6 +9,10 @@
   --green: #14a67a;
   --red: #e05268;
   --sidebar: 246px;
+  --motion-fast: 180ms;
+  --motion-base: 260ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --focus-ring: 0 0 0 3px #6950e829;
 }
 * {
   box-sizing: border-box;
@@ -16,7 +20,9 @@
 body {
   margin: 0;
   color: var(--ink);
-  background: #f5f5f7;
+  background:
+    radial-gradient(circle at 92% 2%, rgb(105 80 232 / 5%), transparent 24rem),
+    #f5f5f7;
   font-family:
     Inter,
     ui-sans-serif,
@@ -34,6 +40,18 @@ select {
 button {
   cursor: pointer;
 }
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 3px;
+}
 input,
 select {
   color: var(--ink);
@@ -47,7 +65,7 @@ select {
 input:focus,
 select:focus {
   border-color: var(--violet);
-  box-shadow: 0 0 0 3px #6950e81a;
+  box-shadow: var(--focus-ring);
 }
 .loading {
   min-height: 100vh;
@@ -419,9 +437,15 @@ select:focus {
   font-weight: 700;
   border-radius: 8px;
   box-shadow: 0 6px 13px #6950e829;
+  transition: transform var(--motion-fast) var(--ease-out), background-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 .primary-button:hover {
   background: var(--violet-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px #6950e833;
+}
+.primary-button:active {
+  transform: scale(.97);
 }
 .primary-button:disabled {
   opacity: 0.65;
@@ -584,6 +608,24 @@ select:focus {
   max-width: 1620px;
   width: 100%;
   margin: auto;
+}
+.view-stage {
+  display: grid;
+  animation: view-enter 360ms var(--ease-out) both;
+}
+.view-stage > * { min-width: 0; }
+.view-stage .stats-grid > .stat-card { animation: stat-enter 340ms var(--ease-out) both; }
+.view-stage .stats-grid > .stat-card:nth-child(2) { animation-delay: 45ms; }
+.view-stage .stats-grid > .stat-card:nth-child(3) { animation-delay: 90ms; }
+.view-stage .stats-grid > .stat-card:nth-child(4) { animation-delay: 135ms; }
+.view-stage .stats-grid > .stat-card:nth-child(n + 5) { animation-delay: 170ms; }
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes stat-enter {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .content > header {
   display: flex;
@@ -885,6 +927,7 @@ select:focus {
   background: var(--surface);
   border-radius: 12px;
   box-shadow: 0 3px 10px #17172106;
+  transition: border-color var(--motion-base) ease, box-shadow var(--motion-base) ease;
 }
 .stat-card {
   padding: 17px;
@@ -998,10 +1041,18 @@ select:focus {
   font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
+  transition: color var(--motion-fast) ease, border-color var(--motion-fast) ease, background-color var(--motion-fast) ease, transform var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) ease;
 }
 .secondary-button:hover {
   border-color: #c3bded;
   color: var(--violet);
+  background: #fbfaff;
+  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgb(64 49 135 / 8%);
+}
+.secondary-button:active,
+.danger-button:active {
+  transform: scale(.97);
 }
 .danger-button {
   color: #b82843;
@@ -1094,15 +1145,98 @@ select:focus {
   width: 38%;
   border-radius: 5px 5px 0 0;
   z-index: 1;
+  transform: scaleY(0);
+  animation: cash-bar-grow 420ms var(--ease-out) var(--bar-delay, 0ms) forwards;
 }
 .fc-bar.income {
   bottom: 50%;
+  transform-origin: center bottom;
   background: linear-gradient(#77d7b6, var(--green));
 }
 .fc-bar.expense {
   top: 50%;
+  transform-origin: center top;
   border-radius: 0 0 5px 5px;
   background: linear-gradient(var(--red), #f3a1b0);
+}
+@keyframes cash-bar-grow { to { transform: scaleY(1); } }
+.cash-balance-card {
+  margin: 20px 0;
+  overflow: hidden;
+  background: linear-gradient(145deg, #fff 0%, #fbfaff 100%);
+  border-color: #e4e0f6;
+}
+.cash-balance-card .panel-heading p {
+  max-width: 620px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.cash-balance-status {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 850;
+}
+.cash-balance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 8px;
+}
+.cash-balance-summary > span {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid #ece9f8;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 72%);
+}
+.cash-balance-summary small { color: var(--muted); font-size: 10px; font-weight: 700; }
+.cash-balance-summary strong { font-size: 15px; }
+.cash-balance-chart {
+  width: 100%;
+  overflow-x: auto;
+  padding: 8px 0 0;
+}
+.cash-balance-chart svg {
+  display: block;
+  min-width: 620px;
+  width: 100%;
+  height: auto;
+}
+.cash-zero-line { stroke: #cec9df; stroke-width: 1; stroke-dasharray: 5 5; }
+.cash-balance-area { opacity: 0; animation: cash-area-enter 380ms ease 180ms forwards; }
+.positive-area { fill: rgb(20 166 122 / 11%); }
+.negative-area { fill: rgb(224 82 104 / 10%); }
+.cash-balance-line {
+  fill: none;
+  stroke: var(--violet);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: cash-line-draw 720ms var(--ease-out) 80ms forwards;
+}
+.cash-balance-point {
+  stroke: #fff;
+  stroke-width: 3;
+  opacity: 0;
+  animation: cash-point-enter 240ms var(--ease-out) 520ms forwards;
+}
+.positive-point { fill: var(--green); }
+.negative-point { fill: var(--red); }
+.cash-balance-note { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+@keyframes cash-line-draw { to { stroke-dashoffset: 0; } }
+@keyframes cash-area-enter { to { opacity: 1; } }
+@keyframes cash-point-enter {
+  from { opacity: 0; transform: scale(.5); transform-origin: center; }
+  to { opacity: 1; transform: scale(1); }
 }
 .tool-stack {
   display: grid;
@@ -2773,6 +2907,29 @@ body {
 .public-home-section-heading p { margin: 18px 0 0; color: #625d78; font-size: 1.03rem; line-height: 1.7; }
 .public-home-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .public-home-card-grid article { padding: 24px; border: 1px solid #e7e4f5; border-radius: 18px; background: #fbfaff; }
+.public-home-hero > div {
+  animation: public-copy-enter 560ms var(--ease-out) both;
+}
+.public-home-summary {
+  animation: public-summary-enter 620ms var(--ease-out) 90ms both;
+}
+.public-home-card-grid article {
+  transition: transform var(--motion-base) var(--ease-out), border-color var(--motion-base) ease, box-shadow var(--motion-base) ease, background-color var(--motion-base) ease;
+}
+.public-home-card-grid article:hover {
+  transform: translateY(-4px);
+  border-color: #d4cdf7;
+  background: #fff;
+  box-shadow: 0 16px 34px rgb(58 43 134 / 9%);
+}
+@keyframes public-copy-enter {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes public-summary-enter {
+  from { opacity: 0; transform: translateY(16px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 .public-home-card-grid h3 { margin: 0 0 10px; font-size: 1.05rem; }
 .public-home-card-grid p { margin: 0; color: #68627d; line-height: 1.65; }
 .public-home-business { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 70px; width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 96px 0; }
@@ -2882,4 +3039,30 @@ body {
   .client-actions { flex-wrap: wrap; }
   .dashboard-shortcuts > div:last-child,
   .client-suggestions > div:last-child { justify-content: start; }
+  .cash-balance-card .panel-heading { align-items: flex-start; }
+  .cash-balance-summary { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .view-stage,
+  .view-stage .stat-card,
+  .public-home-hero > div,
+  .public-home-summary,
+  .fc-bar,
+  .cash-balance-area,
+  .cash-balance-line,
+  .cash-balance-point {
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
 }

@@ -20,7 +20,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Visão geral financeira integrada ao workspace de cada usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
-- Fluxos de caixa com datas, entradas, saídas e detalhes interativos.
+- Fluxo de caixa com datas, entradas, saídas, saldo acumulado, maior/menor saldo e detalhes interativos.
 - Tabelas de amortização PRICE, SAF, SAA e SAC com memória de cálculo.
 - Formação de preço unitário a partir de despesas, unidades e margem de lucro.
 - Organização financeira com categorias reutilizáveis criadas pelo usuário, seletores padronizados e gráfico de distribuição de custos.
@@ -31,6 +31,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Exportação XLSX com itens de estoque, múltiplos financiamentos por finalidade, memória de juros e resumo final de gastos.
 - Tabela financeira preenchida anexada ao mesmo histórico do cálculo.
 - Interface responsiva para computador e celular.
+- Transições curtas entre módulos, resposta visual em botões e gráficos animados com alternativa automática para quem prefere movimento reduzido.
 - Valores de entrada exibidos com sinal positivo e verde; saídas e gastos com sinal negativo e vermelho.
 - Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
 - Cadastro diferenciado para pessoa física e empresa.

@@ -252,7 +252,7 @@ function CashFlowChart({ rows }) {
   return (
     <div className="fc-chart-scroll" aria-label="Gráfico do fluxo de caixa">
       <div className="fc-chart" style={{ width: `${chartWidth}px` }}>
-        {rows.map((row) => {
+        {rows.map((row, index) => {
           // A altura é proporcional ao maior fluxo; o sinal define acima ou abaixo do eixo.
           const height =
             row.flow === 0
@@ -284,7 +284,7 @@ function CashFlowChart({ rows }) {
                 </span>
                 <i
                   className={isIncome ? "fc-bar income" : "fc-bar expense"}
-                  style={{ height: `${height}px` }}
+                  style={{ height: `${height}px`, "--bar-delay": `${Math.min(index * 35, 280)}ms` }}
                 />
               </div>
               <strong className={isIncome ? "positive" : "negative"}>
@@ -296,6 +296,75 @@ function CashFlowChart({ rows }) {
         })}
       </div>
     </div>
+  );
+}
+
+function CashBalanceChart({ rows }) {
+  const movements = rows.filter((entry) => Number(entry.amount) > 0);
+  if (!movements.length) {
+    return <p className="empty-chart">Adicione movimentações com valor para acompanhar a evolução do caixa.</p>;
+  }
+
+  const balances = movements.map((entry) => Number(entry.runningBalance) || 0);
+  const highest = Math.max(0, ...balances);
+  const lowest = Math.min(0, ...balances);
+  const finalBalance = balances.at(-1) || 0;
+  const width = 760;
+  const height = 230;
+  const paddingX = 34;
+  const paddingY = 28;
+  const usableWidth = width - paddingX * 2;
+  const usableHeight = height - paddingY * 2;
+  const range = Math.max(highest - lowest, 1);
+  const pointFor = (balance, index) => ({
+    x: movements.length === 1 ? width / 2 : paddingX + (index / (movements.length - 1)) * usableWidth,
+    y: paddingY + ((highest - balance) / range) * usableHeight,
+  });
+  const points = balances.map(pointFor);
+  const zeroY = paddingY + ((highest - 0) / range) * usableHeight;
+  const linePoints = points.map(({ x, y }) => `${x},${y}`).join(" ");
+  const areaPoints = `${paddingX},${zeroY} ${linePoints} ${points.at(-1).x},${zeroY}`;
+  const description = `Saldo acumulado iniciado em zero no período filtrado, encerrando em ${money.format(finalBalance)}.`;
+
+  return (
+    <article className="cash-balance-card panel">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">FLUXO DE CAIXA</span>
+          <h2>Evolução do saldo acumulado</h2>
+          <p>Mostra como cada entrada ou saída altera o caixa dentro do período filtrado.</p>
+        </div>
+        <span className={finalBalance >= 0 ? "cash-balance-status positive" : "cash-balance-status negative"}>
+          {finalBalance >= 0 ? "Caixa positivo" : "Caixa negativo"}
+        </span>
+      </div>
+      <div className="cash-balance-summary" aria-label="Resumo do fluxo de caixa">
+        <span><small>Maior saldo</small><strong className="positive">{money.format(highest)}</strong></span>
+        <span><small>Menor saldo</small><strong className={lowest < 0 ? "negative" : ""}>{money.format(lowest)}</strong></span>
+        <span><small>Saldo final</small><strong className={finalBalance >= 0 ? "positive" : "negative"}>{money.format(finalBalance)}</strong></span>
+      </div>
+      <div className="cash-balance-chart">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby="cash-balance-title cash-balance-description">
+          <title id="cash-balance-title">Gráfico do saldo acumulado</title>
+          <desc id="cash-balance-description">{description}</desc>
+          <line className="cash-zero-line" x1={paddingX} x2={width - paddingX} y1={zeroY} y2={zeroY} />
+          <polygon className={finalBalance >= 0 ? "cash-balance-area positive-area" : "cash-balance-area negative-area"} points={areaPoints} />
+          <polyline className="cash-balance-line" points={linePoints} pathLength="1" />
+          {points.map((point, index) => (
+            <circle
+              className={balances[index] >= 0 ? "cash-balance-point positive-point" : "cash-balance-point negative-point"}
+              key={`${movements[index].date}-${index}`}
+              cx={point.x}
+              cy={point.y}
+              r="5"
+            >
+              <title>{`${formatDate(movements[index].date)}: ${money.format(balances[index])}`}</title>
+            </circle>
+          ))}
+        </svg>
+      </div>
+      <p className="cash-balance-note">O cálculo começa em R$ 0 no período selecionado. A tabela abaixo continua sendo a fonte detalhada para conferência.</p>
+    </article>
   );
 }
 
@@ -1938,6 +2007,7 @@ export default function CandTechApp({ publicFallback = null }) {
             <div className="module-actions"><button className="secondary-button" onClick={() => exportSelected("csv")}>Baixar CSV</button><button className="secondary-button" onClick={() => exportSelected("pdf")}>Baixar PDF</button><button className="primary-button" onClick={() => exportSelected("drive")}>Enviar ao Drive</button></div>
           </section>
         )}
+        <div className="view-stage" key={view}>
         {view === "home" && (
           canAccess("dashboard") ? <Dashboard
             cashEntries={cashEntries}
@@ -2034,6 +2104,7 @@ export default function CandTechApp({ publicFallback = null }) {
             onDownload={downloadHistoryFile}
           />
         )}
+        </div>
       </section>
     </main>
   );
@@ -2710,6 +2781,7 @@ function CashFlow({
             )}
           </article>
         </section>
+        <CashBalanceChart rows={rowsWithBalance} />
         <div className="table-scroll">
           <table>
             <thead>

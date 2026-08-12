@@ -157,7 +157,7 @@ Prefira JSDoc em funções exportadas que representam fronteiras importantes. Co
 
 ## Histórico identificado de commits
 
-Este catálogo cobre os commits funcionais existentes até `2a74b08`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
+Este catálogo cobre os commits funcionais existentes até `630c446`. O hash curto identifica de forma imutável a revisão; a explicação registra o efeito principal, inclusive quando o título original era genérico ou estava em inglês. Commits posteriores devem ser acrescentados aqui em revisões futuras, sem reescrever hashes já publicados.
 
 ### Fundação e persistência — 30 e 31 de julho de 2026
 
@@ -267,13 +267,15 @@ Este catálogo cobre os commits funcionais existentes até `2a74b08`. O hash cur
 | `f85b68b` | 11/08 | `feat` monitoramento e suporte | Criou a central administrativa protegida, captura segura de incidentes, chamados com resposta dentro do ERP, migration, testes e documentação operacional. |
 | `79bd181` | 11/08 | `docs` monitoramento e suporte | Registrou no README e no catálogo a central administrativa e o fluxo de atendimento ao usuário. |
 | `2a74b08` | 11/08 | `security` rota privada | Substituiu o endereço fixo da central por uma rota secreta entregue apenas ao administrador autenticado, com comparação segura e resposta 404 para tentativas inválidas. |
+| `4a8a208` | 11/08 | `docs` rota privada | Registrou no catálogo a proteção adicional aplicada ao endereço da central de monitoramento. |
+| `630c446` | 11/08 | `fix/ux` monitoramento e 404 | Fez a sessão identificar o administrador sem depender da assinatura ou das métricas, manteve o botão privado disponível e criou o 404 animado, responsivo e acessível. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 2a74b08..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 630c446..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

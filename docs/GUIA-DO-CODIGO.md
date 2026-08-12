@@ -271,13 +271,15 @@ Este catálogo cobre os commits funcionais existentes até `630c446`. O hash cur
 | `630c446` | 11/08 | `fix/ux` monitoramento e 404 | Fez a sessão identificar o administrador sem depender da assinatura ou das métricas, manteve o botão privado disponível e criou o 404 animado, responsivo e acessível. |
 | `5edf169` | 11/08 | `docs` monitoramento e 404 | Registrou a correção de acesso à central e o comportamento visual da página não encontrada. |
 | `2627a67` | 11/08 | `fix/security` e-mail único | Normalizou e-mails, arquivou duplicatas históricas com sessões revogadas, criou a garantia única no banco e passou a orientar o usuário a entrar ou recuperar a senha. |
+| `7f3f78c` | 11/08 | `docs` e-mail único | Registrou no catálogo a proteção contra contas duplicadas por e-mail. |
+| `8b8f27e` | 11/08 | `fix/ux` cadastro e menu | Exibiu o aviso de conta existente junto ao e-mail, com ações de recuperação, e manteve a conta e a saída visíveis na lateral enquanto os módulos rolam. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 2627a67..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 8b8f27e..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

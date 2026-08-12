@@ -2,7 +2,7 @@
 
 ## Resultado
 
-A CandTech possui uma central operacional em `/admin/monitoramento`. A página é renderizada somente depois de validar o JWT, a sessão persistida e o e-mail do administrador. Contas que não estejam em `ADMIN_EMAILS` recebem uma página não encontrada; visitantes sem sessão são enviados ao login.
+A CandTech possui uma central operacional com endereço não publicado. O administrador acessa pelo ERP em **Moderação → Abrir central privada de monitoramento**. A página é renderizada somente depois de validar a chave do caminho, o JWT, a sessão persistida e o e-mail do administrador. Uma chave incorreta ou uma conta que não esteja em `ADMIN_EMAILS` recebe uma página não encontrada; visitantes sem sessão são enviados ao login.
 
 A lista é o documento vivo solicitado: ela se atualiza a cada 20 segundos quando a aba está visível e pode ser atualizada manualmente. Um arquivo Word ou PDF seria apenas um retrato estático e ficaria desatualizado assim que surgisse um novo incidente.
 
@@ -14,9 +14,12 @@ Na Vercel, configure em Production e Preview:
 ADMIN_EMAILS=seu-email-de-administrador@exemplo.com
 NEXT_PUBLIC_SUPPORT_EMAIL=atendimento@exemplo.com
 NEXT_PUBLIC_SUPPORT_PHONE="+55 11 00000-0000"
+# Opcional. Use 24 a 80 letras, números, _ ou -. Se ficar vazio, a rota é
+# derivada de JWT_SECRET e continua sem aparecer no código ou na documentação.
+ADMIN_MONITORING_SLUG=
 ```
 
-`ADMIN_EMAILS` é uma regra de autorização do servidor e não deve usar um e-mail compartilhado. As duas variáveis `NEXT_PUBLIC_SUPPORT_*` são públicas porque aparecem propositalmente na aba Suporte.
+`ADMIN_EMAILS` é uma regra de autorização do servidor e não deve usar um e-mail compartilhado. `ADMIN_MONITORING_SLUG` é apenas uma camada adicional contra varreduras; JWT, sessão e autorização continuam sendo a segurança real. As duas variáveis `NEXT_PUBLIC_SUPPORT_*` são públicas porque aparecem propositalmente na aba Suporte.
 
 ## O que é registrado automaticamente
 
@@ -59,7 +62,7 @@ A inicialização cria as tabelas tanto no PostgreSQL/Neon quanto no SQLite loca
 ## Verificação antes de publicar
 
 1. Confirmar `ADMIN_EMAILS` na Vercel sem espaços ou erros de digitação.
-2. Entrar com o administrador e abrir `/admin/monitoramento`.
+2. Entrar com o administrador, abrir **Moderação** e usar o botão da central privada.
 3. Confirmar que outra conta recebe acesso negado.
 4. Enviar uma mensagem de teste pela aba Suporte e responder pela central.
 5. Confirmar que a resposta aparece somente na conta que enviou o chamado.

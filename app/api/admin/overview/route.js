@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getAdminOverview } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { reportServerError } from "@/lib/server-observability";
-import { isAdministrator } from "@/lib/admin-access";
+import { getMonitoringAccessPath, isAdministrator } from "@/lib/admin-access";
 
 export const runtime = "nodejs";
 
@@ -19,6 +19,7 @@ export async function GET(request) {
     const trafficLevel = metrics.peak_per_identity >= 100 ? "critical" : metrics.peak_per_identity >= 60 ? "attention" : "normal";
     return NextResponse.json({
       metrics,
+      monitoringPath: getMonitoringAccessPath(),
       health: { database: "online", server: "online", trafficLevel, checkedAt: new Date().toISOString() },
       privacy: "Somente métricas agregadas; nenhum dado financeiro de usuários é consultado.",
     });

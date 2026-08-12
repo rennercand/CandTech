@@ -14,7 +14,7 @@ import {
   replySupportTicket,
   updateMonitoringEventStatus,
 } from "../lib/db.js";
-import { isAdministrator } from "../lib/admin-access.js";
+import { getMonitoringAccessPath, isAdministrator, isMonitoringAccessKey } from "../lib/admin-access.js";
 
 async function isolatedDatabase(run) {
   const previousCwd = process.cwd();
@@ -67,5 +67,23 @@ test("acesso administrativo usa lista explícita e comparação normalizada", ()
   } finally {
     if (previous === undefined) delete process.env.ADMIN_EMAILS;
     else process.env.ADMIN_EMAILS = previous;
+  }
+});
+
+test("caminho do monitoramento não é fixo e exige a chave completa", () => {
+  const previousSecret = process.env.JWT_SECRET;
+  const previousSlug = process.env.ADMIN_MONITORING_SLUG;
+  process.env.JWT_SECRET = "segredo-de-teste-com-entropia-suficiente";
+  delete process.env.ADMIN_MONITORING_SLUG;
+  try {
+    const path = getMonitoringAccessPath();
+    const key = path.split("/").at(-1);
+    assert.match(path, /^\/central\/[A-Za-z0-9_-]{32}$/);
+    assert.equal(isMonitoringAccessKey(key), true);
+    assert.equal(isMonitoringAccessKey(`${key.slice(0, -1)}x`), false);
+    assert.doesNotMatch(path, /monitoramento|admin/);
+  } finally {
+    if (previousSecret === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = previousSecret;
+    if (previousSlug === undefined) delete process.env.ADMIN_MONITORING_SLUG; else process.env.ADMIN_MONITORING_SLUG = previousSlug;
   }
 });

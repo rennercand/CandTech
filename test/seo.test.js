@@ -45,11 +45,11 @@ test("mapa do sistema apresenta áreas públicas e mantém módulos privados for
 });
 
 test("central administrativa não é indexada nem publicada no sitemap", () => {
-  const adminPage = readFileSync(join(projectRoot, "app", "admin", "monitoramento", "page.js"), "utf8");
+  const adminPage = readFileSync(join(projectRoot, "app", "central", "[accessKey]", "page.js"), "utf8");
   const robots = readFileSync(join(projectRoot, "app", "robots.js"), "utf8");
   const sitemap = readFileSync(join(projectRoot, "app", "sitemap.js"), "utf8");
   assert.match(adminPage, /index:\s*false/);
   assert.match(adminPage, /isAdministrator/);
-  assert.match(robots, /\/admin\//);
-  assert.doesNotMatch(sitemap, /admin\/monitoramento/);
+  assert.match(robots, /\/central\//);
+  assert.doesNotMatch(sitemap, /central/);
 });

@@ -17,7 +17,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Quadro Kanban com tarefas, prioridade, prazo, cliente relacionado e etapas “A fazer”, “Em andamento” e “Concluído”.
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
-- Central privada em `/admin/monitoramento`, autorizada por `ADMIN_EMAILS`, com incidentes agrupados, estados de investigação e mensagens de suporte atualizadas automaticamente.
+- Central privada com endereço não publicado, autorizada por `ADMIN_EMAILS`, com incidentes agrupados, estados de investigação e mensagens de suporte atualizadas automaticamente.
 - Aba Suporte com e-mail, telefone, WhatsApp, abertura de chamados e acompanhamento das respostas dentro do ERP.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Visão geral financeira integrada ao workspace de cada usuário.
@@ -184,7 +184,7 @@ app/
   api/workspace/     restauração, autosave e rascunho automático
   api/inventory/     estoque relacional, entradas, pedidos, relatórios e desfazimento
   api/support/       chamados privados do usuário
-  admin/monitoramento central privada de incidentes e mensagens
+  central/[accessKey] central privada de incidentes e mensagens
   advanced-tools.js  financiamento, preço e leitor de PDF
   client-manager.js  carteira de clientes e atalhos de contato
   inventory-operations.js operação guiada e treinamento de estoque

@@ -140,7 +140,7 @@ O UUID reduz enumeração, mas não substitui autorização. O isolamento efetiv
 - `lib/server-observability.js` transforma falhas tratadas das APIs em resumos técnicos persistentes e mantém o log estruturado da Vercel;
 - `app/monitoring-client.js` captura falhas não tratadas no navegador, mas a API só aceita registros de uma sessão autenticada e aplica rate limit;
 - `/api/support` deriva o autor da sessão e nunca aceita `user_id` ou `organization_id` como autoridade do navegador;
-- `/api/admin/monitoring` e `/admin/monitoramento` exigem sessão válida e e-mail presente em `ADMIN_EMAILS`;
+- `/api/admin/monitoring` e a rota dinâmica da central exigem sessão válida e e-mail presente em `ADMIN_EMAILS`; a chave do caminho é validada com comparação de tempo constante;
 - a central não é listada no sitemap, possui `noindex` e também é bloqueada no `robots.txt`;
 - detalhes operacionais e configuração estão em `docs/MONITORAMENTO-E-SUPORTE.md`.
 

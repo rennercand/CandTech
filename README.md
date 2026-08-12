@@ -36,6 +36,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Cadastro diferenciado para pessoa física e empresa.
 - Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Checkout hospedado, portal do cliente e confirmação por webhook assinado.
 - Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
+- Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.

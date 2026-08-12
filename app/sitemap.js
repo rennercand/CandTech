@@ -1,7 +1,7 @@
 import { SITE_URL } from "@/lib/site";
 
 export default function sitemap() {
-  const legalPages = ["juridico", "termos", "privacidade", "cookies", "uso-aceitavel", "tratamento-de-dados", "cancelamento", "seguranca"];
+  const legalPages = ["juridico", "termos", "propriedade-intelectual", "privacidade", "cookies", "uso-aceitavel", "tratamento-de-dados", "cancelamento", "seguranca"];
   return [
     { url: SITE_URL, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/assinar`, changeFrequency: "monthly", priority: 0.8 },

@@ -21,7 +21,7 @@ export default function TermsPage() {
     <h2>6. Suspensão e encerramento</h2>
     <p>Acesso pode ser limitado para conter incidente, fraude, risco técnico, inadimplência após aviso ou violação material. Sempre que seguro e legalmente possível, haverá informação e oportunidade de correção. O cliente pode cancelar conforme a Política de Cobrança e deve exportar dados antes do término.</p>
     <h2>7. Propriedade intelectual</h2>
-    <p>Software, marca, interface e materiais da CandTech permanecem de seus titulares. Não é permitido copiar o serviço, contornar limites, extrair código, revender acesso sem autorização ou realizar testes ofensivos fora de autorização escrita.</p>
+    <p>Software, marca, interface e materiais da CandTech permanecem de seus titulares. Não é permitido copiar o serviço, contornar limites, extrair código, revender acesso sem autorização ou realizar testes ofensivos fora de autorização escrita. O uso do nome, logotipo, ícone, imagens e telas também deve respeitar a <a href="/propriedade-intelectual">Política de Propriedade Intelectual e Uso da Marca</a>, que integra estes Termos.</p>
     <h2>8. Limites legais</h2>
     <p>Nada nestes Termos exclui responsabilidade por dolo, culpa grave, violação de direitos indisponíveis, proteção de dados ou hipóteses em que a lei proíba limitação. Eventual responsabilidade será apurada conforme a lei, o dano comprovado e a participação de cada parte.</p>
     <h2>9. Lei e solução de conflitos</h2>

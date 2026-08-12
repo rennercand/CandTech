@@ -19,3 +19,16 @@ test("página inicial mantém os sinais essenciais verificados pelo Screaming Fr
   assert.ok((publicHome.match(/href="(?:\/|#)/g) || []).length >= 5);
   assert.match(page, /alternates:\s*\{ canonical: SITE_URL \}/);
 });
+
+test("política de marca está ligada aos termos, rodapé e sitemap", () => {
+  const policy = readFileSync(join(projectRoot, "app", "propriedade-intelectual", "page.js"), "utf8");
+  const terms = readFileSync(join(projectRoot, "app", "termos", "page.js"), "utf8");
+  const publicHome = readFileSync(join(projectRoot, "app", "public-home.js"), "utf8");
+  const sitemap = readFileSync(join(projectRoot, "app", "sitemap.js"), "utf8");
+
+  assert.match(policy, /Uso da Marca/);
+  assert.match(policy, /não equivale ao símbolo ® nem declara registro concedido/);
+  assert.match(terms, /propriedade-intelectual/);
+  assert.match(publicHome, /© 2026 CandTech/);
+  assert.match(sitemap, /propriedade-intelectual/);
+});

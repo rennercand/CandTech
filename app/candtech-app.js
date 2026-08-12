@@ -356,7 +356,7 @@ function LegalLicenseModal({ onClose }) {
           <li><strong>Privacidade:</strong> tratamos apenas os dados necessários para autenticação, operação, segurança, suporte e cobrança, conforme o Aviso de Privacidade.</li>
         </ul>
         <p>Seu aceite fica registrado com data e versão. Direitos obrigatórios previstos no CDC e na LGPD não são afastados por este resumo.</p>
-        <div className="legal-modal-links"><a href="/termos" target="_blank" rel="noreferrer">Termos completos</a><a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a><a href="/cancelamento" target="_blank" rel="noreferrer">Cobrança e cancelamento</a></div>
+        <div className="legal-modal-links"><a href="/termos" target="_blank" rel="noreferrer">Termos completos</a><a href="/propriedade-intelectual" target="_blank" rel="noreferrer">Marca e imagens</a><a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a><a href="/cancelamento" target="_blank" rel="noreferrer">Cobrança e cancelamento</a></div>
       </div>
       <footer><button type="button" className="primary-button" onClick={onClose}>Fechar e voltar ao aceite</button></footer>
     </section>

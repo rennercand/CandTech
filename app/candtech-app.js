@@ -462,11 +462,13 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person", legalAccepted: false });
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [invitePreview, setInvitePreview] = useState(null);
   const [inviteLoading, setInviteLoading] = useState(Boolean(inviteToken));
   const [inviteError, setInviteError] = useState("");
   const [showLicense, setShowLicense] = useState(false);
+  const emailInputRef = useRef(null);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
     if (!inviteToken) return;
@@ -495,6 +497,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
     event.preventDefault();
     setLoading(true);
     setError("");
+    setErrorCode("");
     try {
       const response = await fetch(
         `/api/auth/${mode === "login" ? "login" : "register"}`,
@@ -505,7 +508,13 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
         },
       );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Não foi possível continuar.");
+      if (!response.ok) {
+        setErrorCode(data.code || "");
+        if (data.code === "EMAIL_ALREADY_REGISTERED") {
+          requestAnimationFrame(() => emailInputRef.current?.focus());
+        }
+        throw new Error(data.error || "Não foi possível continuar.");
+      }
       trackMarketingEvent(mode === "login" ? "login" : "sign_up", {
         method: "email",
         account_type: data.user?.accountType || form.accountType,
@@ -624,11 +633,31 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
           <label>
             {isInvitation ? "E-mail que recebeu o convite" : "E-mail"}
             <input
+              ref={emailInputRef}
               required
               type="email"
+              autoComplete="email"
+              aria-invalid={errorCode === "EMAIL_ALREADY_REGISTERED" ? "true" : undefined}
+              aria-describedby={errorCode === "EMAIL_ALREADY_REGISTERED" ? "registered-email-error" : undefined}
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, email: e.target.value });
+                if (errorCode === "EMAIL_ALREADY_REGISTERED") {
+                  setError("");
+                  setErrorCode("");
+                }
+              }}
             />
+            {errorCode === "EMAIL_ALREADY_REGISTERED" && (
+              <span id="registered-email-error" className="email-exists-alert" role="alert">
+                <strong>Esta conta já foi criada.</strong>
+                <span>Entre com esse e-mail ou recupere a senha para continuar.</span>
+                <span className="email-exists-actions">
+                  <button type="button" onClick={() => { setMode("login"); setError(""); setErrorCode(""); }}>Entrar na conta</button>
+                  <a href="/esqueci-senha">Recuperar senha</a>
+                </span>
+              </span>
+            )}
           </label>
           <label>
             Senha
@@ -661,7 +690,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
           {mode === "login" && !isInvitation && (
             <a className="text-button" href="/esqueci-senha">Esqueci minha senha</a>
           )}
-          {error && <p className="form-error">{error}</p>}
+          {error && errorCode !== "EMAIL_ALREADY_REGISTERED" && <p className="form-error" role="alert">{error}</p>}
           <button className="primary-button" disabled={loading}>
             {loading
               ? isInvitation ? "Validando e ingressando…" : "Aguarde..."

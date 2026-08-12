@@ -100,9 +100,22 @@ test("CSP permite somente os endpoints necessarios do Google Analytics", async (
 });
 
 test("cadastro informa claramente quando o e-mail já possui conta", () => {
-  const source = readFileSync(join(projectRoot, "app", "api", "auth", "register", "route.js"), "utf8");
-  assert.match(source, /EMAIL_ALREADY_REGISTERED/);
-  assert.match(source, /Já existe uma conta criada com este e-mail/);
-  assert.match(source, /status:\s*409/);
-  assert.match(source, /findUserByEmail\(cleanEmail\)/);
+  const route = readFileSync(join(projectRoot, "app", "api", "auth", "register", "route.js"), "utf8");
+  const interfaceSource = readFileSync(join(projectRoot, "app", "candtech-app.js"), "utf8");
+  assert.match(route, /EMAIL_ALREADY_REGISTERED/);
+  assert.match(route, /Já existe uma conta criada com este e-mail/);
+  assert.match(route, /status:\s*409/);
+  assert.match(route, /findUserByEmail\(cleanEmail\)/);
+  assert.match(interfaceSource, /errorCode === "EMAIL_ALREADY_REGISTERED"/);
+  assert.match(interfaceSource, /Esta conta já foi criada/);
+  assert.match(interfaceSource, /role="alert"/);
+  assert.match(interfaceSource, /Recuperar senha/);
+});
+
+test("menu lateral mantém conta e saída dentro da altura visível", () => {
+  const styles = readFileSync(join(projectRoot, "app", "globals.css"), "utf8");
+  assert.match(styles, /\.sidebar\s*\{[^}]*position:\s*sticky/s);
+  assert.match(styles, /\.sidebar\s*\{[^}]*height:\s*100dvh/s);
+  assert.match(styles, /\.sidebar nav\s*\{[^}]*overflow-y:\s*auto/s);
+  assert.match(styles, /\.sidebar-bottom\s*\{[^}]*flex:\s*0 0 auto/s);
 });

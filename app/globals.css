@@ -468,6 +468,36 @@ select:focus {
   color: #bd2744;
   font-size: 13px;
 }
+.email-exists-alert {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid #e7a8b5;
+  border-radius: 9px;
+  background: #fff4f6;
+  color: #8f1f37;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.email-exists-alert strong { color: #7c172e; }
+.email-exists-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 4px; }
+.email-exists-actions button,
+.email-exists-actions a {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #513bd0;
+  font: inherit;
+  font-weight: 800;
+  line-height: 32px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.auth-card input[aria-invalid="true"] {
+  border-color: #bd2744;
+  box-shadow: 0 0 0 3px rgb(189 39 68 / 12%);
+}
 .password-hint {
   color: var(--muted);
   font-size: 10px;
@@ -477,9 +507,16 @@ select:focus {
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar) 1fr;
-  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: start;
 }
 .sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   background: #fff;
   border-right: 1px solid var(--line);
   display: flex;
@@ -495,9 +532,16 @@ select:focus {
 }
 .sidebar nav {
   display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 4px;
   position: relative;
   isolation: isolate;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d5d0eb transparent;
+  padding-right: 3px;
 }
 .sidebar nav::before {
   content: "";
@@ -769,6 +813,7 @@ select:focus {
   display: none;
 }
 .sidebar-bottom {
+  flex: 0 0 auto;
   border-top: 1px solid var(--line);
   padding: 18px 7px 0;
   margin-top: auto;
@@ -2458,7 +2503,7 @@ select:focus {
 .sidebar-subscribe {
   display: grid;
   gap: 4px;
-  margin: auto 0 12px;
+  margin: 12px 0;
   padding: 12px 14px;
   border: 1px solid #dcd6ff;
   border-radius: 11px;

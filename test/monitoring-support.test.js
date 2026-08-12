@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -15,6 +15,8 @@ import {
   updateMonitoringEventStatus,
 } from "../lib/db.js";
 import { getMonitoringAccessPath, isAdministrator, isMonitoringAccessKey } from "../lib/admin-access.js";
+
+const projectRoot = process.cwd();
 
 async function isolatedDatabase(run) {
   const previousCwd = process.cwd();
@@ -86,4 +88,13 @@ test("caminho do monitoramento não é fixo e exige a chave completa", () => {
     if (previousSecret === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = previousSecret;
     if (previousSlug === undefined) delete process.env.ADMIN_MONITORING_SLUG; else process.env.ADMIN_MONITORING_SLUG = previousSlug;
   }
+});
+
+test("identificação administrativa não depende da assinatura do ERP", () => {
+  const sessionRoute = readFileSync(join(projectRoot, "app", "api", "auth", "me", "route.js"), "utf8");
+  const overviewRoute = readFileSync(join(projectRoot, "app", "api", "admin", "overview", "route.js"), "utf8");
+  assert.match(sessionRoute, /const administrator = isAdministrator\(user\.email\)/);
+  assert.match(sessionRoute, /monitoringPath:\s*administrator\s*\?\s*getMonitoringAccessPath\(\)\s*:\s*null/);
+  assert.match(overviewRoute, /allowInactiveSubscription:\s*true/);
+  assert.match(overviewRoute, /isAdministrator\(user\.email\)/);
 });

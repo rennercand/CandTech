@@ -4,6 +4,8 @@
 
 A CandTech possui uma central operacional com endereço não publicado. O administrador acessa pelo ERP em **Moderação → Abrir central privada de monitoramento**. A página é renderizada somente depois de validar a chave do caminho, o JWT, a sessão persistida e o e-mail do administrador. Uma chave incorreta ou uma conta que não esteja em `ADMIN_EMAILS` recebe uma página não encontrada; visitantes sem sessão são enviados ao login.
 
+A sessão autenticada recebe apenas a decisão `administrator` e, somente quando ela for verdadeira, o caminho privado. Isso faz a aba aparecer sem depender da consulta de métricas. O botão da central continua disponível mesmo se essas métricas estiverem temporariamente indisponíveis e a configuração da assinatura não impede a administração operacional.
+
 A lista é o documento vivo solicitado: ela se atualiza a cada 20 segundos quando a aba está visível e pode ser atualizada manualmente. Um arquivo Word ou PDF seria apenas um retrato estático e ficaria desatualizado assim que surgisse um novo incidente.
 
 ## Configuração obrigatória
@@ -63,6 +65,7 @@ A inicialização cria as tabelas tanto no PostgreSQL/Neon quanto no SQLite loca
 
 1. Confirmar `ADMIN_EMAILS` na Vercel sem espaços ou erros de digitação.
 2. Entrar com o administrador, abrir **Moderação** e usar o botão da central privada.
+   Se a sessão já estava aberta quando `ADMIN_EMAILS` foi alterado, sair e entrar novamente ou atualizar a página para renovar os dados da interface.
 3. Confirmar que outra conta recebe acesso negado.
 4. Enviar uma mensagem de teste pela aba Suporte e responder pela central.
 5. Confirmar que a resposta aparece somente na conta que enviou o chamado.

@@ -10,7 +10,9 @@ export const runtime = "nodejs";
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "admin-overview", limit: 30 });
   if (limited) return limited;
-  const user = await getSession(request);
+  // O proprietário do sistema precisa consultar a operação mesmo durante a
+  // configuração da cobrança; a autorização administrativa continua obrigatória.
+  const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!isAdministrator(user.email)) return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
 

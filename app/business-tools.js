@@ -204,8 +204,9 @@ export function SalesPurchases({ orders, setOrders, products = [], issuer, setIs
   </section></div>;
 }
 
-export function AdminOverview({ overview, onRefresh }) {
-  if (!overview) return <section className="panel"><p>Carregando métricas agregadas…</p></section>;
+export function AdminOverview({ overview, monitoringPath, onRefresh }) {
+  const privatePath = monitoringPath || overview?.monitoringPath;
+  if (!overview) return <section className="panel operations-panel"><p>Carregando métricas agregadas…</p>{privatePath && <a className="primary-button admin-monitor-link" href={privatePath} rel="nofollow">Abrir central privada de monitoramento</a>}</section>;
   const { metrics, health } = overview;
   return <div className="business-stack">
     <Summary items={[
@@ -217,7 +218,7 @@ export function AdminOverview({ overview, onRefresh }) {
     <section className="panel operations-panel"><div className="panel-heading"><div><span className="eyebrow">ACESSO DO MODERADOR</span><h2>Saúde e segurança</h2><p>Visão agregada, sem nomes, e-mails ou informações financeiras de terceiros.</p></div><button className="secondary-button" onClick={onRefresh}>Atualizar</button></div>
       <div className="health-grid"><div><span>Servidor</span><strong className="positive">{health.server === "online" ? "Online" : "Indisponível"}</strong></div><div><span>Banco de dados</span><strong className="positive">{health.database === "online" ? "Online" : "Indisponível"}</strong></div><div><span>Tráfego</span><strong className={health.trafficLevel === "normal" ? "positive" : "negative"}>{health.trafficLevel === "normal" ? "Normal" : health.trafficLevel === "attention" ? "Atenção" : "Crítico"}</strong></div><div><span>Atualizado</span><strong>{new Date(health.checkedAt).toLocaleString("pt-BR")}</strong></div></div>
       <p className="responsibility-note">Este painel indica pressão nos limites do aplicativo. O relatório persistente reúne incidentes e mensagens sem expor dados financeiros.</p>
-      {overview.monitoringPath && <a className="primary-button admin-monitor-link" href={overview.monitoringPath}>Abrir central privada de monitoramento</a>}
+      {privatePath && <a className="primary-button admin-monitor-link" href={privatePath} rel="nofollow">Abrir central privada de monitoramento</a>}
     </section>
   </div>;
 }

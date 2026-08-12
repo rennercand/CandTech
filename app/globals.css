@@ -563,6 +563,94 @@ select:focus {
   }
 }
 
+/* O 404 usa um único ponto de movimento: entrada espacial que desacelera e,
+   ao terminar, uma respiração discreta. O espaço é reservado para evitar CLS. */
+.not-found-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(24px, 6vw, 72px) 20px;
+  color: #211d3d;
+  background:
+    radial-gradient(circle at 50% 38%, rgb(110 77 232 / 14%), transparent 34%),
+    linear-gradient(180deg, #f8f7ff 0%, #fff 58%, #f2f4fa 100%);
+}
+.not-found-card {
+  width: min(560px, 100%);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+.not-found-mark {
+  width: clamp(132px, 27vw, 188px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(124 92 232 / 24%);
+  border-radius: 38%;
+  color: white;
+  background: linear-gradient(145deg, #21135f 5%, #6441d9 54%, #18bfe0 115%);
+  box-shadow: 0 30px 80px rgb(72 45 170 / 24%), inset 0 1px 0 rgb(255 255 255 / 30%);
+  animation:
+    not-found-arrive 1400ms cubic-bezier(.16, 1, .3, 1) both,
+    not-found-breathe 3200ms ease-in-out 1400ms infinite;
+  will-change: transform, opacity;
+}
+.not-found-mark span {
+  font-size: clamp(5.4rem, 18vw, 8.2rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.12em;
+  transform: translateX(-.06em);
+  text-shadow: 0 8px 28px rgb(10 4 46 / 30%);
+}
+.not-found-code {
+  margin: 34px 0 10px;
+  color: #6548e8;
+  font-size: .76rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+.not-found-card h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.35rem);
+  line-height: 1.05;
+  letter-spacing: -.045em;
+}
+.not-found-copy {
+  max-width: 480px;
+  margin: 18px 0 28px;
+  color: #625d78;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.not-found-action {
+  min-height: 48px;
+  padding-inline: 24px;
+  text-decoration: none;
+}
+.not-found-action:focus-visible {
+  outline: 3px solid rgb(101 72 232 / 38%);
+  outline-offset: 4px;
+}
+@keyframes not-found-arrive {
+  from { opacity: 0; transform: translateY(44vh) rotate(-540deg) scale(.62); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes not-found-breathe {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 30px 80px rgb(72 45 170 / 24%), inset 0 1px 0 rgb(255 255 255 / 30%); }
+  50% { transform: translateY(-4px) scale(1.035); box-shadow: 0 36px 92px rgb(72 45 170 / 30%), inset 0 1px 0 rgb(255 255 255 / 36%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .not-found-mark {
+    opacity: 1;
+    transform: none;
+    animation: none !important;
+    will-change: auto;
+  }
+}
+
 /* Suporte do ERP: contato rápido e histórico legível para capacitação da equipe. */
 .support-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; background: linear-gradient(135deg, #f8f6ff, #fff); }
 .support-hero h2, .support-hero p { margin-bottom: 8px; }

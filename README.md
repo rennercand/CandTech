@@ -18,6 +18,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
 - Central privada com endereço não publicado, autorizada por `ADMIN_EMAILS`, com incidentes agrupados, estados de investigação e mensagens de suporte atualizadas automaticamente.
+- Página 404 própria, responsiva e acessível, com entrada animada da marca e movimento reduzido respeitado automaticamente.
 - Aba Suporte com e-mail, telefone, WhatsApp, abertura de chamados e acompanhamento das respostas dentro do ERP.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Visão geral financeira integrada ao workspace de cada usuário.

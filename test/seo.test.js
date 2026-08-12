@@ -53,3 +53,14 @@ test("central administrativa não é indexada nem publicada no sitemap", () => {
   assert.match(robots, /\/central\//);
   assert.doesNotMatch(sitemap, /central/);
 });
+
+test("página 404 própria orienta o retorno e respeita redução de movimento", () => {
+  const notFound = readFileSync(join(projectRoot, "app", "not-found.js"), "utf8");
+  const styles = readFileSync(join(projectRoot, "app", "globals.css"), "utf8");
+  assert.match(notFound, /ERRO 404/);
+  assert.match(notFound, /Voltar para a CandTech/);
+  assert.match(notFound, /robots:\s*\{\s*index:\s*false/);
+  assert.match(styles, /@keyframes not-found-arrive/);
+  assert.match(styles, /@keyframes not-found-breathe/);
+  assert.match(styles, /prefers-reduced-motion:[^)]+\)[\s\S]*?\.not-found-mark[\s\S]*?animation:\s*none/);
+});

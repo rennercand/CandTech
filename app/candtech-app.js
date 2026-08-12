@@ -895,15 +895,19 @@ export default function CandTechApp({ publicFallback = null }) {
     if (response.ok) {
       setIsAdministrator(true);
       setAdminOverview(await response.json());
-    } else if (response.status === 403) {
+    } else if ([401, 403, 404].includes(response.status)) {
       setIsAdministrator(false);
+      setAdminOverview(null);
       if (view === "admin") setView("home");
     }
   }
 
   useEffect(() => {
-    if (user && (!user.subscriptionRequired || user.subscriptionActive)) loadAdminOverview();
-  }, [user?.id, user?.emailVerified, user?.access?.organizationId, user?.subscriptionRequired, user?.subscriptionActive]);
+    const administrator = Boolean(user?.administrator);
+    setIsAdministrator(administrator);
+    if (administrator) loadAdminOverview();
+    else setAdminOverview(null);
+  }, [user?.id, user?.administrator, user?.emailVerified, user?.access?.organizationId]);
 
   useEffect(() => {
     if (!user || (user.subscriptionRequired && !user.subscriptionActive)) {
@@ -2090,7 +2094,7 @@ export default function CandTechApp({ publicFallback = null }) {
         {view === "commerce" && <InventoryOperations initialSection="orders" canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
         {view === "clients" && <ClientManager clients={clients} setClients={setClients} orders={[...commerceOrders, ...(inventoryState.orders || [])]} />}
         {view === "tasks" && <TaskKanban tasks={tasks} setTasks={setTasks} clients={clients} />}
-        {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
+        {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} monitoringPath={user.monitoringPath} onRefresh={loadAdminOverview} />}
         {view === "support" && <SupportCenter />}
         {view === "team" && user.access?.role === "owner" && <TeamAccess />}
         {view === "history" && (

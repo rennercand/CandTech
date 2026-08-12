@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { authCookie, createToken } from "@/lib/auth";
 import { sendEmailVerification } from "@/lib/auth-email";
-import { appendAuditEvent, createUser, isUniqueConstraintError } from "@/lib/db";
+import { appendAuditEvent, createUser, findUserByEmail, isUniqueConstraintError } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
@@ -45,6 +45,15 @@ export async function POST(request) {
       return NextResponse.json({ error: "Aceite os Termos de Uso e o Aviso de Privacidade para criar a conta." }, { status: 400 });
     }
 
+    // A consulta melhora a mensagem na tentativa comum; o índice único do banco
+    // continua sendo a proteção definitiva contra duas requisições simultâneas.
+    if (await findUserByEmail(cleanEmail)) {
+      return NextResponse.json(
+        { error: "Já existe uma conta criada com este e-mail. Entre na sua conta ou recupere a senha.", code: "EMAIL_ALREADY_REGISTERED" },
+        { status: 409 },
+      );
+    }
+
     // bcrypt adiciona um salt e transforma a senha em um hash irreversível.
     const passwordHash = await bcrypt.hash(cleanPassword, 12);
     // A camada de banco escolhe Postgres na Vercel e SQLite no ambiente local.
@@ -82,7 +91,10 @@ export async function POST(request) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
     if (isUniqueConstraintError(error)) {
-      return NextResponse.json({ error: "Não foi possível concluir o cadastro com os dados informados." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Já existe uma conta criada com este e-mail. Entre na sua conta ou recupere a senha.", code: "EMAIL_ALREADY_REGISTERED" },
+        { status: 409 },
+      );
     }
 
     // Registra o erro real apenas no servidor; a resposta pública permanece genérica.

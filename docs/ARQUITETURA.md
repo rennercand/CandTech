@@ -116,6 +116,7 @@ mindmap
 | `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | `tenant_id` + lote de movimentação |
 | `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
 | `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou administrador em `ADMIN_EMAILS` |
+| `users.account_status` | separa contas ativas de duplicatas históricas arquivadas | somente servidor |
 
 O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extrai o identificador do usuário e consulta o Neon usando esse identificador. A credencial do banco permanece no servidor.
 
@@ -141,6 +142,7 @@ O UUID reduz enumeração, mas não substitui autorização. O isolamento efetiv
 - `app/monitoring-client.js` captura falhas não tratadas no navegador, mas a API só aceita registros de uma sessão autenticada e aplica rate limit;
 - `/api/support` deriva o autor da sessão e nunca aceita `user_id` ou `organization_id` como autoridade do navegador;
 - `/api/admin/monitoring` e a rota dinâmica da central exigem sessão válida e e-mail presente em `ADMIN_EMAILS`; a chave do caminho é validada com comparação de tempo constante;
+- `users.email` é normalizado com `trim + lowercase`, possui índice funcional único no PostgreSQL e duplicatas históricas são arquivadas com sessões revogadas, sem apagar seus dados empresariais;
 - a central não é listada no sitemap, possui `noindex` e também é bloqueada no `robots.txt`;
 - detalhes operacionais e configuração estão em `docs/MONITORAMENTO-E-SUPORTE.md`.
 

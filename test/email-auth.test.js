@@ -50,3 +50,25 @@ test("confirmação de e-mail e recuperação usam tokens únicos, expiráveis e
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("e-mail de conta é normalizado e não pode ser cadastrado novamente", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "candtech-unique-email-"));
+  const previousEnvironment = process.env.NODE_ENV;
+  const previousPath = process.env.SQLITE_DATABASE_PATH;
+  process.env.NODE_ENV = "test";
+  process.env.SQLITE_DATABASE_PATH = join(directory, "unique-email.sqlite");
+  try {
+    const first = await createUser({ name: "Primeira conta", email: "  Pessoa@Exemplo.COM  ", passwordHash: "hash" });
+    assert.equal(first.email, "pessoa@exemplo.com");
+    assert.equal((await findUserByEmail(" PESSOA@EXEMPLO.COM ")).id, first.id);
+    await assert.rejects(
+      () => createUser({ name: "Conta repetida", email: "pessoa@exemplo.com", passwordHash: "outro-hash" }),
+      /UNIQUE/i,
+    );
+  } finally {
+    await closeDatabaseForTests();
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
+    if (previousPath === undefined) delete process.env.SQLITE_DATABASE_PATH; else process.env.SQLITE_DATABASE_PATH = previousPath;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

@@ -17,6 +17,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Quadro Kanban com tarefas, prioridade, prazo, cliente relacionado e etapas “A fazer”, “Em andamento” e “Concluído”.
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
+- E-mail de acesso normalizado e protegido por índice único no banco; tentativas repetidas recebem orientação para entrar ou recuperar a senha.
 - Central privada com endereço não publicado, autorizada por `ADMIN_EMAILS`, com incidentes agrupados, estados de investigação e mensagens de suporte atualizadas automaticamente.
 - Página 404 própria, responsiva e acessível, com entrada animada da marca e movimento reduzido respeitado automaticamente.
 - Aba Suporte com e-mail, telefone, WhatsApp, abertura de chamados e acompanhamento das respostas dentro do ERP.

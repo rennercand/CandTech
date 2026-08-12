@@ -98,3 +98,11 @@ test("CSP permite somente os endpoints necessarios do Google Analytics", async (
   assert.doesNotMatch(csp, /script-src[^;]*https:\/\/\*/);
   assert.doesNotMatch(csp, /unsafe-eval/, "produção e testes não devem liberar eval");
 });
+
+test("cadastro informa claramente quando o e-mail já possui conta", () => {
+  const source = readFileSync(join(projectRoot, "app", "api", "auth", "register", "route.js"), "utf8");
+  assert.match(source, /EMAIL_ALREADY_REGISTERED/);
+  assert.match(source, /Já existe uma conta criada com este e-mail/);
+  assert.match(source, /status:\s*409/);
+  assert.match(source, /findUserByEmail\(cleanEmail\)/);
+});

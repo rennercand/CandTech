@@ -9,7 +9,7 @@ import { historyXlsx, historyXlsxFilename } from "@/lib/history-xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 import { getAccessibleHistory } from "@/lib/organization-access";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

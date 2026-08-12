@@ -2,15 +2,10 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdminOverview } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
+import { isAdministrator } from "@/lib/admin-access";
 
 export const runtime = "nodejs";
-
-function isAdministrator(email) {
-  const allowed = String(process.env.ADMIN_EMAILS || "")
-    .split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
-  return allowed.includes(String(email || "").toLowerCase());
-}
 
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "admin-overview", limit: 30 });

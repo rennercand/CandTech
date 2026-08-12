@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { appendAuditEvent, hasProcessedStripeEvent, recordStripeEvent, updateStripeSubscription } from "@/lib/db";
 import { getStripe, stripePriceId, stripeWebhookSecret } from "@/lib/stripe";
 import { invoiceSubscriptionId, localSubscriptionStatus, stripeObjectId, subscriptionPriceId, subscriptionUserId } from "@/lib/stripe-subscription";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 const MAX_WEBHOOK_BYTES = 1_048_576;

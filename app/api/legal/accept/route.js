@@ -4,7 +4,7 @@ import { appendAuditEvent, recordLegalAcceptance } from "@/lib/db";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

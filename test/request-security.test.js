@@ -96,4 +96,5 @@ test("CSP permite somente os endpoints necessarios do Google Analytics", async (
   assert.match(csp, /script-src[^;]*https:\/\/www\.googletagmanager\.com/);
   assert.match(csp, /connect-src[^;]*https:\/\/\*\.google-analytics\.com/);
   assert.doesNotMatch(csp, /script-src[^;]*https:\/\/\*/);
+  assert.doesNotMatch(csp, /unsafe-eval/, "produção e testes não devem liberar eval");
 });

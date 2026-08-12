@@ -21,6 +21,7 @@ import TeamAccess from "./team-access";
 import InventoryOperations from "./inventory-operations";
 import ClientManager from "./client-manager";
 import TaskKanban from "./task-kanban";
+import SupportCenter from "./support-center";
 import { trackMarketingEvent } from "../lib/analytics";
 
 async function hydrateAuthenticatedUser() {
@@ -1887,6 +1888,7 @@ export default function CandTechApp({ publicFallback = null }) {
             ...(canAccess("pricing") ? [["pricing", "Formação de preço", "◇"]] : []),
             ...(user.access?.role === "owner" ? [["team", "Empresa e acessos", "♙"]] : []),
             ...(isAdministrator ? [["admin", "Moderação", "◉"]] : []),
+            ["support", "Suporte", "?"],
             ...(canAccess("history") ? [["history", "Histórico", "◷"]] : []),
           ].map(([id, label, icon]) => (
             <button
@@ -1951,6 +1953,8 @@ export default function CandTechApp({ publicFallback = null }) {
                                 ? "Tarefas"
                             : view === "admin"
                               ? "Moderação do sistema"
+                              : view === "support"
+                                ? "Suporte"
                               : view === "team"
                                 ? "Empresa e acessos"
                             : "Histórico salvo"}
@@ -2087,6 +2091,7 @@ export default function CandTechApp({ publicFallback = null }) {
         {view === "clients" && <ClientManager clients={clients} setClients={setClients} orders={[...commerceOrders, ...(inventoryState.orders || [])]} />}
         {view === "tasks" && <TaskKanban tasks={tasks} setTasks={setTasks} clients={clients} />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} onRefresh={loadAdminOverview} />}
+        {view === "support" && <SupportCenter />}
         {view === "team" && user.access?.role === "owner" && <TeamAccess />}
         {view === "history" && (
           <History

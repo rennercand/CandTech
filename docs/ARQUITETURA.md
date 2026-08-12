@@ -114,6 +114,8 @@ mindmap
 | `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | `tenant_id` derivado da sessão e da organização |
 | `inventory_batches` / `inventory_movements` | livro de movimentos e reversões | `tenant_id` + autor autenticado |
 | `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | `tenant_id` + lote de movimentação |
+| `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
+| `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou administrador em `ADMIN_EMAILS` |
 
 O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extrai o identificador do usuário e consulta o Neon usando esse identificador. A credencial do banco permanece no servidor.
 
@@ -132,6 +134,15 @@ O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extra
 - o link do convite usa token aleatório de uso único, expira em 72 horas e só é aceito após autenticação com o mesmo e-mail destinatário.
 
 O UUID reduz enumeração, mas não substitui autorização. O isolamento efetivo vem do escopo de proprietário/organização aplicado em todas as consultas.
+
+### Monitoramento e suporte
+
+- `lib/server-observability.js` transforma falhas tratadas das APIs em resumos técnicos persistentes e mantém o log estruturado da Vercel;
+- `app/monitoring-client.js` captura falhas não tratadas no navegador, mas a API só aceita registros de uma sessão autenticada e aplica rate limit;
+- `/api/support` deriva o autor da sessão e nunca aceita `user_id` ou `organization_id` como autoridade do navegador;
+- `/api/admin/monitoring` e `/admin/monitoramento` exigem sessão válida e e-mail presente em `ADMIN_EMAILS`;
+- a central não é listada no sitemap, possui `noindex` e também é bloqueada no `robots.txt`;
+- detalhes operacionais e configuração estão em `docs/MONITORAMENTO-E-SUPORTE.md`.
 
 ### Ambientes atuais e destino planejado
 

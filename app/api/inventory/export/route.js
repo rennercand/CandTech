@@ -11,7 +11,7 @@ import { canExportInventory, inventoryCsv, inventoryFilename, inventoryXlsx } fr
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

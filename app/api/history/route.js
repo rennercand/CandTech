@@ -5,7 +5,7 @@ import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOrganizationAccess, isPublicHistoryId } from "@/lib/organization-access";
 import { filterHistoryForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

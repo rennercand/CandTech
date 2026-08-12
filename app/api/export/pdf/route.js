@@ -5,7 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterHistoryForAccess, filterWorkspaceForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

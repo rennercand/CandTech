@@ -7,7 +7,7 @@ import {
 } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/organization-access";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

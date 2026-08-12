@@ -1,6 +1,7 @@
 import "./globals.css";
 import AnalyticsConsent from "./analytics-consent";
 import { HOME_DESCRIPTION, SITE_URL } from "@/lib/site";
+import MonitoringClient from "./monitoring-client";
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
@@ -24,5 +25,5 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }) {
-  return <html lang="pt-BR"><body>{children}<AnalyticsConsent /></body></html>;
+  return <html lang="pt-BR"><body>{children}<AnalyticsConsent /><MonitoringClient /></body></html>;
 }

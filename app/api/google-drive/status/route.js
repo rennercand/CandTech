@@ -9,7 +9,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { hasPermission } from "@/lib/team-permissions";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 async function canUseDrive(user) {
   return hasPermission(await getOrganizationAccess(user), "drive");

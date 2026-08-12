@@ -13,7 +13,7 @@ import {
   listInventory,
   undoInventoryBatch,
 } from "@/lib/inventory-db";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

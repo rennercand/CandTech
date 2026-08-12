@@ -10,7 +10,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterWorkspaceForAccess, hasPermission, mergeWorkspaceForAccess } from "@/lib/team-permissions";
 import { hasMeaningfulWorkspaceContent } from "@/lib/workspace-content";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

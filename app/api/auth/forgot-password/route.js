@@ -3,7 +3,7 @@ import { findUserByEmail } from "@/lib/db";
 import { sendPasswordReset } from "@/lib/auth-email";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 const GENERIC_MESSAGE = "Se o e-mail estiver cadastrado, você receberá um link em alguns minutos.";

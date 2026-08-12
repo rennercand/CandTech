@@ -5,7 +5,7 @@ import { sendEmailVerification } from "@/lib/auth-email";
 import { appendAuditEvent, createUser, isUniqueConstraintError } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 
 // Força o uso do runtime Node.js, necessário para bcrypt e para o banco.

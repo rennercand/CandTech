@@ -4,7 +4,7 @@ import { authCookie, createToken } from "@/lib/auth";
 import { appendAuditEvent, findUserByEmail } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 
 // Mantém a rota no runtime Node.js, compatível com bcrypt e o banco.

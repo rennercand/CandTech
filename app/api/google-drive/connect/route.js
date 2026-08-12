@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth";
 import { googleAuthorizationUrl, googleDriveConfigured } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isPublicHistoryId, requirePermission } from "@/lib/organization-access";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

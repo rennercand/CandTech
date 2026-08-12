@@ -4,7 +4,7 @@ import { appendAuditEvent, getBillingProfile, saveBillingProfile } from "@/lib/d
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { normalizeBillingProfile } from "@/lib/profile-validation";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

@@ -4,7 +4,7 @@ import { getBillingProviderState } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation } from "@/lib/request-security";
 import { getStripe, publicAppUrl } from "@/lib/stripe";
-import { reportServerError } from "@/lib/observability";
+import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 

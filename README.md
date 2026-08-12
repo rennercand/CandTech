@@ -17,6 +17,8 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Quadro Kanban com tarefas, prioridade, prazo, cliente relacionado e etapas “A fazer”, “Em andamento” e “Concluído”.
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
+- Central privada em `/admin/monitoramento`, autorizada por `ADMIN_EMAILS`, com incidentes agrupados, estados de investigação e mensagens de suporte atualizadas automaticamente.
+- Aba Suporte com e-mail, telefone, WhatsApp, abertura de chamados e acompanhamento das respostas dentro do ERP.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
 - Visão geral financeira integrada ao workspace de cada usuário.
 - Cálculos de VPL, TIR, ROI e payback com data estimada de retorno.
@@ -181,6 +183,8 @@ app/
   api/history/       histórico, exclusão e CSV
   api/workspace/     restauração, autosave e rascunho automático
   api/inventory/     estoque relacional, entradas, pedidos, relatórios e desfazimento
+  api/support/       chamados privados do usuário
+  admin/monitoramento central privada de incidentes e mensagens
   advanced-tools.js  financiamento, preço e leitor de PDF
   client-manager.js  carteira de clientes e atalhos de contato
   inventory-operations.js operação guiada e treinamento de estoque
@@ -212,6 +216,8 @@ As tabelas são criadas automaticamente na primeira utilização:
 - `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa;
 - `inventory_batches` e `inventory_movements`: livro auditável de entradas, vendas, compras e reversões;
 - `inventory_orders` e `inventory_order_items`: pedidos com vários produtos.
+- `monitoring_events`: resumos técnicos sem segredos, agrupados por tipo de falha;
+- `support_tickets`: mensagens do suporte vinculadas ao usuário e respostas administrativas.
 
 ### Como o banco atual funciona
 
@@ -250,6 +256,8 @@ O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está docume
 Para entender responsabilidades dos arquivos, autenticação, IDOR, Stripe, planilhas e critérios de comentários, leia [GUIA-DO-CODIGO.md](./docs/GUIA-DO-CODIGO.md).
 
 O padrão de branches, mensagens de commit e checklist de publicação está em [CONTRIBUINDO.md](./docs/CONTRIBUINDO.md).
+
+O uso, a segurança e a operação da central privada estão em [MONITORAMENTO-E-SUPORTE.md](./docs/MONITORAMENTO-E-SUPORTE.md).
 
 As fórmulas, premissas, testes de referência e limitações estão registradas em [AUDITORIA-FINANCEIRA.md](./docs/AUDITORIA-FINANCEIRA.md).
 

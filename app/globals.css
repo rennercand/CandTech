@@ -472,6 +472,30 @@ select:focus {
 .sidebar nav {
   display: grid;
   gap: 4px;
+  position: relative;
+  isolation: isolate;
+}
+.sidebar nav::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0;
+  width: var(--active-width, 0);
+  height: var(--active-height, 0);
+  border-radius: 8px;
+  background: #f0edff;
+  opacity: 0;
+  transform: translate3d(var(--active-x, 0), var(--active-y, 0), 0);
+  transition:
+    transform 480ms cubic-bezier(.22, 1, .36, 1),
+    width 320ms ease,
+    height 320ms ease,
+    opacity 160ms ease;
+  pointer-events: none;
+}
+.sidebar nav[data-indicator-ready="true"]::before {
+  opacity: 1;
 }
 .nav-link {
   display: flex;
@@ -484,6 +508,9 @@ select:focus {
   color: #666673;
   font-size: 14px;
   text-align: left;
+  position: relative;
+  z-index: 1;
+  transition: color 260ms ease, transform 260ms ease;
 }
 .nav-link span {
   color: #878791;
@@ -496,11 +523,20 @@ select:focus {
 }
 .nav-link.active {
   color: #513bd0;
-  background: #f0edff;
+  background: transparent;
   font-weight: 700;
 }
 .nav-link.active span {
   color: #684ee8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar nav::before,
+  .nav-link {
+    transition: none;
+  }
+  html:focus-within {
+    scroll-behavior: auto;
+  }
 }
 .mobile-logout {
   display: none;

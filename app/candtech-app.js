@@ -662,6 +662,7 @@ export default function CandTechApp({ publicFallback = null }) {
   const [exportSections, setExportSections] = useState({ calculations: true, finance: true, inventory: true, commerce: true });
   const lastSavedWorkspace = useRef("");
   const autoSaveTimer = useRef(null);
+  const sidebarNavRef = useRef(null);
   const result = useMemo(() => calculateInvestment(inputs), [inputs]);
   const financialTableResult = useMemo(
     () => calculateAmortization({ ...financeState.form, system: financeState.system }),
@@ -913,6 +914,30 @@ export default function CandTechApp({ publicFallback = null }) {
     if (permission && !canAccess(permission)) setView("home");
     if (view === "team" && user?.access?.role !== "owner") setView("home");
   }, [view, user?.access?.role, user?.access?.permissions?.join(",")]);
+
+  useEffect(() => {
+    const navigation = sidebarNavRef.current;
+    const activeItem = navigation?.querySelector(".nav-link.active");
+    if (!navigation || !activeItem) return undefined;
+
+    // Um único fundo se move entre os botões. Assim a seleção mantém contexto
+    // visual e não parece que uma caixa desapareceu e outra surgiu do nada.
+    const positionIndicator = () => {
+      navigation.style.setProperty("--active-x", `${activeItem.offsetLeft}px`);
+      navigation.style.setProperty("--active-y", `${activeItem.offsetTop}px`);
+      navigation.style.setProperty("--active-width", `${activeItem.offsetWidth}px`);
+      navigation.style.setProperty("--active-height", `${activeItem.offsetHeight}px`);
+      navigation.dataset.indicatorReady = "true";
+      activeItem.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    };
+    const frame = requestAnimationFrame(positionIndicator);
+    const observer = new ResizeObserver(positionIndicator);
+    observer.observe(navigation);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [view, user?.access?.role, user?.access?.permissions?.join(","), isAdministrator]);
 
   function applyWorkspace(payload, { preserveFinancialCategories = false } = {}) {
     setInputs(payload.inputs);
@@ -1779,7 +1804,7 @@ export default function CandTechApp({ publicFallback = null }) {
           <img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech
         </div>
         <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
-        <nav aria-label="Navegação principal">
+        <nav ref={sidebarNavRef} aria-label="Navegação principal">
           {[
             ["home", "Visão geral", "⌂"],
             ["workspace", "Workspace", "□"],

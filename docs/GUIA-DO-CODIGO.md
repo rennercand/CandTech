@@ -269,13 +269,15 @@ Este catálogo cobre os commits funcionais existentes até `630c446`. O hash cur
 | `2a74b08` | 11/08 | `security` rota privada | Substituiu o endereço fixo da central por uma rota secreta entregue apenas ao administrador autenticado, com comparação segura e resposta 404 para tentativas inválidas. |
 | `4a8a208` | 11/08 | `docs` rota privada | Registrou no catálogo a proteção adicional aplicada ao endereço da central de monitoramento. |
 | `630c446` | 11/08 | `fix/ux` monitoramento e 404 | Fez a sessão identificar o administrador sem depender da assinatura ou das métricas, manteve o botão privado disponível e criou o 404 animado, responsivo e acessível. |
+| `5edf169` | 11/08 | `docs` monitoramento e 404 | Registrou a correção de acesso à central e o comportamento visual da página não encontrada. |
+| `2627a67` | 11/08 | `fix/security` e-mail único | Normalizou e-mails, arquivou duplicatas históricas com sessões revogadas, criou a garantia única no banco e passou a orientar o usuário a entrar ou recuperar a senha. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 630c446..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 2627a67..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

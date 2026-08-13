@@ -67,11 +67,11 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 ## Antes de cobrar qualquer valor
 
 - definir planos, preços, impostos, cancelamento, reembolso e suporte;
-- escolher provedor de pagamento; CPF/CNPJ quando necessário, cartão e dados bancários devem ser coletados pelo provedor, não pela CandTech;
-- implementar webhooks assinados, idempotência, recibos e conciliação de pagamento;
+- confirmar que a conta recebedora e a chave Pix pertencem a uma pessoa legalmente apta a vender o serviço;
+- documentar conferência manual, recibo, vencimento, reembolso e conciliação do Pix;
 - criar status de assinatura no servidor e autorização por plano;
 - não liberar recurso apenas escondendo botão no navegador;
-- validar fluxo de falha, pagamento duplicado, estorno e chargeback;
+- validar solicitação repetida, pagamento não localizado, aprovação indevida, rejeição, vencimento e reembolso;
 - revisar LGPD, relação com operadores e política de retenção.
 
 ## Antes de vender para empresas
@@ -91,7 +91,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 ## Decisões que aguardam o responsável pelo produto
 
 - nomes finais dos planos e preços;
-- provedor de pagamento e conta recebedora;
+- conta recebedora, chave Pix e responsável pela conferência;
 - termos comerciais, prazo de teste e política de reembolso;
 - empresa/CNPJ responsável pela venda do serviço;
 - ferramentas externas de e-mail, observabilidade, WAF distribuído e suporte;

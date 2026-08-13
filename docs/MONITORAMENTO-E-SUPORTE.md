@@ -51,15 +51,27 @@ O painel ajuda na triagem, mas não substitui os Runtime Logs da Vercel durante 
 
 Cada usuário consulta somente os próprios chamados. O administrador autorizado pode consultar todos para realizar o atendimento. Não se deve pedir senha, chave, número completo de cartão ou documento pessoal no formulário.
 
+## Conferência de pagamentos Pix
+
+A central inclui a seção **Pagamentos Pix**. Ela exibe referência, valor, cliente, vencimento e estado da solicitação. Aprovar ou rejeitar exige a mesma autenticação administrativa da central.
+
+- **Aprovar:** use somente depois de localizar valor e referência no extrato da conta recebedora. A assinatura recebe 30 dias.
+- **Rejeitar:** suspende a assinatura e inicia a tentativa de envio do backup ao e-mail verificado do proprietário.
+- **Expirado:** o cron diário suspende e tenta enviar o mesmo backup.
+
+O botão de WhatsApp do cliente apenas prepara uma mensagem; ele não confirma o pagamento. Caso o envio de backup falhe, a coluna permanece sem confirmação e o cron tenta novamente.
+
 ## Estados
 
 Incidentes: `open`, `investigating`, `resolved`.
 
 Chamados: `open`, `answered`, `closed`.
 
+Pagamentos Pix: `pending`, `approved`, `rejected`, `expired`.
+
 ## Banco e migração
 
-A inicialização cria as tabelas tanto no PostgreSQL/Neon quanto no SQLite local. Para ambientes em que migrations são aplicadas separadamente, execute `migrations/20260811_monitoring_and_support.sql` antes do deploy.
+A inicialização cria as tabelas tanto no PostgreSQL/Neon quanto no SQLite local. Para ambientes em que migrations são aplicadas separadamente, execute `migrations/20260811_monitoring_and_support.sql` e `migrations/20260812_manual_pix.sql` antes do deploy.
 
 ## Verificação antes de publicar
 
@@ -69,7 +81,8 @@ A inicialização cria as tabelas tanto no PostgreSQL/Neon quanto no SQLite loca
 3. Confirmar que outra conta recebe acesso negado.
 4. Enviar uma mensagem de teste pela aba Suporte e responder pela central.
 5. Confirmar que a resposta aparece somente na conta que enviou o chamado.
-6. Rodar `npm test` e `npm run build`.
+6. Gerar um Pix controlado, aprovar outro, rejeitar um terceiro e confirmar o ZIP no e-mail do proprietário.
+7. Rodar `npm test` e `npm run build`.
 
 ## Privacidade e retenção
 

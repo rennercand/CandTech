@@ -6,8 +6,8 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 
 1. **Identidade vem da sessão:** IDs enviados pelo navegador nunca determinam sozinho o usuário ou a empresa que será acessada.
 2. **Autorização ocorre no servidor:** cada rota privada autentica o JWT, recarrega a sessão persistida e resolve a organização e as permissões atuais.
-3. **Cobrança é confirmada por webhook:** uma página de sucesso da Stripe não libera o ERP. O servidor só considera o estado persistido após validar a assinatura do webhook.
-4. **Segredos ficam no servidor:** chaves Stripe, Resend, Google, JWT e banco não podem usar o prefixo `NEXT_PUBLIC_` nem aparecer em respostas da API.
+3. **Cobrança é confirmada pelo administrador:** gerar ou copiar o Pix não libera o ERP. Somente um administrador autenticado pode aprovar o recebimento após conferência bancária.
+4. **Segredos ficam no servidor:** chave Pix, Resend, Google, JWT e banco não podem usar o prefixo `NEXT_PUBLIC_` nem aparecer em respostas públicas da API.
 5. **Importação tem prévia:** planilhas são interpretadas e validadas antes de alterar o saldo. SKU duplicado ou inválido produz erro, não atualização parcial silenciosa.
 6. **Comentários explicam decisões:** comentários devem registrar o motivo de uma regra ou proteção. O código não precisa repetir em comentário aquilo que já diz claramente.
 
@@ -19,14 +19,16 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 | `app/client-manager.js` | Carteira de clientes, busca, status e atalhos seguros de contato |
 | `app/task-kanban.js` | Quadro de tarefas com prazos, prioridade, cliente e etapas |
 | `app/api/auth/` | Cadastro, login, sessão, confirmação de e-mail e recuperação de senha |
-| `app/api/stripe/` | Criação do Checkout, portal do cliente e recepção de webhooks |
+| `app/api/pix/` | Geração autenticada e consulta da solicitação Pix |
+| `app/api/cron/` | Expiração periódica e entrega do backup por e-mail |
 | `app/api/inventory/` | Operações e exportações do estoque relacional |
 | `app/api/team/` | Cargos, membros e convites empresariais |
 | `lib/auth.js` | JWT, cookie, sessão persistida e revogação |
 | `lib/organization-access.js` | Resolução de organização, proprietário e permissões |
 | `lib/billing-access.js` | Regra que decide se a assinatura bloqueia o acesso |
-| `lib/stripe.js` | Cliente Stripe e validação de variáveis de ambiente |
-| `lib/stripe-subscription.js` | Normalização segura de objetos e estados da Stripe |
+| `lib/pix.js` | Geração do código EMV Pix e leitura segura da configuração |
+| `lib/pix-db.js` | Solicitações, aprovação, rejeição e expiração dos pagamentos |
+| `lib/account-backup.js` | Exportação ZIP limitada, sem senha, sessão ou token |
 | `lib/inventory-import.js` | Leitura de CSV, TSV, TXT e XLSX e normalização das colunas |
 | `lib/db.js` | Persistência PostgreSQL/Neon e fallback SQLite local |
 | `migrations/` | Alterações versionadas do banco PostgreSQL |
@@ -56,21 +58,20 @@ Ao criar uma rota nova:
 4. valide formato, tamanho e origem da requisição;
 5. não retorne diferenças que permitam descobrir registros de outra empresa.
 
-## Fluxo da assinatura Stripe
+## Fluxo da assinatura por Pix
 
 ```text
-Proprietário → POST /api/stripe/checkout → Checkout hospedado pela Stripe
-Stripe → webhook assinado → consulta do estado mais recente da assinatura
-       → banco local → getBillingAccess → liberação ou bloqueio do ERP
+Proprietário → POST /api/pix → código individual + chamado interno + aviso opcional no WhatsApp
+Administrador → confere o extrato → aprova ou rejeita na central privada
+Banco local → getBillingAccess → liberação por 30 dias ou bloqueio
+Rejeição/expiração → ZIP sem credenciais → Resend → e-mail verificado do proprietário
 ```
 
-- `STRIPE_SECRET_KEY` é exclusiva do servidor.
-- `STRIPE_PRICE_ID` representa R$ 60 mensais.
-- `STRIPE_SETUP_PRICE_ID` representa R$ 120 cobrados uma vez no primeiro Checkout.
-- `STRIPE_WEBHOOK_SECRET` valida que o evento veio da Stripe.
-- `BILLING_ENFORCEMENT_ENABLED` funciona como chave de ativação controlada. Enquanto não for `true`, a integração pode ser testada sem bloquear clientes existentes.
-- Eventos são deduplicados pelo ID da Stripe.
-- Como webhooks podem chegar fora de ordem, o sistema consulta a assinatura atual antes de gravar o estado.
+- `PIX_KEY` existe somente no servidor e é retornada dentro do código Pix apenas ao proprietário autenticado.
+- `PIX_MONTHLY_AMOUNT_CENTS` representa R$ 60 mensais e `PIX_SETUP_AMOUNT_CENTS` os R$ 120 iniciais.
+- uma solicitação pendente é reutilizada para impedir cobranças duplicadas por cliques repetidos.
+- `CRON_SECRET` protege o processamento periódico de vencimentos e backups.
+- `BILLING_ENFORCEMENT_ENABLED` permanece `false` até o fluxo completo ser homologado.
 
 ## Importação de estoque
 
@@ -282,13 +283,14 @@ Este catálogo cobre os commits funcionais existentes até `630c446`. O hash cur
 | `432d017` | 12/08 | `fix/ux` layout móvel | Centralizou os botões, transformou Recursos, Planos, Jurídico e Login em ações roxas com estados interativos e criou uma barra inferior segura e responsiva no celular. |
 | `e67a270` | 12/08 | `docs` layout móvel | Registrou no catálogo a revisão de interface e navegação móvel. |
 | `66a836a` | 12/08 | `chore` Analytics | Substituiu a propriedade pública do GA4 pela nova conta e manteve o carregamento condicionado ao consentimento analítico. |
+| `0bbd708` | 12/08 | `feat` assinatura Pix | Removeu a integração ativa da Stripe, criou Pix manual com aprovação administrativa, expiração diária e backup idempotente por e-mail. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 66a836a..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 0bbd708..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

@@ -4,7 +4,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
-**Estado atual:** ERP web funcional com autenticação por e-mail, workspace multiempresa, estoque relacional, equipe por cargos, documentos jurídicos, integração Google Drive e cobrança Stripe preparada. A ativação obrigatória da assinatura permanece controlada pela variável `BILLING_ENFORCEMENT_ENABLED`.
+**Estado atual:** ERP web funcional com autenticação por e-mail, workspace multiempresa, estoque relacional, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix com conferência manual. A ativação obrigatória da assinatura permanece controlada pela variável `BILLING_ENFORCEMENT_ENABLED`.
 
 ## Funcionalidades
 
@@ -39,7 +39,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Valores de entrada exibidos com sinal positivo e verde; saídas e gastos com sinal negativo e vermelho.
 - Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
 - Cadastro diferenciado para pessoa física e empresa.
-- Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Checkout hospedado, portal do cliente e confirmação por webhook assinado.
+- Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Pix Copia e Cola individual, aviso por WhatsApp e confirmação exclusiva do administrador.
 - Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
 - Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
@@ -137,17 +137,20 @@ JWT_SECRET=gere-um-segredo-longo-e-aleatorio
 DATABASE_URL=postgresql://usuario:senha@host/banco
 ```
 
-Para testar a cobrança, use exclusivamente chaves de teste fora de produção:
+Para testar a cobrança por Pix, configure somente no servidor:
 
 ```env
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PRICE_ID=price_...
-STRIPE_SETUP_PRICE_ID=price_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+PIX_KEY=sua-chave-pix
+PIX_RECEIVER_NAME=NOME DO TITULAR
+PIX_RECEIVER_CITY=MAIRINQUE
+PIX_MONTHLY_AMOUNT_CENTS=6000
+PIX_SETUP_AMOUNT_CENTS=12000
+PIX_PAYMENT_TTL_HOURS=72
+CRON_SECRET=gere-um-segredo-longo-e-aleatorio
 BILLING_ENFORCEMENT_ENABLED=false
 ```
 
-As chaves `live` devem existir somente no ambiente Production da Vercel. Ative `BILLING_ENFORCEMENT_ENABLED=true` apenas depois de configurar o webhook, aplicar as migrations e concluir uma compra de teste de ponta a ponta.
+`PIX_KEY` não usa `NEXT_PUBLIC_`: o servidor só a entrega ao proprietário autenticado que solicitar o pagamento. Ative `BILLING_ENFORCEMENT_ENABLED=true` apenas depois de aplicar a migration, testar geração, aprovação, expiração e recebimento do backup por e-mail.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -255,7 +258,7 @@ A rotina de capacitação para proprietários e funcionários está em [GUIA-OPE
 
 O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
 
-Para entender responsabilidades dos arquivos, autenticação, IDOR, Stripe, planilhas e critérios de comentários, leia [GUIA-DO-CODIGO.md](./docs/GUIA-DO-CODIGO.md).
+Para entender responsabilidades dos arquivos, autenticação, IDOR, Pix, planilhas e critérios de comentários, leia [GUIA-DO-CODIGO.md](./docs/GUIA-DO-CODIGO.md). A operação da assinatura está em [PIX-MANUAL.md](./docs/PIX-MANUAL.md) e as proteções do banco em [SEGURANCA-DO-BANCO.md](./docs/SEGURANCA-DO-BANCO.md).
 
 O padrão de branches, mensagens de commit e checklist de publicação está em [CONTRIBUINDO.md](./docs/CONTRIBUINDO.md).
 

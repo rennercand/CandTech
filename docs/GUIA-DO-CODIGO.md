@@ -280,13 +280,15 @@ Este catálogo cobre os commits funcionais existentes até `630c446`. O hash cur
 | Commit | Data | Identificação | O que mudou |
 | --- | --- | --- | --- |
 | `432d017` | 12/08 | `fix/ux` layout móvel | Centralizou os botões, transformou Recursos, Planos, Jurídico e Login em ações roxas com estados interativos e criou uma barra inferior segura e responsiva no celular. |
+| `e67a270` | 12/08 | `docs` layout móvel | Registrou no catálogo a revisão de interface e navegação móvel. |
+| `66a836a` | 12/08 | `chore` Analytics | Substituiu a propriedade pública do GA4 pela nova conta e manteve o carregamento condicionado ao consentimento analítico. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 432d017..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 66a836a..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

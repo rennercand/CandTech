@@ -30,8 +30,7 @@
     "pdfjs-dist": "^6.2.108",
     "pdfkit": "^0.19.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "stripe": "^22.5.0"
+    "react-dom": "^19.2.8"
   },
   "overrides": {
     "postcss": "8.5.25",

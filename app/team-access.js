@@ -223,7 +223,7 @@ export default function TeamAccess() {
   return (
     <div className="business-stack team-access-page">
       <section className="panel team-owner-panel">
-        <div className="panel-heading"><div><span className="eyebrow">TITULAR DA ASSINATURA</span><h2>Proprietário da operação</h2><p>Este é o e-mail principal da empresa. Quando o pagamento estiver ativo, a confirmação segura do provedor de cobrança definirá este titular.</p></div><span className="role-pill">Acesso integral</span></div>
+        <div className="panel-heading"><div><span className="eyebrow">TITULAR DA ASSINATURA</span><h2>Proprietário da operação</h2><p>Este é o e-mail principal da empresa e a conta responsável por solicitar o Pix e receber a confirmação do pagamento.</p></div><span className="role-pill">Acesso integral</span></div>
         {owner && <div className="team-owner-summary"><span className="avatar">{owner.name?.[0]?.toUpperCase() || "?"}</span><div><strong>{owner.name}</strong><small>{owner.email}</small></div><div className="team-owner-badges"><span>Proprietário</span><small>Não pode ser removido nem rebaixado por colaboradores.</small></div></div>}
       </section>
 

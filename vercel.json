@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/pix-expiration",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}

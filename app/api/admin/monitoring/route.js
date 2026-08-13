@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdministrator } from "@/lib/admin-access";
-import { listMonitoringEvents, listSupportTicketsForAdmin, replySupportTicket, updateMonitoringEventStatus } from "@/lib/db";
+import { appendAuditEvent, listMonitoringEvents, listSupportTicketsForAdmin, replySupportTicket, updateMonitoringEventStatus } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
+import { listPixPaymentsForAdmin, reviewPixPayment } from "@/lib/pix-db";
+import { processPixExpirations } from "@/lib/pix-expiration";
 
 export const runtime = "nodejs";
 
@@ -21,14 +23,16 @@ export async function GET(request) {
   const auth = await authorize(request);
   if (auth.response) return auth.response;
   try {
-    const [events, tickets] = await Promise.all([listMonitoringEvents(), listSupportTicketsForAdmin()]);
+    const [events, tickets, payments] = await Promise.all([listMonitoringEvents(), listSupportTicketsForAdmin(), listPixPaymentsForAdmin()]);
     return NextResponse.json({
       events,
       tickets,
+      payments,
       totals: {
         openEvents: events.filter((item) => item.status !== "resolved").length,
         criticalEvents: events.filter((item) => item.level === "error" && item.status !== "resolved").length,
         openTickets: tickets.filter((item) => item.status === "open").length,
+        pendingPayments: payments.filter((item) => item.status === "pending").length,
       },
       checkedAt: new Date().toISOString(),
     }, { headers: { "Cache-Control": "private, no-store" } });
@@ -58,6 +62,14 @@ export async function PATCH(request) {
       const ticket = await replySupportTicket({ id: String(body.id || ""), reply, status: body.status });
       if (!ticket) return NextResponse.json({ error: "Mensagem não encontrada." }, { status: 404 });
       return NextResponse.json({ ticket });
+    }
+    if (body.type === "payment") {
+      if (!["approve", "reject"].includes(body.action)) return NextResponse.json({ error: "Ação de pagamento inválida." }, { status: 400 });
+      const payment = await reviewPixPayment({ id: String(body.id || ""), approved: body.action === "approve", administratorId: auth.user.id });
+      if (!payment) return NextResponse.json({ error: "Pagamento pendente não encontrado." }, { status: 404 });
+      await appendAuditEvent({ userId: payment.userId, action: body.action === "approve" ? "pix.payment_approved" : "pix.payment_rejected", metadata: { paymentId: payment.id, administratorId: auth.user.id } });
+      if (body.action === "reject") await processPixExpirations();
+      return NextResponse.json({ payment });
     }
     return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
   } catch (error) {

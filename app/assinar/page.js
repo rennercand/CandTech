@@ -1,119 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
 import { trackMarketingEvent } from "../../lib/analytics";
 
-const emptyProfile = {
-  accountType: "person", legalName: "", phone: "", postalCode: "",
-  address: "", addressNumber: "", complement: "", district: "", city: "", state: "",
-  subscriptionStatus: "not_subscriber",
-  paymentProvider: "",
-};
-
-const plans = [
-  {
-    name: "CandTech Negócio", eyebrow: "PLANO ÚNICO", monthlyPrice: "R$ 60/mês",
-    setupPrice: "+ R$ 120 de implantação na primeira cobrança",
-    description: "Preço fixo por empresa, sem cobrança adicional por funcionário convidado.",
-    features: ["Financeiro, estoque e pedidos", "Equipe com cargos e permissões", "Importação e exportação de planilhas", "Histórico e relatórios"],
-  },
-];
+const emptyProfile = { accountType: "person", legalName: "", phone: "", subscriptionStatus: "not_subscriber", paymentProvider: "" };
+const features = ["Financeiro, estoque e pedidos", "Equipe com cargos e permissões", "Importação e exportação de planilhas", "Histórico e relatórios"];
 
 export default function SubscribePage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(emptyProfile);
+  const [payment, setPayment] = useState(null);
+  const [contact, setContact] = useState(null);
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     trackMarketingEvent("view_subscription", { source: "subscription_page" });
-    const checkoutResult = new URLSearchParams(window.location.search).get("checkout");
-    if (checkoutResult === "success") setMessage("Checkout concluído. O acesso será atualizado após a confirmação assinada da Stripe.");
-    if (checkoutResult === "cancelled") setMessage("Checkout cancelado. Nenhuma nova assinatura foi criada.");
-    Promise.all([
-      fetch("/api/auth/me", { cache: "no-store" }),
-      fetch("/api/profile", { cache: "no-store" }),
-    ]).then(async ([sessionResponse, profileResponse]) => {
-      if (sessionResponse.ok) setUser((await sessionResponse.json()).user);
-      if (profileResponse.ok) setProfile({ ...emptyProfile, ...(await profileResponse.json()).profile });
-      setStatus("ready");
-    }).catch(() => setStatus("ready"));
+    Promise.all([fetch("/api/auth/me", { cache: "no-store" }), fetch("/api/profile", { cache: "no-store" })])
+      .then(async ([sessionResponse, profileResponse]) => {
+        const session = sessionResponse.ok ? (await sessionResponse.json()).user : null;
+        if (session) {
+          setUser(session);
+          const pixResponse = await fetch("/api/pix", { cache: "no-store" });
+          if (pixResponse.ok) { const pix = await pixResponse.json(); setPayment(pix.payment); setContact(pix.contact); }
+        }
+        if (profileResponse.ok) setProfile({ ...emptyProfile, ...(await profileResponse.json()).profile });
+        setStatus("ready");
+      }).catch(() => setStatus("ready"));
   }, []);
 
+  const whatsappUrl = useMemo(() => {
+    if (!contact?.whatsapp || !payment) return "";
+    return `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(`Olá, realizei o Pix da CandTech. Referência: ${payment.txid}. Valor: ${payment.amount}.`)}`;
+  }, [contact, payment]);
   const update = (field, value) => setProfile((current) => ({ ...current, [field]: value }));
+
   async function saveProfile(event) {
-    event.preventDefault();
-    setStatus("saving");
-    setMessage("");
-    const response = await fetch("/api/profile", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile),
-    });
-    const data = await response.json();
-    setStatus("ready");
+    event.preventDefault(); setStatus("saving"); setMessage("");
+    const response = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile) });
+    const data = await response.json(); setStatus("ready");
     if (!response.ok) return setMessage(data.error || "Não foi possível salvar os dados.");
-    setProfile({ ...emptyProfile, ...data.profile });
-    trackMarketingEvent("generate_lead", { source: "billing_profile", account_type: data.profile?.accountType || profile.accountType });
-    setMessage("Dados de cobrança preparados. Nenhuma cobrança foi realizada.");
+    setProfile({ ...emptyProfile, ...data.profile }); setMessage("Cadastro salvo. Agora você pode gerar o Pix.");
   }
-  async function openStripe(path) {
-    setStatus("redirecting"); setMessage("");
+
+  async function generatePix() {
+    setStatus("generating"); setMessage("");
     try {
-      const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const response = await fetch("/api/pix", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       const data = await response.json();
-      if (!response.ok || !data.url) throw new Error(data.error || "Não foi possível abrir a Stripe.");
-      window.location.assign(data.url);
-    } catch (error) {
-      setMessage(error.message); setStatus("ready");
-    }
+      if (!response.ok) throw new Error(data.error || "Não foi possível gerar o Pix.");
+      setPayment(data.payment); setContact(data.contact);
+      setMessage(data.created ? "Pix gerado e aviso enviado à central da CandTech." : "Você já possui um Pix aguardando confirmação.");
+    } catch (error) { setMessage(error.message); } finally { setStatus("ready"); }
   }
 
+  async function copyPix() {
+    await navigator.clipboard.writeText(payment.pixCode);
+    setMessage("Código Pix copiado. Após pagar, avise pelo WhatsApp ou acompanhe a confirmação nesta página.");
+  }
+
+  const active = profile.subscriptionStatus === "active" || user?.subscriptionStatus === "active";
   return <main className={styles.page}>
-    <nav className={styles.nav}><a href="/" className={styles.brand}><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</a><a href="/" className={styles.back}>Voltar ao painel</a></nav>
-    <header className={styles.hero}>
-      <span>ASSINATURAS CANDTECH</span>
-      <h1>Um preço simples para organizar sua empresa.</h1>
-      <p>Assinatura mensal fixa, com implantação cobrada apenas na primeira contratação. O pagamento acontece no Checkout hospedado da Stripe.</p>
-      <div className={styles.statusPill}>{profile.subscriptionStatus === "active" ? "Assinatura ativa" : "Stripe em configuração"}</div>
-    </header>
-
-    <section className={styles.plans} style={{ maxWidth: "460px", gridTemplateColumns: "1fr" }} aria-label="Plano de assinatura">
-      {plans.map((plan, index) => <article className={styles.planCard} style={{ "--delay": `${index * 180}ms` }} key={plan.name}>
-        <span>{plan.eyebrow}</span><h2>{plan.name}</h2>
-        <strong style={{ display: "block", color: "#241b55", fontSize: "34px", letterSpacing: "-.04em" }}>{plan.monthlyPrice}</strong>
-        <small style={{ display: "block", margin: "6px 0 18px", color: "#6b54df", fontWeight: 800 }}>{plan.setupPrice}</small><p>{plan.description}</p>
-        <ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
-        <button type="button" disabled>Contratação pelo checkout seguro abaixo</button>
-      </article>)}
-    </section>
-
+    <nav className={styles.nav}><a href="/" className={styles.brand}><img className="brand-mark" src="/candtech-mark.svg" alt=""/> CandTech</a><a href="/" className={styles.back}>Voltar ao painel</a></nav>
+    <header className={styles.hero}><span>ASSINATURA POR PIX</span><h1>Um preço simples para organizar sua empresa.</h1><p>O Pix é gerado pela CandTech e conferido manualmente. Nenhum dado bancário, senha ou cartão é armazenado no sistema.</p><div className={styles.statusPill}>{active ? "Assinatura ativa" : payment?.status === "pending" ? "Pix aguardando conferência" : "Pagamento por Pix"}</div></header>
+    <section className={styles.plans} style={{ maxWidth: "460px", gridTemplateColumns: "1fr" }} aria-label="Plano de assinatura"><article className={styles.planCard} style={{ "--delay": "0ms" }}><span>PLANO ÚNICO</span><h2>CandTech Negócio</h2><strong className={styles.planPrice}>R$ 60/mês</strong><small className={styles.setupPrice}>+ R$ 120 de implantação apenas no primeiro Pix</small><p>Preço fixo por empresa, sem cobrança adicional por funcionário convidado.</p><ul>{features.map((feature) => <li key={feature}>{feature}</li>)}</ul></article></section>
     <section className={styles.billingSection}>
-      <div className={styles.billingIntro}>
-        <span>DADOS DE COBRANÇA</span><h2>Deixe seu cadastro preparado</h2>
-        <p>Guardamos somente nome, contato, endereço e o status da assinatura. Os dados de pagamento são informados diretamente no ambiente da Stripe.</p>
-        <div className={styles.paymentPreview} aria-label="Proteções do pagamento">
-          <div><b>Checkout</b><small>Hospedado</small></div><div><b>Cartão</b><small>Na Stripe</small></div><div><b>Portal</b><small>Cancelamento</small></div>
-        </div>
-      </div>
-      {!user && status === "ready" ? <div className={styles.signInCard}>
-        <span>PRIMEIRO PASSO</span><h3>Crie sua conta para preparar o cadastro</h3><p>Você poderá escolher pessoa física ou empresa durante o registro.</p><a href="/?cadastro=1">Criar minha conta</a><small>Já tem conta? <a href="/">Entrar</a></small>
-      </div> : <form className={styles.form} onSubmit={saveProfile}>
-        <div className={styles.typeToggle}>
-          <button type="button" className={profile.accountType === "person" ? styles.active : ""} onClick={() => update("accountType", "person")}>Pessoa física</button>
-          <button type="button" className={profile.accountType === "company" ? styles.active : ""} onClick={() => update("accountType", "company")}>Empresa</button>
-        </div>
-        <label>{profile.accountType === "person" ? "Nome completo" : "Razão social"}<input required maxLength="120" value={profile.legalName} onChange={(e) => update("legalName", e.target.value)} /></label>
-        <div className={styles.twoColumns}><label>Telefone<input value={profile.phone} onChange={(e) => update("phone", e.target.value)} /></label><label>CEP<input inputMode="numeric" value={profile.postalCode} onChange={(e) => update("postalCode", e.target.value)} /></label></div>
-        <label>Endereço<input value={profile.address} onChange={(e) => update("address", e.target.value)} /></label>
-        <div className={styles.threeColumns}><label>Número<input value={profile.addressNumber} onChange={(e) => update("addressNumber", e.target.value)} /></label><label>Bairro<input value={profile.district} onChange={(e) => update("district", e.target.value)} /></label><label>Complemento<input value={profile.complement} onChange={(e) => update("complement", e.target.value)} /></label></div>
-        <div className={styles.twoColumns}><label>Cidade<input value={profile.city} onChange={(e) => update("city", e.target.value)} /></label><label>UF<input maxLength="2" value={profile.state} onChange={(e) => update("state", e.target.value.toUpperCase())} /></label></div>
-        {message && <p className={message.startsWith("Dados") || message.startsWith("Checkout concluído") ? styles.success : styles.error}>{message}</p>}
-        <button className={styles.save} disabled={status !== "ready"}>{status === "saving" ? "Salvando…" : "Salvar dados de cobrança"}</button>
-        {profile.paymentProvider === "stripe" && profile.subscriptionStatus !== "not_subscriber"
-          ? <button type="button" className={styles.save} disabled={status !== "ready"} onClick={() => openStripe("/api/stripe/portal")}>Gerenciar assinatura na Stripe</button>
-          : <button type="button" className={styles.save} disabled={status !== "ready"} onClick={() => openStripe("/api/stripe/checkout")}>{status === "redirecting" ? "Abrindo Stripe…" : "Continuar para checkout seguro"}</button>}
-        <small className={styles.notice}>Salvar o cadastro não cobra nada. O checkout mostra o preço e a periodicidade antes da confirmação, e o retorno do navegador nunca libera acesso sozinho.</small>
-      </form>}
+      <div className={styles.billingIntro}><span>PIX SEGURO</span><h2>Pagamento com conferência humana</h2><p>Ao gerar o código, uma solicitação aparece na central administrativa. O acesso só é liberado depois que o recebimento é confirmado.</p><div className={styles.paymentPreview}><div><b>1. Gere</b><small>Copia e Cola</small></div><div><b>2. Pague</b><small>No seu banco</small></div><div><b>3. Avise</b><small>Site ou WhatsApp</small></div></div></div>
+      {!user && status === "ready" ? <div className={styles.signInCard}><span>PRIMEIRO PASSO</span><h3>Entre para gerar seu Pix</h3><p>A cobrança ficará vinculada somente à empresa autenticada.</p><a href="/?cadastro=1">Criar minha conta</a><small>Já tem conta? <a href="/?entrar=1">Entrar</a></small></div> : <div className={styles.form}>
+        <form className={styles.profileForm} onSubmit={saveProfile}><div className={styles.typeToggle}><button type="button" className={profile.accountType === "person" ? styles.active : ""} onClick={() => update("accountType", "person")}>Pessoa física</button><button type="button" className={profile.accountType === "company" ? styles.active : ""} onClick={() => update("accountType", "company")}>Empresa</button></div><label>{profile.accountType === "person" ? "Nome completo" : "Razão social"}<input required maxLength="120" value={profile.legalName} onChange={(event) => update("legalName", event.target.value)}/></label><label>Telefone para contato<input value={profile.phone} onChange={(event) => update("phone", event.target.value)}/></label><button className={styles.save} disabled={status !== "ready"}>{status === "saving" ? "Salvando…" : "Salvar contato"}</button></form>
+        {!active && payment?.status === "pending" && payment.pixCode ? <div className={styles.pixBox}><span>PIX COPIA E COLA</span><strong>{payment.amount}</strong><small>Referência {payment.txid} · válido até {new Date(payment.dueAt).toLocaleString("pt-BR")}</small><textarea readOnly rows="5" value={payment.pixCode} aria-label="Código Pix Copia e Cola"/><button type="button" className={styles.save} onClick={copyPix}>Copiar código Pix</button>{whatsappUrl && <a className={styles.whatsapp} href={whatsappUrl} target="_blank" rel="noreferrer">Avisar pagamento pelo WhatsApp</a>}<small className={styles.notice}>A solicitação também já foi enviada para a central interna. A tela sozinha não aprova o pagamento.</small></div> : !active && <button type="button" className={styles.save} disabled={status !== "ready" || !user} onClick={generatePix}>{status === "generating" ? "Gerando…" : "Gerar Pix"}</button>}
+        {active && <p className={styles.success}>Pagamento confirmado. Sua empresa está com acesso ativo.</p>}{message && <p className={message.startsWith("Não") || message.includes("configurado") ? styles.error : styles.success}>{message}</p>}
+      </div>}
     </section>
   </main>;
 }

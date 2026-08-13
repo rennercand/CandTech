@@ -731,6 +731,8 @@ select:focus {
 .ticket-status { display: inline-flex; width: max-content; padding: 5px 9px; border-radius: 999px; background: #fff3cf; color: #8a5b00; font-size: .7rem; font-weight: 850; }
 .ticket-status.answered { background: #e8f8f0; color: #16724d; }
 .ticket-status.closed { background: #edf0f5; color: #526072; }
+.ticket-status.approved { background: #dcfce7; color: #166534; }
+.ticket-status.rejected, .ticket-status.expired { background: #fee2e2; color: #991b1b; }
 .admin-monitor-link { display: inline-flex; margin-top: 18px; text-decoration: none; }
 
 /* Central privada: visual de operação separado do ambiente financeiro do cliente. */
@@ -757,7 +759,7 @@ select:focus {
 .monitor-header button, .monitor-ticket-actions button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #d4d9e4; border-radius: 10px; background: white; color: var(--monitor-ink); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; transition: border-color .2s ease, box-shadow .2s ease; }
 .monitor-header button:hover, .monitor-ticket-actions button:hover { border-color: #8c7bdd; box-shadow: 0 8px 20px rgba(48, 36, 110, .08); }
 .monitor-header button:disabled, .monitor-ticket-actions button:disabled { cursor: wait; opacity: .55; }
-.monitor-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 30px 0 18px; }
+.monitor-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 30px 0 18px; }
 .monitor-metrics article { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--monitor-line); border-radius: 15px; background: white; box-shadow: 0 7px 24px rgba(27, 35, 58, .04); animation: monitor-card-in .35s ease both; }
 .monitor-metrics article:nth-child(2) { animation-delay: 50ms; }.monitor-metrics article:nth-child(3) { animation-delay: 100ms; }
 .monitor-metrics svg { width: 22px; height: 22px; padding: 10px; box-sizing: content-box; border-radius: 12px; color: #674ed4; background: #f0ecff; }

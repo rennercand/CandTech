@@ -4,10 +4,10 @@ export default function PublicHome() {
       <header className="public-home-header">
         <a className="public-home-brand" href="/" aria-label="CandTech — página inicial"><img className="brand-mark" src="/candtech-mark.svg" alt="" />CandTech</a>
         <nav aria-label="Navegação pública">
-          <a href="#recursos">Recursos</a>
-          <a href="/assinar">Planos</a>
-          <a href="/juridico">Jurídico</a>
-          <a href="/?entrar=1">Entrar</a>
+          <a className="public-nav-link public-nav-secondary" href="#recursos">Recursos</a>
+          <a className="public-nav-link" href="/assinar">Planos</a>
+          <a className="public-nav-link" href="/juridico">Jurídico</a>
+          <a className="public-nav-link" href="/?entrar=1">Login</a>
         </nav>
       </header>
 

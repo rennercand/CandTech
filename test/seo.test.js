@@ -20,6 +20,18 @@ test("página inicial mantém os sinais essenciais verificados pelo Screaming Fr
   assert.match(page, /alternates:\s*\{ canonical: SITE_URL \}/);
 });
 
+test("navegação pública vira barra inferior acessível no celular", () => {
+  const publicHome = readFileSync(join(projectRoot, "app", "public-home.js"), "utf8");
+  const styles = readFileSync(join(projectRoot, "app", "globals.css"), "utf8");
+
+  assert.match(publicHome, /public-nav-link[^>]*href="\/assinar">Planos/);
+  assert.match(publicHome, /public-nav-link[^>]*href="\/juridico">Jurídico/);
+  assert.match(publicHome, /public-nav-link[^>]*href="\/\?entrar=1">Login/);
+  assert.match(styles, /\.public-nav-link\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*center/s);
+  assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.public-home-header nav\s*\{[^}]*position:\s*fixed/s);
+  assert.match(styles, /\.public-nav-link:hover,[\s\S]*?background:\s*#fff[^}]*color:\s*#5739d7/);
+});
+
 test("política de marca está ligada aos termos, rodapé e sitemap", () => {
   const policy = readFileSync(join(projectRoot, "app", "propriedade-intelectual", "page.js"), "utf8");
   const terms = readFileSync(join(projectRoot, "app", "termos", "page.js"), "utf8");

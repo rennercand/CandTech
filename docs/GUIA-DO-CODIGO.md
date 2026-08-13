@@ -273,13 +273,20 @@ Este catálogo cobre os commits funcionais existentes até `630c446`. O hash cur
 | `2627a67` | 11/08 | `fix/security` e-mail único | Normalizou e-mails, arquivou duplicatas históricas com sessões revogadas, criou a garantia única no banco e passou a orientar o usuário a entrar ou recuperar a senha. |
 | `7f3f78c` | 11/08 | `docs` e-mail único | Registrou no catálogo a proteção contra contas duplicadas por e-mail. |
 | `8b8f27e` | 11/08 | `fix/ux` cadastro e menu | Exibiu o aviso de conta existente junto ao e-mail, com ações de recuperação, e manteve a conta e a saída visíveis na lateral enquanto os módulos rolam. |
+| `0f9c9ce` | 11/08 | `docs` cadastro e menu | Registrou no catálogo a correção do aviso de conta existente e da navegação lateral. |
+
+### Interface móvel e navegação pública — 12 de agosto de 2026
+
+| Commit | Data | Identificação | O que mudou |
+| --- | --- | --- | --- |
+| `432d017` | 12/08 | `fix/ux` layout móvel | Centralizou os botões, transformou Recursos, Planos, Jurídico e Login em ações roxas com estados interativos e criou uma barra inferior segura e responsiva no celular. |
 
 ### Como manter o catálogo
 
 Para listar revisões ainda não documentadas:
 
 ```bash
-git log 8b8f27e..HEAD --date=short --pretty=format:"%h | %ad | %s"
+git log 432d017..HEAD --date=short --pretty=format:"%h | %ad | %s"
 ```
 
 Ao atualizar a tabela, descreva o resultado observável e não apenas copie a mensagem do commit. Não altere hashes ou explicações históricas para fazer o passado parecer diferente; correções devem ser registradas em uma nova linha.

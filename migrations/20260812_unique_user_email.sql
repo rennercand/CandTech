@@ -1,5 +1,5 @@
 -- Normaliza a identidade de login e preserva dados de contas antigas duplicadas.
--- A aplicação executa a mesma estratégia de forma idempotente ao inicializar.
+-- Este reparo é executado somente como migration controlada, nunca no runtime.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'active';
 
 WITH ranked AS (

@@ -115,7 +115,7 @@ O saldo acumulado não representa automaticamente o saldo bancário anterior ao 
 
 ## Banco e migrations
 
-Em produção, `DATABASE_URL` aponta para PostgreSQL/Neon. No desenvolvimento sem essa variável, o projeto usa SQLite. Mudanças estruturais destinadas à produção devem ganhar uma migration em `migrations/`; inicializações automáticas existem para compatibilidade, mas não substituem o histórico versionado.
+Em produção, `DATABASE_URL` aponta para PostgreSQL/Neon. No desenvolvimento sem essa variável, o projeto usa SQLite. Mudanças estruturais destinadas à produção devem ganhar uma migration em `migrations/` e ser aplicadas, em ordem, antes do deploy. Somente o SQLite local cria tabelas automaticamente; o runtime Postgres não executa DDL nem reparos de dados.
 
 ## Como adicionar uma API privada
 

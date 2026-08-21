@@ -211,7 +211,9 @@ public/
 
 ## Banco de dados
 
-As tabelas são criadas automaticamente na primeira utilização:
+No SQLite local, as tabelas são criadas automaticamente. No PostgreSQL/Neon,
+aplique os arquivos de `migrations/` em ordem antes do deploy; as APIs nunca
+executam DDL durante uma requisição:
 
 - `users`: nome, e-mail e hash da senha;
 - `histories`: cálculos, organizações e rascunhos salvos por usuário;
@@ -229,6 +231,7 @@ As tabelas são criadas automaticamente na primeira utilização:
 - Na Vercel, o backend usa PostgreSQL Serverless do Neon por meio de `DATABASE_URL`.
 - Somente Route Handlers e bibliotecas executadas no servidor acessam essa variável; ela não entra no JavaScript do navegador nem nos payloads da API.
 - `lib/db.js` inicializa a conexão de forma tardia e reutiliza a mesma Promise durante a vida da instância serverless.
+- no Neon, `CREATE`, `ALTER`, índices e reparos ficam exclusivamente nas migrations versionadas, evitando concorrência entre cold starts;
 - As consultas usam parâmetros do driver Neon e os registros privados sempre incluem o `user_id` obtido da sessão.
 - Em desenvolvimento local, quando `DATABASE_URL` não existe, o sistema usa `data/finsight.sqlite`. Esse arquivo é apenas um fallback local e não deve ser usado na Vercel.
 - As credenciais de conexão de Production e Preview ficam como variáveis `Sensitive` na Vercel. Dados de usuários, extratos e payloads ficam no banco, nunca em variáveis de ambiente.

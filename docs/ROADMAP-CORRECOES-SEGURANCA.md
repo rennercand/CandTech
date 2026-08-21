@@ -159,6 +159,7 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 - **Risco:** credencial da aplicação precisa criar estruturas; comprometimento dessa credencial tem impacto maior e inicializações concorrentes adicionam operações administrativas ao caminho de requisição.
 - **Correção:** migrations versionadas fora do runtime; usuário da aplicação limitado a `SELECT/INSERT/UPDATE/DELETE` nas tabelas necessárias.
 - **Aceite:** build/deploy executa migrations controladas e a credencial de runtime não possui `CREATE/ALTER/DROP`.
+- **Situação em 20/08/2026:** DDL e reparos foram removidos do runtime PostgreSQL e há teste de regressão. Permanece pendente confirmar no Neon que a credencial da aplicação não possui privilégios DDL.
 
 ## P2 — Endurecimento empresarial
 

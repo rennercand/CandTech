@@ -1,5 +1,4 @@
--- A aplicação também cria estas estruturas de forma idempotente ao iniciar.
--- Esta migração existe para auditoria e execução manual controlada no Neon.
+-- Execute de forma controlada no Neon antes do deploy da aplicação.
 CREATE TABLE IF NOT EXISTS organizations (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,

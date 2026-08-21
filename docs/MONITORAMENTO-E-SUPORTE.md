@@ -71,7 +71,7 @@ Pagamentos Pix: `pending`, `approved`, `rejected`, `expired`.
 
 ## Banco e migração
 
-A inicialização cria as tabelas tanto no PostgreSQL/Neon quanto no SQLite local. Para ambientes em que migrations são aplicadas separadamente, execute `migrations/20260811_monitoring_and_support.sql` e `migrations/20260812_manual_pix.sql` antes do deploy.
+O SQLite local cria as tabelas automaticamente. No PostgreSQL/Neon, execute `migrations/20260811_monitoring_and_support.sql` e `migrations/20260812_manual_pix.sql` antes do deploy; o runtime não altera a estrutura do banco.
 
 ## Verificação antes de publicar
 

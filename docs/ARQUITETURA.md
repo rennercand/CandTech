@@ -94,8 +94,9 @@ mindmap
 
 1. se `DATABASE_URL` existir, carrega `@neondatabase/serverless` e conecta ao PostgreSQL/Neon;
 2. se ela não existir, cria `data/finsight.sqlite` para desenvolvimento local;
-3. a Promise de inicialização é reutilizada na mesma instância para evitar inicializações repetidas;
-4. `CREATE TABLE IF NOT EXISTS` garante o schema básico, embora migrations versionadas ainda sejam recomendadas antes do uso empresarial.
+3. a Promise de conexão é reutilizada na mesma instância;
+4. no PostgreSQL, o schema é preparado antecipadamente pelas migrations versionadas; nenhuma requisição executa `CREATE` ou `ALTER`;
+5. somente o SQLite local cria o schema automaticamente para facilitar desenvolvimento e testes.
 
 ### Dados persistidos
 

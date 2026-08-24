@@ -25,7 +25,7 @@ Portanto, esta roadmap trata esse caso como limite de payload e proteção contr
 | P0 | Sessões revogáveis | Reutilização de token roubado |
 | P0 | Autorização multiempresa | Acesso cruzado entre empresas |
 | P1 | Auditoria e alertas | Alterações sem rastreabilidade |
-| P1 | CSP sem unsafe-inline | Impacto de XSS |
+| P1 | CSP com nonce por requisição | Impacto de XSS — concluído na branch `anterior` em 23/08/2026 |
 | P1 | Backup e resposta a incidentes | Perda de dados e recuperação lenta |
 | P2 | MFA e verificação de e-mail | Tomada de conta |
 | P2 | Pentest e monitoramento contínuo | Falhas não identificadas |

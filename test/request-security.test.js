@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { readLimitedJson, RequestBodyError } from "../lib/request-security.js";
 import { ANALYTICS_CONSENT_KEY, trackMarketingEvent } from "../lib/analytics.js";
 import nextConfig from "../next.config.mjs";
+import { buildContentSecurityPolicy } from "../lib/security-headers.js";
+import { validateWorkspacePayload } from "../lib/workspace-validation.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -89,16 +91,39 @@ test("revogação do Analytics cobre o host e o domínio principal", () => {
   assert.match(policy, new RegExp(ANALYTICS_CONSENT_KEY));
 });
 
-test("CSP permite somente os endpoints necessarios do Google Analytics", async () => {
-  const rules = await nextConfig.headers();
-  const csp = rules
-    .flatMap((rule) => rule.headers)
-    .find((header) => header.key === "Content-Security-Policy")?.value;
+test("CSP usa nonce por requisição e permite somente os endpoints necessários do Analytics", () => {
+  const csp = buildContentSecurityPolicy("nonceSeguro1234567890", { development: false });
 
+  assert.match(csp, /script-src[^;]*'nonce-nonceSeguro1234567890'/);
+  assert.match(csp, /script-src[^;]*'strict-dynamic'/);
   assert.match(csp, /script-src[^;]*https:\/\/www\.googletagmanager\.com/);
   assert.match(csp, /connect-src[^;]*https:\/\/\*\.google-analytics\.com/);
   assert.doesNotMatch(csp, /script-src[^;]*https:\/\/\*/);
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
+  assert.doesNotMatch(csp, /style-src (?![^;]*-attr)[^;]*'unsafe-inline'/);
   assert.doesNotMatch(csp, /unsafe-eval/, "produção e testes não devem liberar eval");
+});
+
+test("workspace rejeita sintaxe de caminho e mantém nomes comerciais normais", () => {
+  assert.equal(validateWorkspacePayload({ organizationName: "Padaria São José", cashEntries: [] }), true);
+  assert.equal(validateWorkspacePayload({ organizationName: "../etc/passwd" }), false);
+  assert.equal(validateWorkspacePayload({ organizationName: "..\\segredos\\arquivo" }), false);
+  assert.equal(validateWorkspacePayload({ organizationName: "%2e%2e%2f.env" }), false);
+  assert.equal(validateWorkspacePayload({ organizationName: "C:\\Windows\\win.ini" }), false);
+  assert.equal(validateWorkspacePayload({ organizationName: "Loja\u0000Oculta" }), false);
+});
+
+test("logout remove a sessão repetindo Secure, HttpOnly e SameSite", () => {
+  const route = readFileSync(join(projectRoot, "app", "api", "auth", "me", "route.js"), "utf8");
+  assert.match(route, /\.\.\.authCookie/);
+  assert.match(route, /maxAge:\s*0/);
+  assert.match(route, /expires:\s*new Date\(0\)/);
+});
+
+test("gravação do workspace não reflete o payload enviado", () => {
+  const route = readFileSync(join(projectRoot, "app", "api", "workspace", "route.js"), "utf8");
+  assert.match(route, /return NextResponse\.json\(savedWorkspaceMetadata\(workspace\)\)/);
+  assert.doesNotMatch(route, /return NextResponse\.json\(\{ workspace: \{ \.\.\.workspace, payload:/);
 });
 
 test("APIs e central administrativa nunca permitem cache compartilhado", async () => {

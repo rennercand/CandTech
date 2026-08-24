@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession, revokeSession } from "@/lib/auth";
+import { authCookie, getSession, revokeSession } from "@/lib/auth";
 import { appendAuditEvent } from "@/lib/db";
 import { getOrganizationAccess, publicAccess } from "@/lib/organization-access";
 import { guardMutation } from "@/lib/request-security";
@@ -40,6 +40,8 @@ export async function DELETE(request) {
     await appendAuditEvent({ userId: session.id, action: "session.revoked" });
   }
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("finsight_token", "", { httpOnly: true, path: "/", maxAge: 0 });
+  // A remoção precisa repetir os mesmos atributos do cookie original. Além de
+  // apagá-lo corretamente, isso evita uma resposta de logout sem Secure/SameSite.
+  response.cookies.set("finsight_token", "", { ...authCookie, maxAge: 0, expires: new Date(0) });
   return response;
 }

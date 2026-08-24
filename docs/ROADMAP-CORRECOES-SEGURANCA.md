@@ -151,6 +151,7 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 - **Risco:** uma futura falha de injeção terá impacto maior, pois código inline pode ser aceito. React reduz a exposição atual, mas não substitui CSP restritiva.
 - **Correção:** remover `unsafe-inline` de scripts com nonce/hash compatível com Next.js; avaliar estilos separadamente; adicionar testes de cabeçalhos.
 - **Aceite:** aplicação funciona em produção sem `unsafe-inline` em `script-src` e violações são monitoradas.
+- **Situação em 23/08/2026:** corrigido na branch `anterior`. Páginas usam nonce único por requisição e `strict-dynamic`; `script-src` e `style-src` não contêm `unsafe-inline`. Atributos de estilo usados por gráficos permanecem explicitamente separados em `style-src-attr`, e o build, a resposta HTTP e a renderização em navegador foram verificados.
 
 ### SEC-12 — Banco é criado durante a inicialização e exige privilégios DDL
 

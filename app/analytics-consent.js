@@ -21,7 +21,7 @@ function removeAnalyticsCookies() {
   });
 }
 
-export default function AnalyticsConsent() {
+export default function AnalyticsConsent({ nonce }) {
   const [choice, setChoice] = useState("loading");
   const configured = /^G-[A-Z0-9]+$/i.test(analyticsId);
 
@@ -43,7 +43,7 @@ export default function AnalyticsConsent() {
 
   return (
     <>
-      {configured && choice === "granted" ? <GoogleAnalytics gaId={analyticsId} /> : null}
+      {configured && choice === "granted" ? <GoogleAnalytics gaId={analyticsId} nonce={nonce} /> : null}
       {choice === "unset" ? (
         <aside className="cookie-banner" aria-label="Preferências de cookies">
           <div>

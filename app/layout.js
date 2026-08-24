@@ -2,6 +2,8 @@ import "./globals.css";
 import AnalyticsConsent from "./analytics-consent";
 import { HOME_DESCRIPTION, SITE_URL } from "@/lib/site";
 import MonitoringClient from "./monitoring-client";
+import { connection } from "next/server";
+import { headers } from "next/headers";
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
@@ -24,6 +26,10 @@ export const viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }) {
-  return <html lang="pt-BR"><body>{children}<AnalyticsConsent /><MonitoringClient /></body></html>;
+export default async function RootLayout({ children }) {
+  // A CSP usa um nonce diferente em cada resposta, portanto as páginas precisam
+  // ser renderizadas a partir da requisição em vez de reutilizar HTML estático.
+  await connection();
+  const nonce = (await headers()).get("x-nonce") || undefined;
+  return <html lang="pt-BR"><body>{children}<AnalyticsConsent nonce={nonce} /><MonitoringClient /></body></html>;
 }

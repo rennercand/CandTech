@@ -11,13 +11,23 @@ import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterWorkspaceForAccess, hasPermission, mergeWorkspaceForAccess } from "@/lib/team-permissions";
 import { hasMeaningfulWorkspaceContent } from "@/lib/workspace-content";
 import { reportServerError } from "@/lib/server-observability";
+import { validateWorkspacePayload } from "@/lib/workspace-validation";
 
 export const runtime = "nodejs";
 
 const MAX_WORKSPACE_SIZE = 500_000;
 
 function validPayload(payload) {
-  return payload && typeof payload === "object" && JSON.stringify(payload).length <= MAX_WORKSPACE_SIZE;
+  return validateWorkspacePayload(payload, { maxSerializedLength: MAX_WORKSPACE_SIZE });
+}
+
+function savedWorkspaceMetadata(workspace) {
+  return {
+    saved: true,
+    revision: Number(workspace.revision),
+    archivedRevision: Number(workspace.archived_revision),
+    updatedAt: workspace.updated_at,
+  };
 }
 
 function automaticTitle() {
@@ -73,7 +83,9 @@ export async function PUT(request) {
     const current = await getWorkspace(access.ownerUserId);
     const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
     const workspace = await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: Boolean(markSaved) });
-    return NextResponse.json({ workspace: { ...workspace, payload: filterWorkspaceForAccess(workspace.payload, access) } });
+    // A interface já possui o estado salvo e precisa somente da confirmação.
+    // Não refletir todo o JSON reduz exposição e falsos positivos de injeção.
+    return NextResponse.json(savedWorkspaceMetadata(workspace));
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
@@ -112,7 +124,7 @@ export async function POST(request) {
       userId: access.ownerUserId,
       title: automaticTitle(),
     });
-    return NextResponse.json({ archived: Boolean(item), item });
+    return NextResponse.json({ archived: Boolean(item), id: item?.id || null });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;

@@ -113,6 +113,14 @@ test("workspace rejeita sintaxe de caminho e mantém nomes comerciais normais", 
   assert.equal(validateWorkspacePayload({ organizationName: "Loja\u0000Oculta" }), false);
 });
 
+test("workspace aceita taxas numéricas e rejeita injeção no campo rate", () => {
+  assert.equal(validateWorkspacePayload({ inputs: { rate: "1.5" } }), true);
+  assert.equal(validateWorkspacePayload({ financeState: { form: { rate: 2 } } }), true);
+  assert.equal(validateWorkspacePayload({ inputs: { rate: "" } }), true);
+  assert.equal(validateWorkspacePayload({ inputs: { rate: "' OR '1'='1'--" } }), false);
+  assert.equal(validateWorkspacePayload({ financeState: { form: { rate: "1; DROP TABLE users" } } }), false);
+});
+
 test("logout remove a sessão repetindo Secure, HttpOnly e SameSite", () => {
   const route = readFileSync(join(projectRoot, "app", "api", "auth", "me", "route.js"), "utf8");
   assert.match(route, /\.\.\.authCookie/);
@@ -122,7 +130,8 @@ test("logout remove a sessão repetindo Secure, HttpOnly e SameSite", () => {
 
 test("gravação do workspace não reflete o payload enviado", () => {
   const route = readFileSync(join(projectRoot, "app", "api", "workspace", "route.js"), "utf8");
-  assert.match(route, /return NextResponse\.json\(savedWorkspaceMetadata\(workspace\)\)/);
+  assert.match(route, /return NextResponse\.json\(\{ saved: true \}\)/);
+  assert.doesNotMatch(route, /savedWorkspaceMetadata/);
   assert.doesNotMatch(route, /return NextResponse\.json\(\{ workspace: \{ \.\.\.workspace, payload:/);
 });
 

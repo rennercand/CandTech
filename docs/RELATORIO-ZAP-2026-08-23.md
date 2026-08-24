@@ -24,11 +24,13 @@
 | `Session Management Response Identified` | Identificação informativa de resposta de sessão, sem exploração demonstrada. | Sessão permanece em cookie HttpOnly, revogável no servidor e com oito horas de validade. |
 | `User Controllable HTML Element Attribute (Potential XSS)` | Baixa confiança; parâmetros `cadastro` e `entrar` somente ativam estados quando iguais a `1` e não são renderizados como HTML. | CSP com nonce reduz impacto; React continua escapando conteúdo e não há uso de HTML não confiável. Deve ser retestado após o deploy da preview. |
 | `Travessia/Passagem de Caminho` em `organizationName` | Falso positivo provável: o campo era salvo como JSON e refletido, sem qualquer API de arquivos ou construção de caminho. | Campo agora rejeita sintaxe de travessia/caminho e caracteres de controle. Respostas de gravação não devolvem mais o payload completo. |
+| `Injeção SQL` em `rate` no `PUT /api/workspace` | O banco usa consultas parametrizadas e o payload nunca é concatenado ao SQL. O ZAP comparou respostas diferentes de uma rota de autosave: cada tentativa alterava revisão e horário, produzindo um falso sinal booleano. Ainda assim, havia uma validação insuficiente porque `rate`, um campo numérico, aceitava texto arbitrário. | A API passou a aceitar em qualquer campo `rate` somente número finito, número decimal em texto ou rascunho vazio, rejeitando exatamente `' OR '1'='1'--`. A resposta do autosave agora é constante (`{ "saved": true }`) e não expõe revisão, data nem conteúdo enviado. |
+| `User Agent Fuzzer (Systemic)` | Nome da regra usada pelo scanner, não uma vulnerabilidade isolada. Só exige correção se uma ocorrência demonstrar erro, vazamento ou comportamento inseguro da aplicação. | Manter sob observação no reteste e avaliar a requisição/resposta concreta caso o ZAP gere um alerta associado. |
 | `Divulgação de Data e Hora - Unix` / cabeçalhos do servidor | Metadados de infraestrutura da plataforma, sem segredo da aplicação. | `X-Powered-By` foi removido. Cabeçalhos gerenciados exclusivamente pela Vercel devem ser avaliados como informativos. |
 
 ## Evidências automatizadas
 
-- 73 testes automatizados aprovados.
+- 74 testes automatizados aprovados, incluindo rejeição do payload SQL exibido pelo ZAP no campo `rate`.
 - Build de produção Next.js aprovado.
 - Página inicial respondeu HTTP 200 em execução de produção local.
 - CSP real contém nonce no cabeçalho e no HTML.

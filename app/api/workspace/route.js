@@ -21,15 +21,6 @@ function validPayload(payload) {
   return validateWorkspacePayload(payload, { maxSerializedLength: MAX_WORKSPACE_SIZE });
 }
 
-function savedWorkspaceMetadata(workspace) {
-  return {
-    saved: true,
-    revision: Number(workspace.revision),
-    archivedRevision: Number(workspace.archived_revision),
-    updatedAt: workspace.updated_at,
-  };
-}
-
 function automaticTitle() {
   const date = new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -82,10 +73,11 @@ export async function PUT(request) {
     }
     const current = await getWorkspace(access.ownerUserId);
     const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
-    const workspace = await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: Boolean(markSaved) });
+    await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: Boolean(markSaved) });
     // A interface já possui o estado salvo e precisa somente da confirmação.
-    // Não refletir todo o JSON reduz exposição e falsos positivos de injeção.
-    return NextResponse.json(savedWorkspaceMetadata(workspace));
+    // A resposta constante impede que revisão/data de um autosave façam um
+    // scanner interpretar a mutação normal como resultado de uma condição SQL.
+    return NextResponse.json({ saved: true });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;

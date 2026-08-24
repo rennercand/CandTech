@@ -82,6 +82,13 @@ test("eventos de marketing exigem consentimento e descartam dados pessoais", () 
   delete global.window;
 });
 
+test("revogação do Analytics cobre o host e o domínio principal", () => {
+  const source = readFileSync(join(projectRoot, "app", "analytics-consent.js"), "utf8");
+  const policy = readFileSync(join(projectRoot, "app", "cookies", "page.js"), "utf8");
+  assert.match(source, /Domain=\.candtech\.com\.br/);
+  assert.match(policy, new RegExp(ANALYTICS_CONSENT_KEY));
+});
+
 test("CSP permite somente os endpoints necessarios do Google Analytics", async () => {
   const rules = await nextConfig.headers();
   const csp = rules
@@ -92,6 +99,15 @@ test("CSP permite somente os endpoints necessarios do Google Analytics", async (
   assert.match(csp, /connect-src[^;]*https:\/\/\*\.google-analytics\.com/);
   assert.doesNotMatch(csp, /script-src[^;]*https:\/\/\*/);
   assert.doesNotMatch(csp, /unsafe-eval/, "produção e testes não devem liberar eval");
+});
+
+test("APIs e central administrativa nunca permitem cache compartilhado", async () => {
+  const rules = await nextConfig.headers();
+  for (const source of ["/api/:path*", "/central/:path*"]) {
+    const rule = rules.find((item) => item.source === source);
+    const cacheControl = rule?.headers.find((header) => header.key === "Cache-Control")?.value;
+    assert.equal(cacheControl, "private, no-store, max-age=0", `${source} precisa bloquear cache privado`);
+  }
 });
 
 test("cadastro informa claramente quando o e-mail já possui conta", () => {

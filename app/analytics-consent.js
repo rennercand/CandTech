@@ -10,7 +10,14 @@ function removeAnalyticsCookies() {
   document.cookie.split(";").forEach((cookie) => {
     const name = cookie.split("=")[0].trim();
     if (!name.startsWith("_ga")) return;
-    document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
+    const expiration = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
+    // O Analytics pode criar o cookie no host atual ou no domínio principal.
+    // Remover ambos evita que uma preferência revogada continue persistida.
+    document.cookie = expiration;
+    document.cookie = `${expiration}; Domain=${window.location.hostname}`;
+    if (window.location.hostname === "candtech.com.br" || window.location.hostname.endsWith(".candtech.com.br")) {
+      document.cookie = `${expiration}; Domain=.candtech.com.br`;
+    }
   });
 }
 

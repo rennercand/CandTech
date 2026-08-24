@@ -39,6 +39,16 @@ const nextConfig = {
         source: "/",
         headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }],
       },
+      {
+        // APIs e a central privada nunca devem ser armazenadas pelo navegador,
+        // CDN ou proxy intermediário, mesmo quando a resposta for um erro.
+        source: "/api/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }],
+      },
+      {
+        source: "/central/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }],
+      },
       { source: "/(.*)", headers: securityHeaders },
     ];
   },

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { historyCsv, historyCsvFilename } from "@/lib/history-csv";
 import { getAccessibleHistory } from "@/lib/organization-access";
+import { attachmentContentDisposition, safeExportFilename } from "@/lib/export-filename";
 
 export const runtime = "nodejs";
 
@@ -17,11 +18,12 @@ export async function GET(request, { params }) {
   if (forbidden) return NextResponse.json({ error: "Sem permissão para exportar." }, { status: 403 });
   if (!item) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
   const csv = historyCsv(item);
+  const filename = safeExportFilename(new URL(request.url).searchParams.get("filename"), "csv", historyCsvFilename(item));
 
   return new NextResponse(`\ufeff${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${historyCsvFilename(item)}"`,
+      "Content-Disposition": attachmentContentDisposition(filename),
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

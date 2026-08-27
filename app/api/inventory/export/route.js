@@ -10,8 +10,9 @@ import { inventoryTenant } from "@/lib/inventory";
 import { canExportInventory, inventoryCsv, inventoryFilename, inventoryXlsx } from "@/lib/inventory-report";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { guardMutation } from "@/lib/request-security";
+import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
+import { attachmentContentDisposition, safeExportFilename } from "@/lib/export-filename";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,8 @@ export async function GET(request) {
   const auth = await authorized(request);
   if (auth.response) return auth.response;
 
-  const format = new URL(request.url).searchParams.get("format") === "csv" ? "csv" : "xlsx";
+  const requestUrl = new URL(request.url);
+  const format = requestUrl.searchParams.get("format") === "csv" ? "csv" : "xlsx";
   const inventory = await listInventory(inventoryTenant(auth.access));
   const isCsv = format === "csv";
   const content = isCsv ? Buffer.from(`\ufeff${inventoryCsv(inventory)}`, "utf8") : inventoryXlsx(inventory);
@@ -40,7 +42,7 @@ export async function GET(request) {
       "Content-Type": isCsv
         ? "text/csv; charset=utf-8"
         : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${inventoryFilename(format)}"`,
+      "Content-Disposition": attachmentContentDisposition(safeExportFilename(requestUrl.searchParams.get("filename"), format, inventoryFilename(format))),
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },
@@ -55,6 +57,16 @@ export async function POST(request) {
   const auth = await authorized(request, { drive: true });
   if (auth.response) return auth.response;
 
+  let requestedFilename = "";
+  try {
+    const body = await readLimitedJson(request, { maxBytes: 1_024, maxDepth: 2, maxNodes: 8, maxStringLength: 120 });
+    requestedFilename = body.filename || "";
+  } catch (error) {
+    const bodyError = requestBodyErrorResponse(error);
+    if (bodyError) return bodyError;
+    throw error;
+  }
+
   const connection = await getGoogleDriveConnection(auth.user.id);
   if (!connection) {
     return Response.json(
@@ -68,7 +80,7 @@ export async function POST(request) {
     const accessToken = await refreshDriveAccessToken(decryptDriveToken(connection.encrypted_refresh_token));
     const file = await uploadFileToDrive({
       accessToken,
-      filename: inventoryFilename("xlsx"),
+      filename: safeExportFilename(requestedFilename, "xlsx", inventoryFilename("xlsx")),
       content: inventoryXlsx(inventory),
       mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });

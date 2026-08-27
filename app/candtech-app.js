@@ -23,6 +23,7 @@ import ClientManager from "./client-manager";
 import TaskKanban from "./task-kanban";
 import SupportCenter from "./support-center";
 import { trackMarketingEvent } from "../lib/analytics";
+import FileNameDialog, { useFileNameDialog } from "./file-name-dialog";
 
 async function hydrateAuthenticatedUser() {
   const response = await fetch("/api/auth/me", { cache: "no-store" });
@@ -438,6 +439,12 @@ function PaymentRequiredScreen({ user, onLogout }) {
   return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">ASSINATURA NECESSÁRIA</span><h1>O acesso ao ERP é liberado após a confirmação do Pix.</h1></div><p>O administrador confere o recebimento antes de ativar o plano; gerar o código sozinho não libera acesso.</p></section><section className="auth-card"><p className="eyebrow">ACESSO PROTEGIDO</p><h2>{owner ? "Regularize sua assinatura" : "A assinatura da empresa está inativa"}</h2><p className="auth-subtitle">{owner ? "Gere o Pix, pague pelo aplicativo do seu banco e avise pelo site ou WhatsApp." : "Peça ao proprietário da empresa para regularizar a assinatura. Seu cargo e suas permissões serão mantidos."}</p>{owner && <a className="primary-button payment-required-link" href="/assinar">Ir para pagamento Pix</a>}<button type="button" className="text-button" onClick={onLogout}>Sair desta conta</button></section></main>;
 }
 
+function AdministrativeAccessScreen({ user, onLogout }) {
+  // Colaboradores internos não precisam comprar o ERP para trabalhar, mas uma
+  // permissão administrativa também não libera os módulos financeiros pagos.
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">ACESSO INTERNO</span><h1>Sua conta está pronta para a central operacional.</h1></div><p>Você verá somente suporte, cobrança ou monitoramento conforme as permissões concedidas pelo administrador principal.</p></section><section className="auth-card"><p className="eyebrow">EQUIPE CANDTECH</p><h2>Olá, {user.name}</h2><p className="auth-subtitle">O ERP financeiro continua protegido pela assinatura. Seu login interno dá acesso apenas às tarefas administrativas autorizadas.</p><a className="primary-button payment-required-link" href={user.monitoringPath} rel="nofollow">Abrir central privada</a><button type="button" className="text-button" onClick={onLogout}>Sair desta conta</button></section></main>;
+}
+
 function LegalAcceptanceScreen({ onAccepted, onLogout }) {
   const [checked, setChecked] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -714,6 +721,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
 }
 
 export default function CandTechApp({ publicFallback = null }) {
+  const { requestFileName, fileNameDialogProps } = useFileNameDialog();
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
   const [workspaceReady, setWorkspaceReady] = useState(false);
@@ -883,13 +891,14 @@ export default function CandTechApp({ publicFallback = null }) {
     };
     const pendingHistoryId = params.get("export");
     const pendingInventory = params.get("inventoryDrive") === "1";
+    const pendingFilename = params.get("filename") || "";
     if (driveResult === "connected" && pendingInventory) {
-      sessionStorage.setItem("candtech_pending_inventory_drive", "1");
+      sessionStorage.setItem("candtech_pending_inventory_drive", pendingFilename || "estoque-candtech.xlsx");
       setView("inventory");
       setNotice(messages.connected);
     } else if (driveResult === "connected" && /^[0-9a-f-]{36}$/i.test(pendingHistoryId || "")) {
       // Continua automaticamente o envio iniciado antes da autorização do Google.
-      sendHistoryToDrive({ id: pendingHistoryId });
+      sendHistoryToDrive({ id: pendingHistoryId }, pendingFilename);
     } else {
       setNotice(messages[driveResult] || "O Google Drive respondeu à solicitação.");
     }
@@ -1283,12 +1292,19 @@ export default function CandTechApp({ publicFallback = null }) {
       setNotice("Preencha emitente, cliente, quantidade e valor antes de gerar o PDF.");
       return;
     }
+    const filename = await requestFileName({
+      suggestedName: `pre-nota-${order.number || "pedido"}`,
+      extension: "pdf",
+      description: "Escolha como esta pré-nota será identificada no seu dispositivo.",
+    });
+    if (!filename) return;
     const product = inventoryState.products.find((item) =>
       item.sku && item.sku.trim().toLowerCase() === String(order.sku || "").trim().toLowerCase(),
     );
     const response = await fetch("/api/export/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
       title: `Pré-nota ${order.number || "sem número"}`,
       calculationType: "pre-nota-produto",
+      filename,
       payload: { commercialDocument: {
         issuer: invoiceIssuer,
         customer: { name: order.partner, contact: order.contact },
@@ -1307,7 +1323,7 @@ export default function CandTechApp({ publicFallback = null }) {
     }) });
     if (!response.ok) return setNotice("Não foi possível gerar a pré-nota em PDF.");
     const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a"); link.href = url; link.download = `pre-nota-${order.number || "pedido"}.pdf`; link.click();
+    const link = document.createElement("a"); link.href = url; link.download = filename; link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     setNotice("Pré-nota em PDF baixada. Ela não substitui XML autorizado nem DANFE fiscal.");
   }
@@ -1343,22 +1359,29 @@ export default function CandTechApp({ publicFallback = null }) {
   async function exportSelected(format) {
     const rows = selectedExportRows();
     if (!rows.length) return setNotice("As seções selecionadas ainda não possuem dados para exportar.");
+    const extension = format === "drive" ? "xlsx" : format;
+    const filename = await requestFileName({
+      suggestedName: "relatorio-selecionado",
+      extension,
+      description: format === "drive" ? "Este será o nome exibido no seu Google Drive." : "Este será o nome do arquivo baixado.",
+    });
+    if (!filename) return;
     const report = { title: "Relatório operacional selecionado", calculationType: "exportacao-selecionada", payload: { table: rows } };
     if (format === "drive") {
       const item = await createModuleHistory({ ...report, success: "Seleção preparada para o Google Drive.", navigate: false });
       if (!item) return;
-      if (driveStatus.connected) await sendHistoryToDrive(item); else connectGoogleDrive(item);
+      if (driveStatus.connected) await sendHistoryToDrive(item, filename); else connectGoogleDrive(item, filename);
       return;
     }
     if (format === "pdf") {
-      const response = await fetch("/api/export/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(report) });
+      const response = await fetch("/api/export/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...report, filename }) });
       if (!response.ok) return setNotice("Não foi possível gerar o PDF selecionado.");
-      const url = URL.createObjectURL(await response.blob()); const link = document.createElement("a"); link.href = url; link.download = "relatorio-selecionado.pdf"; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      const url = URL.createObjectURL(await response.blob()); const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
       return setNotice("PDF das seções selecionadas baixado.");
     }
     const safe = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const csv = ["sep=;", Object.keys(rows[0]).map(safe).join(";"), ...rows.map((row) => Object.values(row).map(safe).join(";"))].join("\r\n");
-    const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "relatorio-selecionado.csv"; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     setNotice("CSV das seções selecionadas baixado.");
   }
   async function saveActiveDocument({ title, calculationType: type, payload, success, navigate = true, workspace = workspacePayload }) {
@@ -1442,6 +1465,12 @@ export default function CandTechApp({ publicFallback = null }) {
       setNotice("Preencha o valor financiado e a quantidade de parcelas antes de exportar.");
       return;
     }
+    const filename = await requestFileName({
+      suggestedName: `tabela-${financeState.system.toLowerCase()}`,
+      extension: "xlsx",
+      description: "Este será o nome da tabela no seu Google Drive.",
+    });
+    if (!filename) return;
     const financingId = financeState.id || globalThis.crypto?.randomUUID?.() || `financing-${Date.now()}`;
     const nextFinanceState = { ...financeState, id: financingId };
     const financing = { id: financingId, state: nextFinanceState };
@@ -1464,8 +1493,8 @@ export default function CandTechApp({ publicFallback = null }) {
     });
     if (!item) return;
     // Se ainda não houver conexão, o OAuth guarda este ID e retoma o envio no retorno.
-    if (driveStatus.connected) await sendHistoryToDrive(item);
-    else connectGoogleDrive(item);
+    if (driveStatus.connected) await sendHistoryToDrive(item, filename);
+    else connectGoogleDrive(item, filename);
   }
   async function savePricing() {
     if (!(Number(pricingState.units) > 0) || !(pricingResult.totalCost > 0)) {
@@ -1499,17 +1528,29 @@ export default function CandTechApp({ publicFallback = null }) {
       if (activeDocumentId === id) setActiveDocumentId(null);
     }
   }
-  function connectGoogleDrive(item) {
+  async function connectGoogleDrive(item, providedFilename = "") {
+    const filename = providedFilename || await requestFileName({
+      suggestedName: item.title || "relatorio-candtech",
+      extension: "xlsx",
+      description: "Este será o nome exibido no seu Google Drive.",
+    });
+    if (!filename) return;
     // Guarda no fluxo OAuth qual arquivo deve ser enviado após a conexão.
-    window.location.assign(`/api/google-drive/connect?historyId=${encodeURIComponent(item.id)}`);
+    window.location.assign(`/api/google-drive/connect?historyId=${encodeURIComponent(item.id)}&filename=${encodeURIComponent(filename)}`);
   }
-  async function sendHistoryToDrive(item) {
+  async function sendHistoryToDrive(item, providedFilename = "") {
+    const filename = providedFilename || await requestFileName({
+      suggestedName: item.title || "relatorio-candtech",
+      extension: "xlsx",
+      description: "Este será o nome exibido no seu Google Drive.",
+    });
+    if (!filename) return;
     setDriveUpload({ id: item.id, status: "sending", file: null });
     setNotice("Enviando a planilha Excel ao Google Drive…");
     const response = await fetch(`/api/history/${item.id}/drive`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: "{}",
+      body: JSON.stringify({ filename }),
     });
     const data = await response.json();
     if (response.ok) {
@@ -1531,20 +1572,24 @@ export default function CandTechApp({ publicFallback = null }) {
     }
   }
   async function downloadHistoryFile(item, format) {
+    const filename = await requestFileName({
+      suggestedName: item.title || `historico-${item.id}`,
+      extension: format,
+      description: "Escolha um nome para este arquivo do histórico.",
+    });
+    if (!filename) return;
     setFileDownload({ id: item.id, format });
     setNotice(`Preparando arquivo ${format.toUpperCase()}…`);
     try {
-      const response = await fetch(`/api/history/${item.id}/${format}`);
+      const response = await fetch(`/api/history/${item.id}/${format}?filename=${encodeURIComponent(filename)}`);
       if (!response.ok) {
         const data = await response.json().catch(() => null);
         throw new Error(data?.error || `Falha ao gerar ${format.toUpperCase()}.`);
       }
       const blob = await response.blob();
-      const disposition = response.headers.get("content-disposition") || "";
-      const serverName = disposition.match(/filename="([^"]+)"/)?.[1];
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = serverName || `historico-${item.id}.${format}`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1658,7 +1703,7 @@ export default function CandTechApp({ publicFallback = null }) {
     if (item.payload.inputs) loadCalculation(item);
   }
 
-  function downloadCurrentCsv() {
+  async function downloadCurrentCsv() {
     const reports = {
       dashboard: { filename: "visao-geral.csv", title: "Visão geral", rows: result.table, totalSpent: result.totalOutflows },
       calculator: { filename: "calculadora.csv", title: saveTitle, rows: result.table, totalSpent: result.totalOutflows },
@@ -1707,6 +1752,12 @@ export default function CandTechApp({ publicFallback = null }) {
     };
     const report = reports[view];
     if (!report) return;
+    const filename = await requestFileName({
+      suggestedName: report.filename,
+      extension: "csv",
+      description: "Escolha o nome do relatório CSV.",
+    });
+    if (!filename) return;
     const headers = report.rows.length ? Object.keys(report.rows[0]) : ["informação"];
     const safeCell = (value) => {
       const text = String(value ?? "");
@@ -1724,7 +1775,7 @@ export default function CandTechApp({ publicFallback = null }) {
     ].join("\r\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
-    link.download = report.filename;
+    link.download = filename;
     link.click();
     const objectUrl = link.href;
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
@@ -1809,13 +1860,19 @@ export default function CandTechApp({ publicFallback = null }) {
       setNotice("Preencha e calcule os dados desta aba antes de gerar o PDF.");
       return;
     }
+    const filename = await requestFileName({
+      suggestedName: `candtech-${view}`,
+      extension: "pdf",
+      description: "Escolha o nome do relatório PDF.",
+    });
+    if (!filename) return;
     setCurrentPdfLoading(true);
     setNotice("Gerando relatório PDF…");
     try {
       const response = await fetch("/api/export/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(report),
+        body: JSON.stringify({ ...report, filename }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
@@ -1824,7 +1881,7 @@ export default function CandTechApp({ publicFallback = null }) {
       const objectUrl = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = `finsight-${view}.pdf`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1871,7 +1928,9 @@ export default function CandTechApp({ publicFallback = null }) {
       />
     );
   if (user && user.subscriptionRequired && !user.subscriptionActive)
-    return <PaymentRequiredScreen user={user} onLogout={switchInvitationAccount} />;
+    return user.administrator && user.monitoringPath
+      ? <AdministrativeAccessScreen user={user} onLogout={switchInvitationAccount} />
+      : <PaymentRequiredScreen user={user} onLogout={switchInvitationAccount} />;
   if (user && !workspaceReady)
     return <div className="loading">Carregando os dados da sua conta…</div>;
   if (!user) {
@@ -2144,6 +2203,7 @@ export default function CandTechApp({ publicFallback = null }) {
         )}
         </div>
       </section>
+      {fileNameDialogProps && <FileNameDialog {...fileNameDialogProps} />}
     </main>
   );
 }

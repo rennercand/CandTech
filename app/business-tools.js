@@ -207,6 +207,7 @@ export function SalesPurchases({ orders, setOrders, products = [], issuer, setIs
 export function AdminOverview({ overview, monitoringPath, onRefresh }) {
   const privatePath = monitoringPath || overview?.monitoringPath;
   if (!overview) return <section className="panel operations-panel"><p>Carregando métricas agregadas…</p>{privatePath && <a className="primary-button admin-monitor-link" href={privatePath} rel="nofollow">Abrir central privada de monitoramento</a>}</section>;
+  if (overview.restricted) return <section className="panel operations-panel"><div className="panel-heading"><div><span className="eyebrow">ACESSO INTERNO</span><h2>Central operacional</h2><p>Seu login mostra somente suporte, cobrança ou monitoramento conforme as permissões concedidas.</p></div></div>{privatePath && <a className="primary-button admin-monitor-link" href={privatePath} rel="nofollow">Abrir central privada</a>}</section>;
   const { metrics, health } = overview;
   return <div className="business-stack">
     <Summary items={[

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "migrate:2026-08-26": "node scripts/apply-20260826-migrations.js",
     "test": "node --test",
     "start": "next start"
   },
@@ -23,6 +24,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@next/third-parties": "16.2.12",
+    "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
     "fflate": "^0.8.3",
     "jose": "^6.2.6",

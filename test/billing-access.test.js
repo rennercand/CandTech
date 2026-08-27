@@ -8,7 +8,7 @@ import {
   acceptOrganizationInvitation, closeDatabaseForTests, createOrganizationInvitation, createUser,
   ensureOwnedOrganization,
 } from "../lib/db.js";
-import { createOrGetPixPaymentRequest, resetPixSchemaForTests, reviewPixPayment } from "../lib/pix-db.js";
+import { createOrGetPixPaymentRequest, resetPixSchemaForTests, reviewPixPayment, savePixPaymentReceipt } from "../lib/pix-db.js";
 
 test("pagamento do proprietário libera a equipe e a trava pode ser ativada com segurança", async () => {
   const directory = mkdtempSync(join(tmpdir(), "candtech-billing-access-"));
@@ -32,6 +32,11 @@ test("pagamento do proprietário libera a equipe e a trava pode ser ativada com 
     assert.equal((await getBillingAccess(owner.id)).active, false);
     assert.equal((await getBillingAccess(personal.id)).active, false);
     const request = await createOrGetPixPaymentRequest(owner.id);
+    await savePixPaymentReceipt({
+      id: request.payment.id, userId: owner.id, organizationId: organization.organizationId,
+      storageKey: "local:22222222-2222-4222-8222-222222222222.pdf", originalFilename: "pix.pdf",
+      contentType: "application/pdf", sizeBytes: 100, sha256: "b".repeat(64),
+    });
     await reviewPixPayment({ id: request.payment.id, approved: true, administratorId: owner.id });
     const employeeAccess = await getBillingAccess(employee.id);
     assert.equal(employeeAccess.active, true);

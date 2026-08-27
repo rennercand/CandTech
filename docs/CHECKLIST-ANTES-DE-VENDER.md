@@ -5,7 +5,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 ## Preparado no código
 
 - cadastro de pessoa física ou empresa;
-- página de assinatura sem preço e sem cobrança;
+- página de assinatura com plano único, Pix manual e ativação exclusivamente administrativa;
 - perfil cadastral de cobrança separado por usuário;
 - CPF não é solicitado no cadastro nem na pré-nota atual; CNPJ do emitente é opcional e dados exigidos na cobrança ficam no ambiente do provedor;
 - nenhum campo de cartão, senha bancária ou conta é armazenado diretamente;
@@ -16,6 +16,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - teste automatizado de IDOR entre duas empresas para leitura, sobrescrita e administração cruzadas;
 - auditoria atual de dependências sem vulnerabilidades conhecidas após atualização do `nanoid` transitivo;
 - limites estruturais e de bytes nas APIs com corpo JSON;
+- comprovante Pix privado com limite de 5 MB, formatos fechados, conferência de assinatura binária, hash, vínculo ao proprietário e auditoria de envio/visualização/substituição;
 - limites separados de login e cadastro por IP e identidade normalizada;
 - resposta de autenticação mais resistente à enumeração;
 - vínculo do OAuth do Drive à sessão iniciadora;
@@ -42,6 +43,9 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - configurar `OAUTH_STATE_SECRET` diferente de `JWT_SECRET` na Vercel;
 - verificar o domínio remetente no Resend, configurar `RESEND_API_KEY`, `TEAM_INVITE_FROM` e `PUBLIC_APP_URL`, e confirmar a chegada de convite, verificação de cadastro e recuperação de senha reais;
 - confirmar novamente que Production e Preview usam bancos separados;
+- criar stores Blob **Private** separados para Production e Preview e confirmar que nenhum URL funciona sem autenticação;
+- aplicar `migrations/20260826_staff_access.sql`, criar uma conta de suporte e outra de cobrança e confirmar que cada uma recebe somente sua aba;
+- revogar uma conta interna durante uma sessão aberta e confirmar que a próxima requisição recebe acesso negado;
 - rotacionar credenciais que possam ter sido copiadas ou enviadas no passado;
 - publicar primeiro na branch `test` e verificar cadastro, login, logout, Drive, perfil e estoque;
 - importar uma entrada em SKU existente, conferir o novo saldo e desfazer a operação no preview;
@@ -72,6 +76,8 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - criar status de assinatura no servidor e autorização por plano;
 - não liberar recurso apenas escondendo botão no navegador;
 - validar solicitação repetida, pagamento não localizado, aprovação indevida, rejeição, vencimento e reembolso;
+- aplicar `migrations/20260826_pix_payment_receipts.sql` e testar PDF/JPG/PNG/WEBP, arquivo falso, arquivo acima de 5 MB, substituição e acesso cruzado;
+- definir prazo de retenção e rotina de exclusão dos comprovantes rejeitados ou antigos;
 - revisar LGPD, relação com operadores e política de retenção.
 
 ## Antes de vender para empresas

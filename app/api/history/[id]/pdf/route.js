@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { historyPdf, historyPdfFilename } from "@/lib/history-pdf";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getAccessibleHistory } from "@/lib/organization-access";
+import { attachmentContentDisposition, safeExportFilename } from "@/lib/export-filename";
 
 export const runtime = "nodejs";
 
@@ -16,10 +17,11 @@ export async function GET(request, { params }) {
   if (forbidden) return NextResponse.json({ error: "Sem permissão para exportar." }, { status: 403 });
   if (!item) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
   const pdf = await historyPdf(item);
+  const filename = safeExportFilename(new URL(request.url).searchParams.get("filename"), "pdf", historyPdfFilename(item));
   return new NextResponse(pdf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${historyPdfFilename(item)}"`,
+      "Content-Disposition": attachmentContentDisposition(filename),
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

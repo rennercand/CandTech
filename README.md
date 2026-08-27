@@ -18,7 +18,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Página pública renderizada no servidor, com conteúdo institucional, headings semânticos, links internos e metadados canônicos para mecanismos de busca.
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
 - E-mail de acesso normalizado e protegido por índice único no banco; tentativas repetidas recebem orientação para entrar ou recuperar a senha.
-- Central privada com endereço não publicado, autorizada por `ADMIN_EMAILS`, com incidentes agrupados, estados de investigação e mensagens de suporte atualizadas automaticamente.
+- Central privada com endereço não publicado, administrador principal em `ADMIN_EMAILS` e equipe interna com permissões independentes para monitoramento, suporte e cobrança.
 - Página 404 própria, responsiva e acessível, com entrada animada da marca e movimento reduzido respeitado automaticamente.
 - Aba Suporte com e-mail, telefone, WhatsApp, abertura de chamados e acompanhamento das respostas dentro do ERP.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.
@@ -39,7 +39,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Valores de entrada exibidos com sinal positivo e verde; saídas e gastos com sinal negativo e vermelho.
 - Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
 - Cadastro diferenciado para pessoa física e empresa.
-- Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Pix Copia e Cola individual, aviso por WhatsApp e confirmação exclusiva do administrador.
+- Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Pix Copia e Cola individual, comprovante privado e confirmação exclusiva do administrador.
 - Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
 - Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
@@ -57,6 +57,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 | Produção | Vercel |
 | Banco em produção | PostgreSQL/Neon |
 | Banco local | SQLite nativo do Node.js |
+| Arquivos privados | Vercel Blob privado; disco local somente em desenvolvimento |
 | Autenticação | JWT com `jose` e cookie HttpOnly |
 | Senhas | `bcryptjs` |
 | Leitura de PDF | PDF.js |
@@ -77,6 +78,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
 - Contas aceitam senha entre 8 e 128 caracteres; a interface recomenda frases com 15 ou mais caracteres para maior segurança.
 - O extrato PDF é processado no navegador e não é enviado ao servidor pelo importador.
+- Comprovantes Pix aceitam PDF/JPG/PNG/WEBP de até 5 MB, são validados por MIME e assinatura binária, armazenados de forma privada e só podem ser abertos por administradores autorizados.
 - `.env.local`, bancos locais, configurações da Vercel, logs e relatórios de segurança são ignorados pelo Git.
 - Segredos de produção ficam nas Environment Variables criptografadas da Vercel.
 
@@ -119,8 +121,8 @@ Ao entrar novamente, o workspace e o documento ativo são restaurados. Salvar at
 ### Instalação
 
 ```bash
-git clone https://github.com/rennercand/finance-app.git
-cd finance-app
+git clone https://github.com/rennercand/CandTech.git
+cd CandTech
 npm install
 ```
 
@@ -146,11 +148,14 @@ PIX_RECEIVER_CITY=MAIRINQUE
 PIX_MONTHLY_AMOUNT_CENTS=6000
 PIX_SETUP_AMOUNT_CENTS=12000
 PIX_PAYMENT_TTL_HOURS=72
+BLOB_READ_WRITE_TOKEN=
 CRON_SECRET=gere-um-segredo-longo-e-aleatorio
 BILLING_ENFORCEMENT_ENABLED=false
 ```
 
-`PIX_KEY` não usa `NEXT_PUBLIC_`: o servidor só a entrega ao proprietário autenticado que solicitar o pagamento. Ative `BILLING_ENFORCEMENT_ENABLED=true` apenas depois de aplicar a migration, testar geração, aprovação, expiração e recebimento do backup por e-mail.
+`PIX_KEY` e `BLOB_READ_WRITE_TOKEN` não usam `NEXT_PUBLIC_`. Conecte ao projeto um Vercel Blob com acesso **Private**; o navegador recebe apenas uma autorização curta e limitada a 5 MB, nunca o token permanente. Ative `BILLING_ENFORCEMENT_ENABLED=true` apenas depois de aplicar as migrations, testar geração, envio/substituição do comprovante, visualização administrativa, aprovação, rejeição e expiração.
+
+Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -188,6 +193,8 @@ app/
   api/history/       histórico, exclusão e CSV
   api/workspace/     restauração, autosave e rascunho automático
   api/inventory/     estoque relacional, entradas, pedidos, relatórios e desfazimento
+  api/pix/           cobrança Pix e upload autenticado de comprovante
+  api/admin/payments/ leitura privada de comprovantes pelo administrador
   api/support/       chamados privados do usuário
   central/[accessKey] central privada de incidentes e mensagens
   advanced-tools.js  financiamento, preço e leitor de PDF
@@ -203,6 +210,8 @@ lib/
   inventory-report.js relatório CSV/XLSX reimportável do estoque
   finance-calculations.js
   request-security.js valida origem e formato das mutações
+  pix-receipt.js     valida nome, tipo, assinatura e hash do comprovante
+  pix-receipt-storage.js armazenamento privado no Blob ou disco local
 next.config.mjs       cabeçalhos de segurança do navegador
   statement-parser.js
 public/
@@ -225,6 +234,9 @@ executam DDL durante uma requisição:
 - `inventory_orders` e `inventory_order_items`: pedidos com vários produtos.
 - `monitoring_events`: resumos técnicos sem segredos, agrupados por tipo de falha;
 - `support_tickets`: mensagens do suporte vinculadas ao usuário e respostas administrativas.
+- `staff_access`: módulos administrativos concedidos a contas verificadas, sem guardar ou criar senhas;
+- `pix_payment_requests`: cobranças Pix e estado da revisão manual;
+- `pix_payment_receipts`: metadados e hash dos comprovantes; o conteúdo fica no armazenamento privado.
 
 ### Como o banco atual funciona
 
@@ -261,11 +273,13 @@ A rotina de capacitação para proprietários e funcionários está em [GUIA-OPE
 
 O fluxo entre frontend, APIs, banco de dados, Vercel e Google Drive está documentado em [ARQUITETURA.md](./docs/ARQUITETURA.md).
 
-Para entender responsabilidades dos arquivos, autenticação, IDOR, Pix, planilhas e critérios de comentários, leia [GUIA-DO-CODIGO.md](./docs/GUIA-DO-CODIGO.md). A operação da assinatura está em [PIX-MANUAL.md](./docs/PIX-MANUAL.md) e as proteções do banco em [SEGURANCA-DO-BANCO.md](./docs/SEGURANCA-DO-BANCO.md).
+O que foi implementado e os achados corrigidos no fluxo de comprovante estão em [RELATORIO-IMPLEMENTACAO-PIX-2026-08-26.md](./docs/RELATORIO-IMPLEMENTACAO-PIX-2026-08-26.md).
+
+Para entender responsabilidades dos arquivos, autenticação, IDOR, Pix, planilhas e critérios de comentários, leia [GUIA-DO-CODIGO.md](./docs/GUIA-DO-CODIGO.md). A operação da assinatura está em [PIX-MANUAL.md](./docs/PIX-MANUAL.md) e as proteções do banco em [SEGURANCA-DO-BANCO.md](./docs/SEGURANCA-DO-BANCO.md). O público do piloto e os limites comerciais estão em [ICP-CANDTECH.md](./docs/ICP-CANDTECH.md) e [ESCOPO-PILOTO.md](./docs/ESCOPO-PILOTO.md).
 
 O padrão de branches, mensagens de commit e checklist de publicação está em [CONTRIBUINDO.md](./docs/CONTRIBUINDO.md).
 
-O uso, a segurança e a operação da central privada estão em [MONITORAMENTO-E-SUPORTE.md](./docs/MONITORAMENTO-E-SUPORTE.md).
+O uso, a segurança e a operação da central privada estão em [MONITORAMENTO-E-SUPORTE.md](./docs/MONITORAMENTO-E-SUPORTE.md). O passo a passo para criar logins internos e conceder acessos está em [ACESSO-ADMINISTRATIVO.md](./docs/ACESSO-ADMINISTRATIVO.md).
 
 As fórmulas, premissas, testes de referência e limitações estão registradas em [AUDITORIA-FINANCEIRA.md](./docs/AUDITORIA-FINANCEIRA.md).
 

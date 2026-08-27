@@ -15,7 +15,8 @@ Ativar RLS agora, sem adaptação, pode bloquear o próprio servidor. A aplicaç
 - estoque, equipe e convites usam tenant e permissões resolvidos no servidor;
 - rotas privadas exigem autenticação; alterações validam origem, tipo e tamanho;
 - SQL usa parâmetros, evitando concatenar entrada do usuário nas consultas;
-- central administrativa exige caminho privado, sessão válida e e-mail em `ADMIN_EMAILS`;
+- central administrativa exige caminho privado, sessão válida, e-mail verificado, aceite jurídico e permissão atual; somente a raiz `ADMIN_EMAILS` gerencia a equipe;
+- suporte, monitoramento e cobrança são permissões independentes, verificadas novamente no servidor a cada requisição;
 - rate limit compartilhado no banco e trilha de auditoria para operações críticas;
 - segredos ficam em variáveis de ambiente sem prefixo `NEXT_PUBLIC_`.
 

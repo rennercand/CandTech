@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { isAdministrator } from "@/lib/admin-access";
+import { getAdministratorAccess } from "@/lib/admin-access";
 import { appendAuditEvent, listMonitoringEvents, listSupportTicketsForAdmin, replySupportTicket, updateMonitoringEventStatus } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
@@ -13,8 +13,10 @@ export const runtime = "nodejs";
 async function authorize(request) {
   const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return { response: NextResponse.json({ error: "Não autenticado" }, { status: 401 }) };
-  if (!isAdministrator(user.email)) return { response: NextResponse.json({ error: "Acesso restrito" }, { status: 403 }) };
-  return { user };
+  if (!user.legalAccepted) return { response: NextResponse.json({ error: "Aceite jurídico pendente." }, { status: 403 }) };
+  const access = await getAdministratorAccess(user);
+  if (!access.isStaff) return { response: NextResponse.json({ error: "Acesso restrito" }, { status: 403 }) };
+  return { user, access };
 }
 
 export async function GET(request) {
@@ -23,16 +25,24 @@ export async function GET(request) {
   const auth = await authorize(request);
   if (auth.response) return auth.response;
   try {
-    const [events, tickets, payments] = await Promise.all([listMonitoringEvents(), listSupportTicketsForAdmin(), listPixPaymentsForAdmin()]);
+    // Cada colaborador consulta somente os módulos concedidos. Ocultar a aba no
+    // navegador é apenas UX; esta filtragem no servidor é a barreira efetiva.
+    const [events, tickets, payments] = await Promise.all([
+      auth.access.canMonitor ? listMonitoringEvents() : [],
+      auth.access.canSupport ? listSupportTicketsForAdmin() : [],
+      auth.access.canBilling ? listPixPaymentsForAdmin() : [],
+    ]);
     return NextResponse.json({
       events,
       tickets,
       payments,
+      permissions: auth.access,
       totals: {
         openEvents: events.filter((item) => item.status !== "resolved").length,
         criticalEvents: events.filter((item) => item.level === "error" && item.status !== "resolved").length,
         openTickets: tickets.filter((item) => item.status === "open").length,
-        pendingPayments: payments.filter((item) => item.status === "pending").length,
+        pendingPayments: payments.filter((item) => ["pending", "payment_review"].includes(item.status)).length,
+        reviewPayments: payments.filter((item) => item.status === "payment_review").length,
       },
       checkedAt: new Date().toISOString(),
     }, { headers: { "Cache-Control": "private, no-store" } });
@@ -52,11 +62,13 @@ export async function PATCH(request) {
   try {
     const body = await readLimitedJson(request, { maxBytes: 8_192, maxStringLength: 4_000 });
     if (body.type === "event") {
+      if (!auth.access.canMonitor) return NextResponse.json({ error: "Sem permissão para incidentes." }, { status: 403 });
       const event = await updateMonitoringEventStatus({ id: String(body.id || ""), status: body.status });
       if (!event) return NextResponse.json({ error: "Incidente não encontrado." }, { status: 404 });
       return NextResponse.json({ event });
     }
     if (body.type === "ticket") {
+      if (!auth.access.canSupport) return NextResponse.json({ error: "Sem permissão para chamados." }, { status: 403 });
       const reply = String(body.reply || "").trim().slice(0, 4_000);
       if (reply.length < 2) return NextResponse.json({ error: "Escreva uma resposta." }, { status: 400 });
       const ticket = await replySupportTicket({ id: String(body.id || ""), reply, status: body.status });
@@ -64,6 +76,7 @@ export async function PATCH(request) {
       return NextResponse.json({ ticket });
     }
     if (body.type === "payment") {
+      if (!auth.access.canBilling) return NextResponse.json({ error: "Sem permissão para pagamentos." }, { status: 403 });
       if (!["approve", "reject"].includes(body.action)) return NextResponse.json({ error: "Ação de pagamento inválida." }, { status: 400 });
       const payment = await reviewPixPayment({ id: String(body.id || ""), approved: body.action === "approve", administratorId: auth.user.id });
       if (!payment) return NextResponse.json({ error: "Pagamento pendente não encontrado." }, { status: 404 });

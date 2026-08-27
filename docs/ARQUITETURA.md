@@ -116,7 +116,8 @@ mindmap
 | `inventory_batches` / `inventory_movements` | livro de movimentos e reversões | `tenant_id` + autor autenticado |
 | `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | `tenant_id` + lote de movimentação |
 | `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
-| `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou administrador em `ADMIN_EMAILS` |
+| `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou equipe com permissão `can_support` |
+| `staff_access` | módulos internos concedidos a contas verificadas | administrador principal em `ADMIN_EMAILS` |
 | `users.account_status` | separa contas ativas de duplicatas históricas arquivadas | somente servidor |
 
 O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extrai o identificador do usuário e consulta o Neon usando esse identificador. A credencial do banco permanece no servidor.
@@ -142,7 +143,8 @@ O UUID reduz enumeração, mas não substitui autorização. O isolamento efetiv
 - `lib/server-observability.js` transforma falhas tratadas das APIs em resumos técnicos persistentes e mantém o log estruturado da Vercel;
 - `app/monitoring-client.js` captura falhas não tratadas no navegador, mas a API só aceita registros de uma sessão autenticada e aplica rate limit;
 - `/api/support` deriva o autor da sessão e nunca aceita `user_id` ou `organization_id` como autoridade do navegador;
-- `/api/admin/monitoring` e a rota dinâmica da central exigem sessão válida e e-mail presente em `ADMIN_EMAILS`; a chave do caminho é validada com comparação de tempo constante;
+- `/api/admin/monitoring` e a rota dinâmica da central exigem sessão válida, e-mail verificado, aceite jurídico atual e permissão persistida; a chave do caminho é validada com comparação de tempo constante;
+- monitoramento, suporte e cobrança são autorizados separadamente também nas APIs, e apenas `ADMIN_EMAILS` pode conceder ou revogar esses acessos;
 - `users.email` é normalizado com `trim + lowercase`, possui índice funcional único no PostgreSQL e duplicatas históricas são arquivadas com sessões revogadas, sem apagar seus dados empresariais;
 - a central não é listada no sitemap, possui `noindex` e também é bloqueada no `robots.txt`;
 - detalhes operacionais e configuração estão em `docs/MONITORAMENTO-E-SUPORTE.md`.
@@ -168,15 +170,20 @@ flowchart TB
 
 - `/assinar` apresenta o plano de R$ 60/mês e a implantação única de R$ 120;
 - `/api/pix` cria ou recupera a solicitação pendente do proprietário autenticado e gera o Pix no servidor;
-- a central privada lista pagamentos e permite ao administrador aprovar ou rejeitar após conferir o extrato bancário;
+- `/api/pix/[paymentId]/receipt` autoriza o proprietário a enviar um comprovante diretamente ao Vercel Blob privado, valida o arquivo no callback e muda a cobrança para `payment_review` sem ativar a assinatura;
+- `/api/admin/payments/[paymentId]/receipt` entrega o arquivo com sessão administrativa, auditoria e `Cache-Control: private, no-store`;
+- a central privada lista pagamentos, visualiza o comprovante e permite ao administrador aprovar ou rejeitar após conferir o extrato bancário;
 - aprovação estende o acesso por 30 dias; rejeição ou expiração suspende a assinatura;
 - `/api/cron/pix-expiration` expira solicitações vencidas e tenta enviar por e-mail um ZIP dos dados disponíveis ao proprietário verificado;
 - `/api/profile` grava somente nome, contato e endereço do usuário autenticado; não coleta CPF/CNPJ nesta preparação;
-- `billing_profiles` e `pix_payment_requests` armazenam valor, referência, estado e datas; senha bancária e credenciais de conta não entram na CandTech;
+- `billing_profiles`, `pix_payment_requests` e `pix_payment_receipts` armazenam cadastro, cobrança e metadados do comprovante; o binário fica no Blob privado e senha bancária ou credenciais de conta não entram na CandTech;
 - `auth_sessions` permite expiração absoluta e revogação no logout;
+- `staff_access` concede monitoramento, suporte ou cobrança a uma conta verificada; somente os e-mails raiz de `ADMIN_EMAILS` gerenciam essa tabela;
 - `audit_events` registra inicialmente conta, sessão e perfil sem copiar documentos completos para os metadados;
 - a migração PostgreSQL correspondente está em `migrations/20260806_security_and_billing.sql`;
 - a migration `migrations/20260809_history_public_ids.sql` cria, preenche e torna obrigatório o UUID público usado nas URLs de documentos;
+- a migration `migrations/20260826_pix_payment_receipts.sql` cria os metadados dos comprovantes e o estado `payment_review`;
+- a migration `migrations/20260826_staff_access.sql` cria o controle de privilégio mínimo da equipe interna;
 - copiar o Pix ou clicar no WhatsApp não libera acesso; somente a ação administrativa autenticada altera a assinatura;
 - `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 

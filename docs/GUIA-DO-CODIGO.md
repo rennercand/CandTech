@@ -19,7 +19,9 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 | `app/client-manager.js` | Carteira de clientes, busca, status e atalhos seguros de contato |
 | `app/task-kanban.js` | Quadro de tarefas com prazos, prioridade, cliente e etapas |
 | `app/api/auth/` | Cadastro, login, sessão, confirmação de e-mail e recuperação de senha |
-| `app/api/pix/` | Geração autenticada e consulta da solicitação Pix |
+| `app/api/pix/` | Geração autenticada, consulta e envio de comprovante Pix |
+| `app/api/admin/payments/` | Leitura administrativa privada do comprovante |
+| `app/api/admin/staff/` | Concessão e revogação de acessos internos pelo administrador principal |
 | `app/api/cron/` | Expiração periódica e entrega do backup por e-mail |
 | `app/api/inventory/` | Operações e exportações do estoque relacional |
 | `app/api/team/` | Cargos, membros e convites empresariais |
@@ -27,6 +29,10 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 | `lib/organization-access.js` | Resolução de organização, proprietário e permissões |
 | `lib/billing-access.js` | Regra que decide se a assinatura bloqueia o acesso |
 | `lib/pix.js` | Geração do código EMV Pix e leitura segura da configuração |
+| `lib/pix-receipt.js` | Validação de nome, MIME, magic bytes, limite e SHA-256 |
+| `lib/pix-receipt-storage.js` | Blob privado em produção e disco ignorado pelo Git no desenvolvimento |
+| `lib/staff-db.js` | Persistência das permissões internas, sem manipular senha |
+| `lib/admin-access.js` | Combina a raiz de confiança `ADMIN_EMAILS` com os privilégios persistidos |
 | `lib/pix-db.js` | Solicitações, aprovação, rejeição e expiração dos pagamentos |
 | `lib/account-backup.js` | Exportação ZIP limitada, sem senha, sessão ou token |
 | `lib/inventory-import.js` | Leitura de CSV, TSV, TXT e XLSX e normalização das colunas |
@@ -61,8 +67,9 @@ Ao criar uma rota nova:
 ## Fluxo da assinatura por Pix
 
 ```text
-Proprietário → POST /api/pix → código individual + chamado interno + aviso opcional no WhatsApp
-Administrador → confere o extrato → aprova ou rejeita na central privada
+Proprietário → POST /api/pix → código individual + chamado interno
+Proprietário → upload privado → validação binária → payment_review
+Administrador → abre comprovante protegido → confere o extrato → aprova ou rejeita
 Banco local → getBillingAccess → liberação por 30 dias ou bloqueio
 Rejeição/expiração → ZIP sem credenciais → Resend → e-mail verificado do proprietário
 ```
@@ -70,6 +77,8 @@ Rejeição/expiração → ZIP sem credenciais → Resend → e-mail verificado 
 - `PIX_KEY` existe somente no servidor e é retornada dentro do código Pix apenas ao proprietário autenticado.
 - `PIX_MONTHLY_AMOUNT_CENTS` representa R$ 60 mensais e `PIX_SETUP_AMOUNT_CENTS` os R$ 120 iniciais.
 - uma solicitação pendente é reutilizada para impedir cobranças duplicadas por cliques repetidos.
+- o upload não ativa a assinatura; somente `payment_review` pode ser aprovado, e cada cobrança mantém um único comprovante ativo.
+- em produção, o navegador envia direto ao Blob com token curto para suportar o limite funcional de 5 MB; o callback assinado revalida usuário, pagamento e conteúdo antes de gravar os metadados.
 - `CRON_SECRET` protege o processamento periódico de vencimentos e backups.
 - `BILLING_ENFORCEMENT_ENABLED` permanece `false` até o fluxo completo ser homologado.
 

@@ -7,9 +7,10 @@ import {
 } from "@/lib/google-drive";
 import { historyXlsx, historyXlsxFilename } from "@/lib/history-xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { guardMutation } from "@/lib/request-security";
+import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { getAccessibleHistory } from "@/lib/organization-access";
 import { reportServerError } from "@/lib/server-observability";
+import { safeExportFilename } from "@/lib/export-filename";
 
 export const runtime = "nodejs";
 
@@ -31,16 +32,19 @@ export async function POST(request, { params }) {
   }
 
   try {
+    const body = await readLimitedJson(request, { maxBytes: 1_024, maxDepth: 2, maxNodes: 8, maxStringLength: 120 });
     const refreshToken = decryptDriveToken(connection.encrypted_refresh_token);
     const accessToken = await refreshDriveAccessToken(refreshToken);
     const file = await uploadFileToDrive({
       accessToken,
-      filename: historyXlsxFilename(item),
+      filename: safeExportFilename(body.filename, "xlsx", historyXlsxFilename(item)),
       content: historyXlsx(item),
       mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     return Response.json({ file });
   } catch (error) {
+    const bodyError = requestBodyErrorResponse(error);
+    if (bodyError) return bodyError;
     const reconnect = error?.code === "invalid_grant";
     reportServerError(error, { request, route: "/api/history/:id/drive", operation: "upload", status: reconnect ? 401 : 502 });
     return Response.json(

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { historyXlsx, historyXlsxFilename } from "@/lib/history-xlsx";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getAccessibleHistory } from "@/lib/organization-access";
+import { attachmentContentDisposition, safeExportFilename } from "@/lib/export-filename";
 
 export const runtime = "nodejs";
 
@@ -15,10 +16,11 @@ export async function GET(request, { params }) {
   const { item, forbidden } = await getAccessibleHistory({ user, id, permissions: ["history", "exports"] });
   if (forbidden) return NextResponse.json({ error: "Sem permissão para exportar." }, { status: 403 });
   if (!item) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
+  const filename = safeExportFilename(new URL(request.url).searchParams.get("filename"), "xlsx", historyXlsxFilename(item));
   return new NextResponse(historyXlsx(item), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${historyXlsxFilename(item)}"`,
+      "Content-Disposition": attachmentContentDisposition(filename),
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

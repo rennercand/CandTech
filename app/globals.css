@@ -611,6 +611,97 @@ select:focus {
   }
 }
 
+/* Gestão da equipe interna: o formulário explica privilégios independentes e
+   mantém ações sensíveis separadas da lista de chamados e pagamentos. */
+.staff-access-form { display: grid; grid-template-columns: minmax(240px, 1.4fr) minmax(280px, 2fr) auto; gap: 18px; align-items: end; padding: 20px; margin-bottom: 18px; border: 1px solid #e2def4; border-radius: 16px; background: #faf9ff; }
+.staff-access-form > label { display: grid; gap: 7px; font-size: .78rem; font-weight: 800; color: #514b6d; }
+.staff-access-form input[type="email"] { width: 100%; min-height: 44px; border: 1px solid #d8d2ee; border-radius: 10px; padding: 0 12px; background: white; }
+.staff-access-form fieldset { display: flex; flex-wrap: wrap; gap: 10px 16px; border: 0; padding: 0; margin: 0; }
+.staff-access-form legend { margin-bottom: 7px; font-size: .78rem; font-weight: 800; color: #514b6d; }
+.staff-access-form fieldset label { display: inline-flex; align-items: center; gap: 7px; font-size: .8rem; color: #514b6d; }
+.staff-access-form button { min-height: 44px; }
+.staff-access-list { margin-top: 16px; }
+.staff-permissions { display: flex; flex-wrap: wrap; gap: 8px; }
+.staff-permissions span { border: 1px solid #ddd8ea; border-radius: 999px; padding: 5px 9px; color: #847d96; font-size: .72rem; font-weight: 800; }
+.staff-permissions span.enabled { border-color: #b8dbce; color: #176d50; background: #edf9f4; }
+.monitor-alert.success { border-color: #b8dbce; color: #176d50; background: #edf9f4; }
+
+@media (max-width: 900px) {
+  .staff-access-form { grid-template-columns: 1fr; align-items: stretch; }
+}
+
+/* Uma única janela de nomeação atende PDF, CSV, Excel e Google Drive. O campo
+   mantém a extensão visível sem permitir que ela seja apagada por engano. */
+.file-name-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(20, 18, 35, .58);
+  backdrop-filter: blur(5px);
+}
+.file-name-dialog {
+  width: min(100%, 520px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  border: 1px solid rgba(100, 75, 210, .2);
+  border-radius: 22px;
+  background: var(--panel, #fff);
+  box-shadow: 0 24px 80px rgba(29, 21, 65, .28);
+  animation: file-name-dialog-enter 220ms ease-out both;
+}
+.file-name-dialog form { display: grid; gap: 18px; padding: 28px; }
+.file-name-dialog-heading { display: grid; gap: 7px; }
+.file-name-dialog-heading h2,
+.file-name-dialog-heading p { margin: 0; }
+.file-name-dialog-heading p,
+.file-name-help { color: var(--muted); line-height: 1.55; }
+.file-name-field { display: grid; gap: 8px; font-weight: 750; }
+.file-name-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--soft, #f7f7fb);
+  overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.file-name-input:focus-within { border-color: #6848e8; box-shadow: 0 0 0 3px rgba(104, 72, 232, .16); }
+.file-name-input.error { border-color: #c73852; box-shadow: 0 0 0 3px rgba(199, 56, 82, .12); }
+.file-name-input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 4px 0 14px;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 1rem;
+}
+.file-name-input strong { padding: 0 14px 0 7px; color: var(--muted); font-size: .92rem; }
+.file-name-help,
+.file-name-error { min-height: 22px; margin: -9px 0 0; font-size: .82rem; }
+.file-name-error { color: #b62d48; font-weight: 700; }
+.file-name-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.file-name-dialog-actions button { min-height: 44px; min-width: 112px; }
+@keyframes file-name-dialog-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 520px) {
+  .file-name-dialog-backdrop { align-items: end; padding: 12px; }
+  .file-name-dialog { border-radius: 22px 22px 16px 16px; }
+  .file-name-dialog form { padding: 22px 18px; }
+  .file-name-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .file-name-dialog-actions button { width: 100%; }
+}
+
 /* O 404 usa um único ponto de movimento: entrada espacial que desacelera e,
    ao terminar, uma respiração discreta. O espaço é reservado para evitar CLS. */
 .not-found-page {
@@ -732,6 +823,7 @@ select:focus {
 .ticket-status.answered { background: #e8f8f0; color: #16724d; }
 .ticket-status.closed { background: #edf0f5; color: #526072; }
 .ticket-status.approved { background: #dcfce7; color: #166534; }
+.ticket-status.payment_review { background: #ede9fe; color: #5b21b6; }
 .ticket-status.rejected, .ticket-status.expired { background: #fee2e2; color: #991b1b; }
 .admin-monitor-link { display: inline-flex; margin-top: 18px; text-decoration: none; }
 
@@ -745,6 +837,7 @@ select:focus {
 .monitor-sidebar nav { display: grid; gap: 7px; }
 .monitor-sidebar nav button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: #aeb8cd; font: inherit; font-weight: 700; cursor: pointer; transition: background .2s ease, color .2s ease, border-color .2s ease; }
 .monitor-sidebar nav button:hover, .monitor-sidebar nav button.active { color: white; background: #222d45; border-color: #35415c; }
+.monitor-count { display: grid; min-width: 21px; height: 21px; margin-left: auto; place-items: center; border-radius: 999px; background: #765cf0; color: white; font-size: .65rem; }
 .monitor-sidebar nav button:focus-visible, .monitor-header button:focus-visible, .monitor-ticket-actions button:focus-visible { outline: 3px solid rgba(117, 92, 255, .45); outline-offset: 2px; }
 .monitor-sidebar svg, .monitor-header button svg { width: 19px; height: 19px; }
 .monitor-private-note { display: grid; gap: 5px; margin-top: auto; padding: 13px; border: 1px solid #303b53; border-radius: 12px; background: #182137; }
@@ -797,6 +890,22 @@ select:focus {
 .monitor-ticket-actions { display: flex; justify-content: flex-end; gap: 9px; }
 .monitor-ticket-actions select { width: 150px; }
 .monitor-ticket-actions button { color: white; border-color: #5b42c8; background: #5b42c8; }
+.monitor-payment-filters { display: flex; gap: 8px; padding: 14px 20px; overflow-x: auto; border-bottom: 1px solid var(--monitor-line); }
+.monitor-payment-filters button { flex: 0 0 auto; padding: 8px 11px; border: 1px solid #d9deea; border-radius: 999px; background: white; color: #5c6474; font: inherit; font-size: .7rem; font-weight: 800; cursor: pointer; }
+.monitor-payment-filters button.active { border-color: #6d52dc; background: #ede9fe; color: #553abf; }
+.monitor-receipt { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 14px; border: 1px solid #d9d0ff; border-radius: 12px; background: #f8f6ff; }
+.monitor-receipt > div { display: grid; gap: 4px; }.monitor-receipt span { color: var(--monitor-muted); font-size: .72rem; }
+.monitor-receipt > div:last-child { display: flex; align-items: center; gap: 8px; }
+.monitor-receipt button, .monitor-receipt a { padding: 8px 11px; border: 1px solid #6d52dc; border-radius: 9px; background: white; color: #553abf; font: inherit; font-size: .72rem; font-weight: 800; text-decoration: none; cursor: pointer; }
+.monitor-receipt-modal { position: fixed; z-index: 1800; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(10, 15, 28, .72); }
+.monitor-receipt-modal > div { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(900px, 100%); height: min(780px, calc(100vh - 48px)); overflow: hidden; border-radius: 17px; background: white; box-shadow: 0 30px 90px rgba(0, 0, 0, .3); }
+.monitor-receipt-modal header, .monitor-receipt-modal footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; }
+.monitor-receipt-modal header { border-bottom: 1px solid var(--monitor-line); }.monitor-receipt-modal footer { border-top: 1px solid var(--monitor-line); }
+.monitor-receipt-modal header span { color: #6146d7; font-size: .65rem; font-weight: 900; letter-spacing: .13em; }.monitor-receipt-modal h2 { margin: 4px 0 0; font-size: 1rem; }
+.monitor-receipt-modal header button { width: 36px; height: 36px; border: 1px solid #d9deea; border-radius: 50%; background: white; color: #334155; font-size: 1.4rem; cursor: pointer; }
+.monitor-receipt-modal iframe { width: 100%; height: 100%; border: 0; background: #eef1f6; }
+.monitor-receipt-image { display: grid; min-height: 0; padding: 18px; place-items: center; overflow: auto; background: #eef1f6; }.monitor-receipt-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.monitor-receipt-modal footer small { color: var(--monitor-muted); }.monitor-receipt-modal footer button { padding: 9px 14px; border: 1px solid #5b42c8; border-radius: 9px; background: #5b42c8; color: white; font-weight: 800; cursor: pointer; }
 @keyframes monitor-card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 850px) {
@@ -814,6 +923,8 @@ select:focus {
   .monitor-sidebar nav { overflow-x: auto; }.monitor-sidebar nav button { min-width: 145px; }
   .monitor-event-main { flex-direction: column; }.monitor-severity { min-width: 0; }
   .monitor-ticket-actions { align-items: stretch; flex-direction: column; }.monitor-ticket-actions select { width: 100%; }
+  .monitor-receipt { align-items: stretch; flex-direction: column; }.monitor-receipt > div:last-child { align-items: stretch; flex-direction: column; }
+  .monitor-receipt-modal { padding: 8px; }.monitor-receipt-modal > div { height: calc(100vh - 16px); }.monitor-receipt-modal footer { align-items: stretch; flex-direction: column; }
 }
 .mobile-logout {
   display: none;

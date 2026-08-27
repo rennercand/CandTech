@@ -61,7 +61,8 @@ test("central administrativa não é indexada nem publicada no sitemap", () => {
   const robots = readFileSync(join(projectRoot, "app", "robots.js"), "utf8");
   const sitemap = readFileSync(join(projectRoot, "app", "sitemap.js"), "utf8");
   assert.match(adminPage, /index:\s*false/);
-  assert.match(adminPage, /isAdministrator/);
+  assert.match(adminPage, /getAdministratorAccess/);
+  assert.match(adminPage, /access\.isStaff/);
   assert.match(robots, /\/central\//);
   assert.doesNotMatch(sitemap, /central/);
 });

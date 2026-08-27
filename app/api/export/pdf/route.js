@@ -6,6 +6,7 @@ import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterHistoryForAccess, filterWorkspaceForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
 import { reportServerError } from "@/lib/server-observability";
+import { attachmentContentDisposition, safeExportFilename } from "@/lib/export-filename";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "Relatório muito grande" }, { status: 413 });
   }
   try {
-    const { title, calculationType, payload } = await readLimitedJson(request, {
+    const { title, calculationType, payload, filename } = await readLimitedJson(request, {
       maxBytes: 512_000, maxDepth: 12, maxNodes: 8_000, maxStringLength: 20_000,
     });
     const safeTitle = String(title || "Relatório CandTech").trim().slice(0, 100);
@@ -49,7 +50,7 @@ export async function POST(request) {
     return new NextResponse(pdf, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": 'attachment; filename="relatorio-finsight.pdf"',
+        "Content-Disposition": attachmentContentDisposition(safeExportFilename(filename, "pdf", "relatorio-finsight.pdf")),
         "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },

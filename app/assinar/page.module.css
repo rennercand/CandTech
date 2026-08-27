@@ -21,6 +21,13 @@
 .typeToggle { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 12px; background: #f0eef7; }.typeToggle button { padding: 11px; border: 0; border-radius: 9px; background: transparent; color: #777188; font-weight: 800; }.typeToggle button.active { background: #fff; color: #5c43dc; box-shadow: 0 3px 12px rgb(43 32 94 / 10%); }
 .save, .signInCard > a { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 14px; border: 1px solid #6247e8; border-radius: 12px; background: #6247e8; color: #fff; font-weight: 800; text-align: center; text-decoration: none; cursor: pointer; }.save:disabled { opacity: .6; cursor: wait; }
 .pixBox { display: grid; gap: 12px; padding: 18px; border: 1px solid #d9d0ff; border-radius: 16px; background: #f7f5ff; }.pixBox > span { color: #6548e8; font-size: 11px; font-weight: 900; letter-spacing: .12em; }.pixBox > strong { font-size: 28px; }.pixBox textarea { box-sizing: border-box; width: 100%; padding: 12px; resize: none; overflow-wrap: anywhere; border: 1px solid #d8d2eb; border-radius: 10px; background: #fff; color: #302a49; font: 12px/1.45 monospace; }
+.receiptUpload, .reviewBox { display: grid; gap: 10px; padding: 16px; border: 1px solid #ddd7f2; border-radius: 13px; background: #fff; }
+.receiptUpload p, .reviewBox p { margin: 0; color: #625d75; font-size: 13px; line-height: 1.5; }
+.reviewBox > span { color: #16724d; font-size: 11px; font-weight: 900; letter-spacing: .12em; }
+.reviewBox > small { color: #625d75; line-height: 1.5; }
+.filePicker { position: relative; display: flex; align-items: center; min-height: 44px; padding: 0 13px; overflow: hidden; border: 1px dashed #927fe5; border-radius: 11px; background: #f8f6ff; color: #563fc4; font-size: 13px; font-weight: 800; cursor: pointer; }
+.filePicker input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.filePicker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .whatsapp { display: flex; align-items: center; justify-content: center; min-height: 46px; border: 1px solid #168f55; border-radius: 12px; background: #eafbf2; color: #08743f; font-weight: 850; text-align: center; text-decoration: none; }
 .notice { color: #777188; line-height: 1.45; }.success { color: #15803d; }.error { color: #b91c1c; }.signInCard h3 { margin: 0; font-size: 27px; }.signInCard p { margin: 0; color: #6f6982; line-height: 1.55; }.signInCard small { color: #6f6982; text-align: center; }.signInCard small a { color: #5c43dc; }
 @keyframes descendReveal { 0% { opacity: .12; filter: blur(10px); transform: translateY(-58px) scale(.97); } 55% { opacity: .65; filter: blur(3px); } 100% { opacity: 1; filter: blur(0); transform: none; } }

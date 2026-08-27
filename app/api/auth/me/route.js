@@ -4,7 +4,7 @@ import { appendAuditEvent } from "@/lib/db";
 import { getOrganizationAccess, publicAccess } from "@/lib/organization-access";
 import { guardMutation } from "@/lib/request-security";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { getMonitoringAccessPath, isAdministrator } from "@/lib/admin-access";
+import { getAdministratorAccess, getMonitoringAccessPath } from "@/lib/admin-access";
 
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "session", limit: 120 });
@@ -13,15 +13,17 @@ export async function GET(request) {
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const { sessionHash: _sessionHash, ...safeUser } = user;
   const access = await getOrganizationAccess(user);
-  const administrator = isAdministrator(user.email);
+  const adminAccess = await getAdministratorAccess(user);
+  const administrator = adminAccess.isStaff;
   return NextResponse.json(
     {
       user: {
         ...safeUser,
         access: publicAccess(access),
-        // O servidor toma a decisão com a lista privada de e-mails e entrega o
-        // caminho apenas à sessão que acabou de ser reconhecida como administradora.
+        // O servidor combina a raiz privada com as permissões atuais do banco e
+        // entrega o caminho apenas à sessão reconhecida como equipe interna.
         administrator,
+        administrativePermissions: administrator ? adminAccess : null,
         monitoringPath: administrator ? getMonitoringAccessPath() : null,
       },
     },

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabaseForTests, createUser, getBillingProviderState } from "../lib/db.js";
 import { buildPixPayload } from "../lib/pix.js";
-import { createOrGetPixPaymentRequest, resetPixSchemaForTests, reviewPixPayment } from "../lib/pix-db.js";
+import { createOrGetPixPaymentRequest, getLatestPixPayment, resetPixSchemaForTests, reviewPixPayment, savePixPaymentReceipt } from "../lib/pix-db.js";
 
 test("Pix inicial inclui implantação, não duplica pendência e só ativa após aprovação", async () => {
   const directory = mkdtempSync(join(tmpdir(), "candtech-pix-"));
@@ -24,6 +24,13 @@ test("Pix inicial inclui implantação, não duplica pendência e só ativa apó
     assert.equal(repeated.payment.id, first.payment.id);
     assert.equal((await getBillingProviderState(user.id)).status, "pending_payment");
 
+    await savePixPaymentReceipt({
+      id: first.payment.id, userId: user.id, storageKey: "local:11111111-1111-4111-8111-111111111111.pdf",
+      originalFilename: "comprovante.pdf", contentType: "application/pdf", sizeBytes: 120,
+      sha256: "a".repeat(64),
+    });
+    assert.equal((await getLatestPixPayment(user.id)).status, "payment_review");
+    assert.equal((await getBillingProviderState(user.id)).status, "pending_payment", "upload não pode ativar a assinatura");
     await reviewPixPayment({ id: first.payment.id, approved: true, administratorId: user.id });
     const active = await getBillingProviderState(user.id);
     assert.equal(active.paymentProvider, "pix");

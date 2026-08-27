@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { isAdministrator, isMonitoringAccessKey } from "@/lib/admin-access";
+import { getAdministratorAccess, isMonitoringAccessKey } from "@/lib/admin-access";
 import MonitoringPortal from "../../admin/monitoramento/portal";
 
 export const metadata = {
@@ -16,6 +16,8 @@ export default async function MonitoringPage({ params }) {
   const cookieStore = await cookies();
   const user = await getSession({ cookies: cookieStore }, { allowInactiveSubscription: true });
   if (!user) redirect("/?entrar=1");
-  if (!isAdministrator(user.email)) notFound();
-  return <MonitoringPortal administratorName={user.name} />;
+  if (!user.legalAccepted) redirect("/");
+  const access = await getAdministratorAccess(user);
+  if (!access.isStaff) notFound();
+  return <MonitoringPortal administratorName={user.name} permissions={access} />;
 }

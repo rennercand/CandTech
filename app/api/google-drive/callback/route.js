@@ -11,12 +11,13 @@ import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
 
-function finish(request, status, { historyId = null, returnTo = "" } = {}) {
+function finish(request, status, { historyId = null, returnTo = "", filename = "" } = {}) {
   const url = new URL("/", request.url);
   url.searchParams.set("drive", status);
   // A página retoma a exportação; a API ainda verifica se o histórico pertence ao usuário.
   if (historyId) url.searchParams.set("export", String(historyId));
   if (returnTo === "inventory") url.searchParams.set("inventoryDrive", "1");
+  if (filename) url.searchParams.set("filename", filename);
   return Response.redirect(url, 302);
 }
 
@@ -47,7 +48,7 @@ export async function GET(request) {
     });
     // Somente a versão cifrada do token persistente entra no banco de dados.
     await saveGoogleDriveConnection(verified.userId, encryptDriveToken(refreshToken));
-    return finish(request, "connected", { historyId: verified.historyId, returnTo: verified.returnTo });
+    return finish(request, "connected", { historyId: verified.historyId, returnTo: verified.returnTo, filename: verified.filename });
   } catch (error) {
     reportServerError(error, { request, route: "/api/google-drive/callback", operation: "exchange" });
     return finish(request, "error");

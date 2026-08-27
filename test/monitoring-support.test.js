@@ -93,8 +93,9 @@ test("caminho do monitoramento não é fixo e exige a chave completa", () => {
 test("identificação administrativa não depende da assinatura do ERP", () => {
   const sessionRoute = readFileSync(join(projectRoot, "app", "api", "auth", "me", "route.js"), "utf8");
   const overviewRoute = readFileSync(join(projectRoot, "app", "api", "admin", "overview", "route.js"), "utf8");
-  assert.match(sessionRoute, /const administrator = isAdministrator\(user\.email\)/);
+  assert.match(sessionRoute, /getAdministratorAccess\(user\)/);
   assert.match(sessionRoute, /monitoringPath:\s*administrator\s*\?\s*getMonitoringAccessPath\(\)\s*:\s*null/);
   assert.match(overviewRoute, /allowInactiveSubscription:\s*true/);
-  assert.match(overviewRoute, /isAdministrator\(user\.email\)/);
+  assert.match(overviewRoute, /getAdministratorAccess\(user\)/);
+  assert.match(overviewRoute, /access\.isStaff/);
 });

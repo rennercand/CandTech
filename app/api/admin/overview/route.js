@@ -10,25 +10,26 @@ export const runtime = "nodejs";
 export async function GET(request) {
   const limited = await enforceRateLimit(request, { scope: "admin-overview", limit: 30 });
   if (limited) return limited;
-  // O proprietário do sistema precisa consultar a operação mesmo durante a
-  // configuração da cobrança; a autorização administrativa continua obrigatória.
   const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!user.legalAccepted) return NextResponse.json({ error: "Aceite jurídico pendente." }, { status: 403 });
   const access = await getAdministratorAccess(user);
   if (!access.isStaff) return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
 
+  const privateView = new URL(request.url).searchParams.get("private") === "1";
+
   try {
-    // Suporte e cobrança recebem o atalho da central, mas não métricas globais
-    // que não são necessárias para executar suas tarefas.
-    if (!access.canMonitor) {
+    // Esta visão contém métricas globais da plataforma. Ela só pode ser usada
+    // pela conta proprietária explicitamente autorizada e somente na central privada.
+    if (!privateView || !access.canViewSystemOverview) {
       return NextResponse.json({
         restricted: true,
         monitoringPath: getMonitoringAccessPath(),
         permissions: access,
-        privacy: "A conta possui somente acesso operacional aos módulos concedidos.",
+        privacy: "As métricas globais da plataforma ficam disponíveis somente na central privada da conta proprietária autorizada.",
       }, { headers: { "Cache-Control": "private, no-store" } });
     }
+
     const metrics = await getAdminOverview();
     const trafficLevel = metrics.peak_per_identity >= 100 ? "critical" : metrics.peak_per_identity >= 60 ? "attention" : "normal";
     return NextResponse.json({

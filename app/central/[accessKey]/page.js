@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getAdministratorAccess, isMonitoringAccessKey } from "@/lib/admin-access";
 import MonitoringPortal from "../../admin/monitoramento/portal";
+import SystemOverviewPanel from "../../admin/monitoramento/system-overview-panel";
 
 export const metadata = {
   title: "Monitoramento privado",
@@ -19,5 +20,9 @@ export default async function MonitoringPage({ params }) {
   if (!user.legalAccepted) redirect("/");
   const access = await getAdministratorAccess(user);
   if (!access.isStaff) notFound();
-  return <MonitoringPortal administratorName={user.name} permissions={access} />;
+
+  return <>
+    {access.canViewSystemOverview && <SystemOverviewPanel />}
+    <MonitoringPortal administratorName={user.name} permissions={access} />
+  </>;
 }

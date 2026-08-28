@@ -5,7 +5,7 @@ import StaffAccessPanel from "./staff-access-panel";
 import SystemOverviewPanel from "./system-overview-panel";
 
 const ticketStatus = { open: "Novo", answered: "Respondido", closed: "Encerrado" };
-const paymentStatus = { pending: "Aguardando pagamento", payment_review: "Comprovante recebido", approved: "Aprovado", rejected: "Recusado", expired: "Expirado" };
+const paymentStatus = { pending: "Aguardando confirmação", payment_review: "Comprovante recebido", approved: "Aprovado", rejected: "Recusado", expired: "Expirado" };
 
 function Icon({ type }) {
   const paths = {
@@ -15,7 +15,7 @@ function Icon({ type }) {
     inbox: <><path d="M4 4h16v16H4Z"/><path d="M4 14h5l2 2h2l2-2h5"/></>,
     payment: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></>,
     refresh: <><path d="M20 6v5h-5"/><path d="M19 11a7 7 0 1 0 1 5"/></>,
-    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 1 0 7.75"/></>,
+    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
 }
@@ -32,7 +32,7 @@ const viewCopy = {
   overview: { kicker: "OPERAÇÃO CANDTECH", title: "Visão do sistema", description: "Uso, capacidade e saúde da plataforma em uma visão privada." },
   events: { kicker: "CONFIABILIDADE", title: "Incidentes", description: "Falhas atuais, alertas e acompanhamento técnico da produção." },
   tickets: { kicker: "ATENDIMENTO", title: "Suporte", description: "Mensagens dos clientes e respostas da equipe interna." },
-  payments: { kicker: "COBRANÇA", title: "Cobrança Pix", description: "Comprovantes, conferência manual e liberação de assinatura." },
+  payments: { kicker: "COBRANÇA", title: "Cobrança Pix", description: "Conferência manual, comprovantes opcionais e liberação de assinatura." },
   staff: { kicker: "ACESSO INTERNO", title: "Equipe interna", description: "Permissões operacionais da equipe CandTech." },
 };
 
@@ -107,7 +107,6 @@ export default function MonitoringPortal({ administratorName, permissions }) {
       </div>}
 
       {state.error && view !== "overview" && <div className="monitor-alert" role="alert">{state.error} <button onClick={load}>Tentar novamente</button></div>}
-
       {permissions.canViewSystemOverview && view === "overview" && <SystemOverviewPanel permissions={permissions} onNavigate={setView} />}
 
       {permissions.canMonitor && view === "events" && <section className="monitor-panel"><div className="monitor-panel-heading"><div><h2>Incidentes e alertas</h2><p>Falhas iguais são agrupadas; dados sensíveis e mensagens de banco não aparecem aqui.</p></div><span>Atualização automática: 20 s</span></div>
@@ -127,15 +126,21 @@ export default function MonitoringPortal({ administratorName, permissions }) {
         </article>)}</div>
       </section>}
 
-      {permissions.canBilling && view === "payments" && <section className="monitor-panel"><div className="monitor-panel-heading"><div><h2>Conferência manual de Pix</h2><p>O comprovante auxilia a análise, mas confirme somente depois de localizar o Pix na conta bancária.</p></div><span>{filteredPayments.length} registro(s)</span></div>
-        <div className="monitor-payment-filters" aria-label="Filtrar pagamentos"><button className={paymentFilter === "all" ? "active" : ""} onClick={() => setPaymentFilter("all")}>Todos</button><button className={paymentFilter === "pending" ? "active" : ""} onClick={() => setPaymentFilter("pending")}>Aguardando pagamento</button><button className={paymentFilter === "payment_review" ? "active" : ""} onClick={() => setPaymentFilter("payment_review")}>Comprovante recebido</button><button className={paymentFilter === "approved" ? "active" : ""} onClick={() => setPaymentFilter("approved")}>Aprovados</button><button className={paymentFilter === "rejected" ? "active" : ""} onClick={() => setPaymentFilter("rejected")}>Recusados</button><button className={paymentFilter === "expired" ? "active" : ""} onClick={() => setPaymentFilter("expired")}>Expirados</button></div>
-        <div className="monitor-ticket-list">{!filteredPayments.length ? <div className="monitor-empty"><Icon type="payment"/><strong>Nenhum pagamento neste filtro</strong></div> : filteredPayments.map((payment) => <article className="monitor-ticket" key={payment.id}>
-          <header><div><span className={`ticket-status ${payment.status}`}>{paymentStatus[payment.status]}</span><h3>{payment.txid}</h3><small>{payment.customer?.name} · {payment.customer?.email}{payment.customer?.phone ? ` · ${payment.customer.phone}` : ""}</small></div><strong>{(payment.amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></header>
-          <p>{payment.customer?.organization ? `Empresa: ${payment.customer.organization}. ` : ""}{payment.kind === "initial" ? "Primeira mensalidade + implantação" : "Renovação mensal"}. Solicitado em {new Date(payment.createdAt).toLocaleString("pt-BR")}; vence em {new Date(payment.dueAt).toLocaleString("pt-BR")}.</p>
-          {payment.receipt && <div className="monitor-receipt"><div><strong>Novo comprovante</strong><span>{payment.receipt.originalFilename} · {(payment.receipt.sizeBytes / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} KB · {new Date(payment.receipt.uploadedAt).toLocaleString("pt-BR")}</span></div><div><button onClick={() => setReceiptPreview(payment)}>Visualizar comprovante</button><a href={`/api/admin/payments/${payment.id}/receipt?download=1`}>Baixar</a></div></div>}
-          {payment.backupSentAt && <div className="monitor-old-reply"><strong>Backup enviado</strong><p>{new Date(payment.backupSentAt).toLocaleString("pt-BR")}</p></div>}
-          {["pending", "payment_review"].includes(payment.status) && <div className="monitor-ticket-actions"><button disabled={state.updating === payment.id} onClick={() => update({ type: "payment", id: payment.id, action: "reject" }, payment.id)}>Recusar e suspender</button>{payment.status === "payment_review" && <button disabled={state.updating === payment.id} onClick={() => update({ type: "payment", id: payment.id, action: "approve" }, payment.id)}>{state.updating === payment.id ? "Salvando…" : "Confirmar recebimento"}</button>}</div>}
-        </article>)}</div>
+      {permissions.canBilling && view === "payments" && <section className="monitor-panel"><div className="monitor-panel-heading"><div><h2>Conferência manual de Pix</h2><p>O comprovante é opcional. Você pode liberar o acesso assim que confirmar o recebimento diretamente no banco.</p></div><span>{filteredPayments.length} registro(s)</span></div>
+        <div className="monitor-payment-filters" aria-label="Filtrar pagamentos"><button className={paymentFilter === "all" ? "active" : ""} onClick={() => setPaymentFilter("all")}>Todos</button><button className={paymentFilter === "pending" ? "active" : ""} onClick={() => setPaymentFilter("pending")}>Aguardando confirmação</button><button className={paymentFilter === "payment_review" ? "active" : ""} onClick={() => setPaymentFilter("payment_review")}>Comprovante recebido</button><button className={paymentFilter === "approved" ? "active" : ""} onClick={() => setPaymentFilter("approved")}>Aprovados</button><button className={paymentFilter === "rejected" ? "active" : ""} onClick={() => setPaymentFilter("rejected")}>Recusados</button><button className={paymentFilter === "expired" ? "active" : ""} onClick={() => setPaymentFilter("expired")}>Expirados</button></div>
+        <div className="monitor-ticket-list">{!filteredPayments.length ? <div className="monitor-empty"><Icon type="payment"/><strong>Nenhum pagamento neste filtro</strong></div> : filteredPayments.map((payment) => {
+          const isCompany = payment.customer?.accountType === "company" || Boolean(payment.customer?.organization);
+          const payerName = payment.customer?.billingName || payment.customer?.organization || payment.customer?.name || "Não informado";
+          return <article className="monitor-ticket" key={payment.id}>
+            <header><div><span className={`ticket-status ${payment.status}`}>{paymentStatus[payment.status]}</span><h3>{payerName}</h3><small>{isCompany ? "Empresa" : "Pessoa física"} · {payment.customer?.email || "E-mail não informado"}{payment.customer?.phone ? ` · ${payment.customer.phone}` : ""}</small></div><strong>{(payment.amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></header>
+            <p><strong>Tipo:</strong> {isCompany ? "Pessoa jurídica" : "Pessoa física"} · <strong>Nome do pagador:</strong> {payerName}{isCompany && payment.customer?.organization && payment.customer.organization !== payerName ? ` · Empresa: ${payment.customer.organization}` : ""}</p>
+            <p><strong>Responsável:</strong> {payment.customer?.name || "Não informado"} · <strong>E-mail:</strong> {payment.customer?.email || "Não informado"} · <strong>TXID:</strong> {payment.txid}</p>
+            <p>{payment.kind === "initial" ? "Primeira mensalidade + implantação" : "Renovação mensal"}. Solicitado em {new Date(payment.createdAt).toLocaleString("pt-BR")}; vence em {new Date(payment.dueAt).toLocaleString("pt-BR")}.</p>
+            {payment.receipt ? <div className="monitor-receipt"><div><strong>Comprovante disponível</strong><span>{payment.receipt.originalFilename} · {(payment.receipt.sizeBytes / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} KB · {new Date(payment.receipt.uploadedAt).toLocaleString("pt-BR")}</span></div><div><button onClick={() => setReceiptPreview(payment)}>Visualizar comprovante</button><a href={`/api/admin/payments/${payment.id}/receipt?download=1`}>Baixar</a></div></div> : ["pending", "payment_review"].includes(payment.status) ? <div className="monitor-old-reply"><strong>Sem comprovante</strong><p>Isso não impede a liberação manual. Confirme apenas se você localizou o recebimento no banco.</p></div> : null}
+            {payment.backupSentAt && <div className="monitor-old-reply"><strong>Backup enviado</strong><p>{new Date(payment.backupSentAt).toLocaleString("pt-BR")}</p></div>}
+            {["pending", "payment_review"].includes(payment.status) && <div className="monitor-ticket-actions"><button disabled={state.updating === payment.id} onClick={() => update({ type: "payment", id: payment.id, action: "reject" }, payment.id)}>Recusar e suspender</button><button disabled={state.updating === payment.id} onClick={() => update({ type: "payment", id: payment.id, action: "approve" }, payment.id)}>{state.updating === payment.id ? "Salvando…" : payment.status === "payment_review" ? "Confirmar e liberar acesso" : "Liberar acesso manualmente"}</button></div>}
+          </article>;
+        })}</div>
       </section>}
 
       {permissions.canManageStaff && view === "staff" && <StaffAccessPanel/>}

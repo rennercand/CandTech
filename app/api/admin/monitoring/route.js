@@ -5,7 +5,7 @@ import { appendAuditEvent, listMonitoringEvents, listSupportTicketsForAdmin, rep
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
-import { listPixPaymentsForAdmin } from "@/lib/pix-db";
+import { listPaymentsForPrivateCentral } from "@/lib/admin-payment-list";
 import { reviewPixPaymentManually } from "@/lib/manual-payment-review";
 import { processPixExpirations } from "@/lib/pix-expiration";
 
@@ -26,12 +26,10 @@ export async function GET(request) {
   const auth = await authorize(request);
   if (auth.response) return auth.response;
   try {
-    // Cada colaborador consulta somente os módulos concedidos. Ocultar a aba no
-    // navegador é apenas UX; esta filtragem no servidor é a barreira efetiva.
     const [events, tickets, payments] = await Promise.all([
       auth.access.canMonitor ? listMonitoringEvents() : [],
       auth.access.canSupport ? listSupportTicketsForAdmin() : [],
-      auth.access.canBilling ? listPixPaymentsForAdmin() : [],
+      auth.access.canBilling ? listPaymentsForPrivateCentral() : [],
     ]);
     return NextResponse.json({
       events,

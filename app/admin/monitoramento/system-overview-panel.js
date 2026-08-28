@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export default function SystemOverviewPanel() {
+export default function SystemOverviewPanel({ permissions, onNavigate }) {
   const [overview, setOverview] = useState(null);
   const [state, setState] = useState({ loading: true, error: "" });
 
@@ -35,7 +35,7 @@ export default function SystemOverviewPanel() {
       <div>
         <span className="monitor-kicker">ACESSO DO PROPRIETÁRIO</span>
         <h2 id="system-overview-title">Visão do sistema</h2>
-        <p>Métricas agregadas de uso, capacidade e saúde da plataforma. Nenhum dado financeiro de clientes é exibido.</p>
+        <p>Métricas agregadas de uso, capacidade e saúde da plataforma. Nenhum dado financeiro detalhado de clientes é exibido.</p>
       </div>
       <button onClick={load}>Atualizar</button>
     </div>
@@ -52,6 +52,16 @@ export default function SystemOverviewPanel() {
         <header><div><span className="ticket-status approved">Saúde</span><h3>Infraestrutura</h3></div></header>
         <p>Servidor: <strong>{health.server === "online" ? "Online" : "Indisponível"}</strong> · Banco de dados: <strong>{health.database === "online" ? "Online" : "Indisponível"}</strong> · Tráfego: <strong>{health.trafficLevel === "normal" ? "Normal" : health.trafficLevel === "attention" ? "Atenção" : "Crítico"}</strong>.</p>
         <small>Atualizado em {new Date(health.checkedAt).toLocaleString("pt-BR")}.</small>
+      </article>
+
+      <article className="monitor-ticket">
+        <header><div><span className="ticket-status answered">Atalhos</span><h3>Operação</h3></div></header>
+        <p>Abra diretamente o módulo que exige atenção sem voltar para a navegação principal.</p>
+        <div className="monitor-ticket-actions">
+          {permissions?.canMonitor && <button onClick={() => onNavigate?.("events")}>Abrir incidentes</button>}
+          {permissions?.canSupport && <button onClick={() => onNavigate?.("tickets")}>Abrir suporte</button>}
+          {permissions?.canBilling && <button onClick={() => onNavigate?.("payments")}>Abrir cobrança</button>}
+        </div>
       </article>
     </div>
   </section>;

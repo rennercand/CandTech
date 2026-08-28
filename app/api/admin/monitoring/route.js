@@ -5,7 +5,8 @@ import { appendAuditEvent, listMonitoringEvents, listSupportTicketsForAdmin, rep
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
-import { listPixPaymentsForAdmin, reviewPixPayment } from "@/lib/pix-db";
+import { listPixPaymentsForAdmin } from "@/lib/pix-db";
+import { reviewPixPaymentManually } from "@/lib/manual-payment-review";
 import { processPixExpirations } from "@/lib/pix-expiration";
 
 export const runtime = "nodejs";
@@ -78,9 +79,19 @@ export async function PATCH(request) {
     if (body.type === "payment") {
       if (!auth.access.canBilling) return NextResponse.json({ error: "Sem permissão para pagamentos." }, { status: 403 });
       if (!["approve", "reject"].includes(body.action)) return NextResponse.json({ error: "Ação de pagamento inválida." }, { status: 400 });
-      const payment = await reviewPixPayment({ id: String(body.id || ""), approved: body.action === "approve", administratorId: auth.user.id });
+      const payment = await reviewPixPaymentManually({ id: String(body.id || ""), approved: body.action === "approve", administratorId: auth.user.id });
       if (!payment) return NextResponse.json({ error: "Pagamento pendente não encontrado." }, { status: 404 });
-      await appendAuditEvent({ userId: payment.userId, action: body.action === "approve" ? "pix.payment_approved" : "pix.payment_rejected", metadata: { paymentId: payment.id, administratorId: auth.user.id } });
+      await appendAuditEvent({
+        userId: payment.userId,
+        action: body.action === "approve" ? "pix.payment_approved" : "pix.payment_rejected",
+        metadata: {
+          paymentId: payment.id,
+          administratorId: auth.user.id,
+          approvalMode: "manual_admin",
+          receiptRequired: false,
+          receiptPresent: Boolean(payment.receipt),
+        },
+      });
       if (body.action === "reject") await processPixExpirations();
       return NextResponse.json({ payment });
     }

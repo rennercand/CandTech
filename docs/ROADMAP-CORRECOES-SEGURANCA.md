@@ -185,7 +185,7 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 ### SEC-15 — Falta trilha de auditoria de segurança e financeira
 
 - **Severidade:** média para empresas.
-- **Evidência atual:** `audit_events` v2 separa autor e conta afetada, organização, origem, versão, objeto e antes/depois minimizado. Tokens e campos sensíveis são removidos; excesso é substituído por tamanho e SHA-256. Autenticação, aceite jurídico, equipe interna/empresarial e Pix já emitem eventos estruturados. Ainda faltam exportações/Drive, política de consulta/retenção e aplicação da migration no Neon.
+- **Evidência atual:** `audit_events` v2 separa autor e conta afetada, organização, origem, versão, objeto e antes/depois minimizado. Tokens e campos sensíveis são removidos; excesso é substituído por tamanho e SHA-256. Autenticação, aceite jurídico, equipe interna/empresarial e Pix já emitem eventos estruturados. Em 29/08/2026, a migration foi aplicada na branch `main` do Neon, verificou as 8 colunas novas e preencheu o autor legado em 63 eventos. Ainda faltam exportações/Drive e a política de consulta/retenção.
 - **Risco:** não é possível provar quem alterou valor, exportou dados, conectou Drive ou mudou permissão.
 - **Correção:** eventos append-only com usuário, empresa, ação, origem, data e antes/depois minimizado; retenção e acesso restrito.
 - **Aceite:** eventos sensíveis podem ser investigados sem expor senhas, tokens ou documentos completos. **Situação: parcialmente implementada e coberta por testes locais.**

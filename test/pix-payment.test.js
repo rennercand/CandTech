@@ -114,6 +114,16 @@ test("campo DICT continua válido quando a chave ocupa o limite do BR Code", () 
   );
 });
 
+test("chave DICT copiada da configuração é normalizada sem alterar o destinatário", () => {
+  const emailPayload = buildPixPayload({ key: ' "Financeiro@Example.com\u200B" ', receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-EMAIL" });
+  const phonePayload = buildPixPayload({ key: "(11) 99999-9999", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-PHONE" });
+  const documentPayload = buildPixPayload({ key: "12.345.678/0001-90", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-CNPJ" });
+
+  assert.equal(decodePixPayload(emailPayload).merchantAccount.dictKey, "financeiro@example.com");
+  assert.equal(decodePixPayload(phonePayload).merchantAccount.dictKey, "+5511999999999");
+  assert.equal(decodePixPayload(documentPayload).merchantAccount.dictKey, "12345678000190");
+});
+
 test("QR Code Pix é gerado localmente a partir do mesmo Copia e Cola", async () => {
   const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 18000, txid: "CT123456" });
   const dataUrl = await QRCode.toDataURL(payload, { width: 280 });

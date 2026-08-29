@@ -51,6 +51,8 @@ O QR Code contém exatamente o mesmo texto do Pix Copia e Cola. `lib/pix.js` mon
 
 A chave não aparece com a palavra literal `DICT`: decodificadores BR Code devem apresentá-la como o subcampo `01` dentro do template `26`. Se `26.01` estiver ausente, diferente de `PIX_KEY`, com TLV inválido ou CRC incorreto, o servidor rejeita a geração com `PIX_EMV_INVALID` e não entrega o QR ao navegador.
 
+Antes de montar o TLV, o servidor remove aspas externas, espaços invisíveis e formatação comum copiada junto com a chave. E-mails são convertidos para minúsculas, telefones brasileiros formatados recebem o padrão `+55`, CPF/CNPJ ficam somente com dígitos e EVP permanece em UUID. Essa normalização não cria nem troca a chave: ela apenas produz o formato canônico esperado pelo DICT.
+
 ## Jornada administrativa
 
 1. Uma conta verificada com permissão **Cobrança** abre a central privada; somente `ADMIN_EMAILS` concede ou revoga essa permissão.

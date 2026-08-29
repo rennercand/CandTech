@@ -70,7 +70,16 @@ export async function POST(request) {
         message: `Nova solicitação Pix de ${formatCents(result.payment.amountCents)}. Referência ${result.payment.txid}. Aguardando conferência manual do pagamento.`,
         preferredChannel: "site",
       });
-      await appendAuditEvent({ userId: auth.user.id, action: "pix.payment_requested", metadata: { paymentId: result.payment.id, kind: result.payment.kind, amountCents: result.payment.amountCents } });
+      await appendAuditEvent({
+        userId: auth.user.id,
+        actorUserId: auth.user.id,
+        organizationId: access?.organizationId || null,
+        action: "pix.payment_requested",
+        origin: "api/pix",
+        subjectType: "pix_payment_request",
+        subjectId: result.payment.id,
+        newState: { status: result.payment.status, kind: result.payment.kind, amountCents: result.payment.amountCents },
+      });
     }
     return NextResponse.json({ payment: publicPayment(result.payment), contact: publicSupportContact(), created: result.created }, { status: result.created ? 201 : 200 });
   } catch (error) {

@@ -39,7 +39,10 @@ export async function DELETE(request) {
   const session = await getSession(request, { allowUnverified: true, allowInactiveSubscription: true });
   if (session) {
     await revokeSession(session);
-    await appendAuditEvent({ userId: session.id, action: "session.revoked" });
+    await appendAuditEvent({
+      userId: session.id, actorUserId: session.id, action: "session.revoked", origin: "api/auth/me",
+      subjectType: "auth_session", previousState: { active: true }, newState: { active: false },
+    });
   }
   const response = NextResponse.json({ ok: true });
   // A remoção precisa repetir os mesmos atributos do cookie original. Além de

@@ -19,7 +19,7 @@ export default function NotFound() {
           Esta parte não está disponível agora. Estamos organizando o caminho e voltaremos logo.
         </p>
         <div className={styles.actions}>
-          <Link className={styles.primary} href="/">Voltar ao início</Link>
+          <Link className={styles.primary} href="/">Voltar para a CandTech</Link>
           <Link className={styles.secondary} href="/?entrar=1">Ir para o ERP</Link>
         </div>
         <small className={styles.footer}>CandTech — organização e controle para sua empresa</small>

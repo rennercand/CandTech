@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import {
   appendAuditEvent,
   createOrganizationJob,
+  findOrganizationJob,
   listOrganizationJobs,
   MAX_ORGANIZATION_JOBS,
   removeOrganizationJob,
@@ -69,7 +70,11 @@ export async function POST(request) {
       role,
       permissions: normalizePermissions(input.permissions, role),
     });
-    await appendAuditEvent({ userId: context.user.id, action: "team.job.created", metadata: { organizationId: context.access.organizationId, jobId: job.id } });
+    await appendAuditEvent({
+      userId: context.user.id, actorUserId: context.user.id, organizationId: context.access.organizationId,
+      action: "team.job.created", origin: "api/team/jobs", subjectType: "organization_job", subjectId: job.id,
+      newState: { name: job.name, role: job.role, permissions: job.permissions },
+    });
     return NextResponse.json({ job }, { status: 201 });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
@@ -95,6 +100,7 @@ export async function PATCH(request) {
     if (!Number.isInteger(jobId) || jobId <= 0 || !name) {
       return NextResponse.json({ error: "Cargo inválido." }, { status: 400 });
     }
+    const previousJob = await findOrganizationJob({ organizationId: context.access.organizationId, jobId });
     const role = normalizeRole(input.role);
     const job = await updateOrganizationJob({
       organizationId: context.access.organizationId,
@@ -104,7 +110,12 @@ export async function PATCH(request) {
       permissions: normalizePermissions(input.permissions, role),
     });
     if (!job) return NextResponse.json({ error: "Cargo não encontrado." }, { status: 404 });
-    await appendAuditEvent({ userId: context.user.id, action: "team.job.updated", metadata: { organizationId: context.access.organizationId, jobId } });
+    await appendAuditEvent({
+      userId: context.user.id, actorUserId: context.user.id, organizationId: context.access.organizationId,
+      action: "team.job.updated", origin: "api/team/jobs", subjectType: "organization_job", subjectId: jobId,
+      previousState: previousJob && { name: previousJob.name, role: previousJob.role, permissions: previousJob.permissions },
+      newState: { name: job.name, role: job.role, permissions: job.permissions },
+    });
     return NextResponse.json({ job });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
@@ -127,9 +138,15 @@ export async function DELETE(request) {
     const input = await readLimitedJson(request, { maxBytes: 2_048, maxDepth: 2, maxNodes: 10, maxStringLength: 50 });
     const jobId = Number(input.id);
     if (!Number.isInteger(jobId) || jobId <= 0) return NextResponse.json({ error: "Cargo inválido." }, { status: 400 });
+    const previousJob = await findOrganizationJob({ organizationId: context.access.organizationId, jobId });
     const removed = await removeOrganizationJob({ organizationId: context.access.organizationId, jobId });
     if (!removed) return NextResponse.json({ error: "Cargo não encontrado." }, { status: 404 });
-    await appendAuditEvent({ userId: context.user.id, action: "team.job.removed", metadata: { organizationId: context.access.organizationId, jobId } });
+    await appendAuditEvent({
+      userId: context.user.id, actorUserId: context.user.id, organizationId: context.access.organizationId,
+      action: "team.job.removed", origin: "api/team/jobs", subjectType: "organization_job", subjectId: jobId,
+      previousState: previousJob && { name: previousJob.name, role: previousJob.role, permissions: previousJob.permissions },
+      newState: { removed: true },
+    });
     return NextResponse.json({ removed: true });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);

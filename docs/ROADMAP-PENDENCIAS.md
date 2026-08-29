@@ -22,13 +22,13 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 - [ ] concluir o isolamento relacional por `tenant_id` para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados;
 - [ ] adicionar testes sistemáticos de acesso cruzado para cada nova entidade e permissão, não somente para os fluxos já cobertos;
-- [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado;
+- [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico e Pix implementados em 29/08/2026; faltam exportações/Drive, aplicar a migration no Neon e definir retenção/acesso de consulta**;
 - [ ] definir e testar backup completo do Neon e do Blob, restauração, RPO/RTO, retenção, exclusão e continuidade; o ZIP enviado após expiração do Pix não substitui backup da plataforma;
-- [ ] confirmar no Neon que a credencial usada pela aplicação não possui privilégios DDL;
+- [ ] confirmar no Neon que a credencial usada pela aplicação não possui privilégios DDL; **verificador `npm run security:check-db-role` criado; falta executá-lo com a credencial real de runtime**;
 - [ ] adicionar MFA para proprietário e equipe administrativa; avaliar SSO/SAML apenas quando houver demanda empresarial;
 - [ ] complementar o rate limit no PostgreSQL com proteção na borda/WAF para rotas públicas e autenticação;
-- [ ] executar revisão independente e pentest do escopo de produção, além de monitoramento contínuo de dependências e alertas;
-- [ ] concluir o plano de resposta a incidentes e realizar um exercício documentado;
+- [ ] executar revisão independente e pentest do escopo de produção, além de monitoramento contínuo de dependências e alertas; **Dependabot, `npm audit`, CodeQL e Gitleaks automatizados; revisão independente e pentest continuam externos**;
+- [ ] concluir o plano de resposta a incidentes e realizar um exercício documentado; **runbook criado em 29/08/2026; faltam responsáveis nominais privados e o exercício em ambiente isolado**;
 - [ ] concluir dados do controlador, contratos com operadores, prazos de retenção e revisão jurídica dos textos LGPD antes da venda ampla.
 
 ## P1 — núcleo financeiro vendável

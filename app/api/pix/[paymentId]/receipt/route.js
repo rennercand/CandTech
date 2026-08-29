@@ -39,8 +39,14 @@ async function authorizedOwner(request, paymentId) {
 async function auditUpload({ request, userId, paymentId, organizationId, receipt, replaced }) {
   await appendAuditEvent({
     userId,
+    actorUserId: userId,
+    organizationId,
     action: replaced ? "pix.receipt_replaced" : "pix.receipt_uploaded",
-    metadata: { paymentId, organizationId, contentType: receipt.contentType, sizeBytes: receipt.sizeBytes },
+    origin: "api/pix/receipt",
+    subjectType: "pix_payment_receipt",
+    subjectId: paymentId,
+    previousState: replaced ? { activeReceipt: true } : null,
+    newState: { activeReceipt: true, contentType: receipt.contentType, sizeBytes: receipt.sizeBytes },
   }).catch((error) => reportServerError(error, { request, route: "/api/pix/[paymentId]/receipt", operation: "audit-upload" }));
 }
 

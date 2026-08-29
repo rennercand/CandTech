@@ -20,7 +20,10 @@ export async function POST(request) {
     }
     const user = await consumeEmailVerificationToken(hashAuthActionToken(cleanToken));
     if (!user) return NextResponse.json({ error: "Este link é inválido, expirou ou já foi usado." }, { status: 400 });
-    await appendAuditEvent({ userId: user.id, action: "account.email_verified" });
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, action: "account.email_verified", origin: "api/auth/verify-email",
+      subjectType: "user", subjectId: user.id, previousState: { emailVerified: false }, newState: { emailVerified: true },
+    });
     return NextResponse.json({ message: "E-mail confirmado com sucesso." });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);

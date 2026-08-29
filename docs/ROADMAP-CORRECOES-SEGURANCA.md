@@ -185,10 +185,10 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 ### SEC-15 — Falta trilha de auditoria de segurança e financeira
 
 - **Severidade:** média para empresas.
-- **Evidência:** banco possui usuários, históricos, workspaces, rate limits e Drive, mas não tabela de eventos imutáveis.
+- **Evidência atual:** `audit_events` v2 separa autor e conta afetada, organização, origem, versão, objeto e antes/depois minimizado. Tokens e campos sensíveis são removidos; excesso é substituído por tamanho e SHA-256. Autenticação, aceite jurídico, equipe interna/empresarial e Pix já emitem eventos estruturados. Ainda faltam exportações/Drive, política de consulta/retenção e aplicação da migration no Neon.
 - **Risco:** não é possível provar quem alterou valor, exportou dados, conectou Drive ou mudou permissão.
 - **Correção:** eventos append-only com usuário, empresa, ação, origem, data e antes/depois minimizado; retenção e acesso restrito.
-- **Aceite:** eventos sensíveis podem ser investigados sem expor senhas, tokens ou documentos completos.
+- **Aceite:** eventos sensíveis podem ser investigados sem expor senhas, tokens ou documentos completos. **Situação: parcialmente implementada e coberta por testes locais.**
 
 ### SEC-16 — Ausência de testes automatizados de segurança
 
@@ -196,12 +196,12 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 - **Evidência atual:** existem testes de limite de payload, campos perigosos, autorização entre empresas, adulteração de identificadores e presença de autenticação nas APIs privadas. Ainda faltam testes de integração completos para CSRF/origem, revogação de sessão, OAuth, rate limit e todos os verbos de cada entidade futura.
 - **Risco:** regressões de autorização podem chegar à produção sem detecção.
 - **Correção:** suíte de integração com dois usuários e duas organizações; casos negativos para todos os verbos; testes de limites e cabeçalhos; execução obrigatória antes do merge.
-- **Aceite:** CI bloqueia merge quando isolamento ou controles falham. **Situação: parcial; a suíte local existe, mas a obrigatoriedade no CI ainda deve ser confirmada.**
+- **Aceite:** CI bloqueia merge quando isolamento ou controles falham. **Situação: CI versionado com testes, build, auditoria de dependências, CodeQL e Gitleaks; regras de proteção da branch ainda precisam ser confirmadas no GitHub.**
 
 ### SEC-17 — Backup, restauração e resposta a incidentes não estão comprovados
 
 - **Severidade:** média operacional.
-- **Evidência:** não há scripts, evidências ou runbook versionado para backup, restauração, rotação emergencial e comunicação.
+- **Evidência atual:** os runbooks `BACKUP-E-RESTAURACAO.md` e `PLANO-RESPOSTA-INCIDENTES.md` definem escopo, metas provisórias, contenção e critérios de evidência. Ainda não há restauração integral cronometrada nem exercício real registrado.
 - **Risco:** falha humana, exclusão ou incidente pode resultar em perda prolongada de dados.
 - **Correção:** definir RPO/RTO; automatizar backup; testar restauração; criar runbook de incidente e responsáveis.
 - **Aceite:** restauração é testada periodicamente e o tempo real fica dentro do RTO.

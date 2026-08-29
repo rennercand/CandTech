@@ -47,7 +47,10 @@ export async function POST(request) {
       emailVerified: !user.email_verification_required || Boolean(user.email_verified_at),
       legalAccepted: Boolean(user.legal_accepted_at) && user.terms_version === TERMS_VERSION && user.privacy_version === PRIVACY_VERSION,
     };
-    await appendAuditEvent({ userId: user.id, action: "session.created" });
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, action: "session.created", origin: "api/auth/login",
+      subjectType: "auth_session", newState: { active: true },
+    });
     const response = NextResponse.json({ user: safeUser });
     response.cookies.set("finsight_token", await createToken(safeUser), authCookie);
     return response;

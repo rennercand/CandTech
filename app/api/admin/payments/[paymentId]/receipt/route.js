@@ -36,8 +36,13 @@ export async function GET(request, { params }) {
     if (!file) return NextResponse.json({ error: "Arquivo do comprovante não encontrado." }, { status: 404 });
     await appendAuditEvent({
       userId: receipt.userId,
+      actorUserId: user.id,
+      organizationId: receipt.organizationId,
       action: "pix.receipt_viewed",
-      metadata: { paymentId: receipt.paymentId, administratorId: user.id, receiptId: receipt.id },
+      origin: "api/admin/payments/receipt",
+      subjectType: "pix_payment_receipt",
+      subjectId: receipt.id,
+      metadata: { paymentId: receipt.paymentId },
     }).catch((error) => reportServerError(error, { request, route: "/api/admin/payments/[paymentId]/receipt", operation: "audit-view" }));
     const download = new URL(request.url).searchParams.get("download") === "1";
     return new Response(file.body, {

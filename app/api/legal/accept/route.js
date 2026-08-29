@@ -20,7 +20,11 @@ export async function POST(request) {
     if (accepted !== true) return NextResponse.json({ error: "O aceite precisa ser expresso." }, { status: 400 });
     const acceptedAt = new Date().toISOString();
     await recordLegalAcceptance({ userId: user.id, acceptedAt, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION });
-    await appendAuditEvent({ userId: user.id, action: "legal.accepted", metadata: { termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION } });
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, action: "legal.accepted", origin: "api/legal/accept",
+      subjectType: "user", subjectId: user.id,
+      newState: { acceptedAt, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION },
+    });
     return NextResponse.json({ ok: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);

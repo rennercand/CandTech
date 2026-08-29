@@ -8,6 +8,8 @@
     "build": "next build",
     "migrate:2026-08-26": "node scripts/apply-20260826-migrations.js",
     "migrate:2026-08-28": "node scripts/apply-20260828-billing-setup.js",
+    "migrate:2026-08-29:audit": "node scripts/apply-20260829-audit-events-v2.js",
+    "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",
     "start": "next start"
   },

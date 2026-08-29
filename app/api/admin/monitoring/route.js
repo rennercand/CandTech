@@ -62,16 +62,33 @@ export async function PATCH(request) {
     const body = await readLimitedJson(request, { maxBytes: 8_192, maxStringLength: 4_000 });
     if (body.type === "event") {
       if (!auth.access.canMonitor) return NextResponse.json({ error: "Sem permissão para incidentes." }, { status: 403 });
+      const previousEvent = (await listMonitoringEvents()).find((item) => item.id === String(body.id || "")) || null;
       const event = await updateMonitoringEventStatus({ id: String(body.id || ""), status: body.status });
       if (!event) return NextResponse.json({ error: "Incidente não encontrado." }, { status: 404 });
+      await appendAuditEvent({
+        userId: auth.user.id, actorUserId: auth.user.id, action: "monitoring.event_updated",
+        origin: "api/admin/monitoring", subjectType: "monitoring_event", subjectId: event.id,
+        previousState: previousEvent && { status: previousEvent.status }, newState: { status: event.status },
+      });
       return NextResponse.json({ event });
     }
     if (body.type === "ticket") {
       if (!auth.access.canSupport) return NextResponse.json({ error: "Sem permissão para chamados." }, { status: 403 });
       const reply = String(body.reply || "").trim().slice(0, 4_000);
       if (reply.length < 2) return NextResponse.json({ error: "Escreva uma resposta." }, { status: 400 });
+      const previousTicket = (await listSupportTicketsForAdmin()).find((item) => item.id === String(body.id || "")) || null;
       const ticket = await replySupportTicket({ id: String(body.id || ""), reply, status: body.status });
       if (!ticket) return NextResponse.json({ error: "Mensagem não encontrada." }, { status: 404 });
+      await appendAuditEvent({
+        userId: auth.user.id,
+        actorUserId: auth.user.id,
+        action: "support.ticket_replied",
+        origin: "api/admin/monitoring",
+        subjectType: "support_ticket",
+        subjectId: ticket.id,
+        previousState: previousTicket && { status: previousTicket.status, answered: Boolean(previousTicket.reply) },
+        newState: { status: ticket.status, answered: true },
+      });
       return NextResponse.json({ ticket });
     }
     if (body.type === "payment") {
@@ -81,7 +98,14 @@ export async function PATCH(request) {
       if (!payment) return NextResponse.json({ error: "Pagamento pendente não encontrado." }, { status: 404 });
       await appendAuditEvent({
         userId: payment.userId,
+        actorUserId: auth.user.id,
+        organizationId: payment.organizationId,
         action: body.action === "approve" ? "pix.payment_approved" : "pix.payment_rejected",
+        origin: "api/admin/monitoring",
+        subjectType: "pix_payment_request",
+        subjectId: payment.id,
+        previousState: { status: "payment_review" },
+        newState: { status: payment.status, review: body.action },
         metadata: {
           paymentId: payment.id,
           administratorId: auth.user.id,

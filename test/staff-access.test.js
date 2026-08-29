@@ -36,6 +36,7 @@ test("equipe interna recebe somente os módulos concedidos e o root mantém a ge
 
   assert.deepEqual(await getAdministratorAccess(root), {
     isStaff: true, isRoot: true, canMonitor: true, canSupport: true, canBilling: true, canManageStaff: true,
+    canViewSystemOverview: false,
   });
   assert.equal((await getAdministratorAccess(outsider)).isStaff, false);
 

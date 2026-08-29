@@ -23,7 +23,10 @@ export async function POST(request) {
     const passwordHash = await bcrypt.hash(cleanPassword, 12);
     const user = await resetPasswordWithToken({ tokenHash: hashAuthActionToken(cleanToken), passwordHash });
     if (!user) return NextResponse.json({ error: "Este link é inválido, expirou ou já foi usado." }, { status: 400 });
-    await appendAuditEvent({ userId: user.id, action: "account.password_reset" });
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, action: "account.password_reset", origin: "api/auth/reset-password",
+      subjectType: "user", subjectId: user.id, newState: { passwordChanged: true, sessionsRevoked: true },
+    });
     return NextResponse.json({ message: "Senha atualizada. Entre novamente com a nova senha." });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);

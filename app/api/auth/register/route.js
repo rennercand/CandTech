@@ -66,7 +66,12 @@ export async function POST(request) {
       name: cleanName, email: cleanEmail, passwordHash, accountType,
       legalAcceptance: { acceptedAt, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION },
     });
-    await appendAuditEvent({ userId: user.id, action: "account.created", metadata: { accountType, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION } });
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, action: "account.created", origin: "api/auth/register",
+      subjectType: "user", subjectId: user.id,
+      newState: { accountType, emailVerified: false, legalAccepted: true },
+      metadata: { termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION },
+    });
 
     // O cadastro continua utilizável mesmo se o provedor de e-mail estiver
     // temporariamente indisponível; o usuário poderá solicitar um novo envio.

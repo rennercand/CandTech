@@ -55,7 +55,12 @@ export async function POST(request) {
     if (!access) {
       return NextResponse.json({ error: "O convite não corresponde a este e-mail, expirou ou a conta já pertence a outra empresa." }, { status: 409 });
     }
-    await appendAuditEvent({ userId: user.id, action: "team.invitation.accepted", metadata: { organizationId: access.organizationId, role: access.role } });
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, organizationId: access.organizationId,
+      action: "team.invitation.accepted", origin: "api/team/invitation",
+      subjectType: "organization_member", subjectId: user.id,
+      newState: { role: access.role, jobTitle: access.jobTitle, status: access.status },
+    });
     return NextResponse.json({ access: publicAccess({ ...access, isOwner: false }) });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);

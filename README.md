@@ -264,6 +264,7 @@ executam DDL durante uma requisição:
 - `billing_profiles`: estado da assinatura e `setup_paid_at`, que impede cobrar novamente a implantação;
 - `pix_payment_requests`: cobranças Pix e estado da revisão manual;
 - `pix_payment_receipts`: metadados e hash dos comprovantes; o conteúdo fica no armazenamento privado.
+- `audit_events`: trilha append-only com autor, conta afetada, organização, origem, versão, objeto e antes/depois minimizado.
 
 ### Como o banco atual funciona
 
@@ -274,6 +275,10 @@ executam DDL durante uma requisição:
 - As consultas usam parâmetros do driver Neon e os registros privados sempre incluem o `user_id` obtido da sessão.
 - Em desenvolvimento local, quando `DATABASE_URL` não existe, o sistema usa `data/finsight.sqlite`. Esse arquivo é apenas um fallback local e não deve ser usado na Vercel.
 - As credenciais de conexão de Production e Preview ficam como variáveis `Sensitive` na Vercel. Dados de usuários, extratos e payloads ficam no banco, nunca em variáveis de ambiente.
+
+Depois de aplicar `migrations/20260829_audit_events_v2.sql` com a credencial administrativa, valide a credencial usada pelo aplicativo com `npm run security:check-db-role`. O comando falha se detectar superusuário, criação de banco/papel/schema ou propriedade de objetos públicos. Ele não imprime a URL de conexão.
+
+O CI executa testes, build, `npm audit`, CodeQL e Gitleaks. O Dependabot acompanha semanalmente pacotes npm e mensalmente as GitHub Actions. A política operacional está em [BACKUP-E-RESTAURACAO.md](./docs/BACKUP-E-RESTAURACAO.md) e [PLANO-RESPOSTA-INCIDENTES.md](./docs/PLANO-RESPOSTA-INCIDENTES.md).
 
 Desde 5 de agosto de 2026, os ambientes estão separados: Production usa a branch principal do Neon, Preview usa a branch `preview-test` criada somente com o schema, e Development não recebe credenciais PostgreSQL da Vercel. Assim, o desenvolvimento local cai no SQLite quando não houver uma `DATABASE_URL` local explícita. As duas URLs implantadas ficam como variáveis `Sensitive` e nunca entram no repositório.
 

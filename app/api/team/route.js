@@ -90,7 +90,16 @@ export async function POST(request) {
       inviteUrl,
       invitationId: invitation.id,
     });
-    await appendAuditEvent({ userId: context.user.id, action: "team.invitation.created", metadata: { organizationId: context.access.organizationId, role, jobTitle, emailSent: delivery.sent } });
+    await appendAuditEvent({
+      userId: context.user.id,
+      actorUserId: context.user.id,
+      organizationId: context.access.organizationId,
+      action: "team.invitation.created",
+      origin: "api/team",
+      subjectType: "organization_invitation",
+      subjectId: invitation.id,
+      newState: { role, jobTitle, emailSent: delivery.sent },
+    });
     return NextResponse.json({ invitation, inviteUrl, emailSent: delivery.sent }, { status: 201 });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
@@ -121,6 +130,8 @@ export async function PATCH(request) {
       ? await findOrganizationJob({ organizationId: context.access.organizationId, jobId })
       : null;
     if (!job) return NextResponse.json({ error: "Selecione um cargo cadastrado para esse colaborador." }, { status: 400 });
+    const previousMember = (await listOrganizationTeam(context.access.organizationId)).members
+      .find((item) => item.id === userId) || null;
     const member = await updateOrganizationMember({
       organizationId: context.access.organizationId,
       userId,
@@ -130,7 +141,17 @@ export async function PATCH(request) {
       status: input.status,
     });
     if (!member) return NextResponse.json({ error: "Membro não encontrado." }, { status: 404 });
-    await appendAuditEvent({ userId: context.user.id, action: "team.member.updated", metadata: { organizationId: context.access.organizationId, memberUserId: userId, role: member.role } });
+    await appendAuditEvent({
+      userId,
+      actorUserId: context.user.id,
+      organizationId: context.access.organizationId,
+      action: "team.member.updated",
+      origin: "api/team",
+      subjectType: "organization_member",
+      subjectId: userId,
+      previousState: previousMember && { role: previousMember.role, jobTitle: previousMember.job_title, permissions: previousMember.permissions, status: previousMember.status },
+      newState: { role: member.role, jobTitle: member.job_title, permissions: member.permissions, status: member.status },
+    });
     return NextResponse.json({ member });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);
@@ -153,7 +174,17 @@ export async function DELETE(request) {
       ? await revokeOrganizationInvitation({ organizationId: context.access.organizationId, invitationId: id })
       : await removeOrganizationMember({ organizationId: context.access.organizationId, userId: id });
     if (!removed) return NextResponse.json({ error: "Acesso não encontrado." }, { status: 404 });
-    await appendAuditEvent({ userId: context.user.id, action: input.kind === "invitation" ? "team.invitation.revoked" : "team.member.removed", metadata: { organizationId: context.access.organizationId, targetId: id } });
+    await appendAuditEvent({
+      userId: input.kind === "invitation" ? context.user.id : id,
+      actorUserId: context.user.id,
+      organizationId: context.access.organizationId,
+      action: input.kind === "invitation" ? "team.invitation.revoked" : "team.member.removed",
+      origin: "api/team",
+      subjectType: input.kind === "invitation" ? "organization_invitation" : "organization_member",
+      subjectId: id,
+      previousState: { existed: true },
+      newState: { removed: true },
+    });
     return NextResponse.json({ removed: true });
   } catch (error) {
     const bodyError = requestBodyErrorResponse(error);

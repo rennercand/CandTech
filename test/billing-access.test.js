@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getBillingAccess } from "../lib/billing-access.js";
+import { listPaymentsForPrivateCentral } from "../lib/admin-payment-list.js";
 import {
   acceptOrganizationInvitation, closeDatabaseForTests, createOrganizationInvitation, createUser,
   ensureOwnedOrganization,
@@ -53,4 +54,42 @@ test("pagamento do proprietário libera a equipe e a trava pode ser ativada com 
     if (previousEnforcement === undefined) delete process.env.BILLING_ENFORCEMENT_ENABLED; else process.env.BILLING_ENFORCEMENT_ENABLED = previousEnforcement;
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("moderação do Pix recebe somente nome e e-mail para identificar o pagamento", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "candtech-payment-identification-"));
+  const previousEnvironment = process.env.NODE_ENV;
+  const previousPath = process.env.SQLITE_DATABASE_PATH;
+  process.env.NODE_ENV = "test";
+  process.env.SQLITE_DATABASE_PATH = join(directory, "payment-identification.sqlite");
+  try {
+    const owner = await createUser({
+      name: "Cliente Teste",
+      email: "cliente@pagamento.test",
+      passwordHash: "hash",
+      accountType: "company",
+    });
+    await createOrGetPixPaymentRequest(owner.id);
+
+    const [payment] = await listPaymentsForPrivateCentral();
+    assert.deepEqual(payment.customer, {
+      name: "Cliente Teste",
+      email: "cliente@pagamento.test",
+    });
+  } finally {
+    await closeDatabaseForTests();
+    resetPixSchemaForTests();
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
+    if (previousPath === undefined) delete process.env.SQLITE_DATABASE_PATH; else process.env.SQLITE_DATABASE_PATH = previousPath;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("área de pagamento não classifica o cliente como pessoa física ou jurídica", () => {
+  const subscriptionPage = readFileSync(new URL("../app/assinar/page.js", import.meta.url), "utf8");
+  const moderationPortal = readFileSync(new URL("../app/admin/monitoramento/portal.js", import.meta.url), "utf8");
+
+  assert.doesNotMatch(subscriptionPage, /Pessoa física|Pessoa jurídica|Razão social|Telefone para contato/);
+  assert.doesNotMatch(moderationPortal, /Pessoa física|Pessoa jurídica|billingName|customer\?\.phone/);
+  assert.match(subscriptionPage, /Somente nome e e-mail da conta/);
 });

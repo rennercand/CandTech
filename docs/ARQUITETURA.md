@@ -108,7 +108,7 @@ mindmap
 | `rate_limits` | contadores temporários de requisição | chave derivada do escopo/origem |
 | `google_drive_connections` | refresh token OAuth cifrado | uma linha por `user_id` |
 | `auth_sessions` | sessões ativas, expiração e revogação | `user_id` + hash da sessão |
-| `billing_profiles` | identificação e endereço de cobrança | uma linha por `user_id` |
+| `billing_profiles` | estado e metadados operacionais da assinatura; a identificação do Pix vem de `users` | uma linha por `user_id` |
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
 | `organizations` / `organization_jobs` | empresa e modelos de cargos personalizados | proprietário autenticado + `organization_id` |
 | `organization_members` / `organization_invitations` | colaboradores, permissões e convites de uso único | `organization_id` resolvido pela sessão |

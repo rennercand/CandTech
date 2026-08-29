@@ -21,7 +21,7 @@
 
 ## Jornada do cliente
 
-1. O proprietário autenticado abre `/assinar` e confirma o contato.
+1. O proprietário autenticado abre `/assinar`; a cobrança usa somente o nome e o e-mail já cadastrados na conta.
 2. `POST /api/pix` gera o Pix Copia e Cola com valor e identificador exclusivos.
 3. O cliente paga no aplicativo bancário e escolhe PDF, JPG, PNG ou WEBP de até 5 MB.
 4. Em produção, o navegador pede uma autorização curta em `/api/pix/[paymentId]/receipt` e envia diretamente ao Vercel Blob privado. Isso evita o limite de 4,5 MB das Functions sem revelar o token do armazenamento.
@@ -34,7 +34,7 @@ No desenvolvimento local, a mesma rota aceita o corpo binário e guarda o arquiv
 ## Jornada administrativa
 
 1. Uma conta verificada com permissão **Cobrança** abre a central privada; somente `ADMIN_EMAILS` concede ou revoga essa permissão.
-2. A aba **Pagamentos Pix** prioriza itens em conferência e mostra empresa, usuário e metadados do arquivo.
+2. A aba **Pagamentos Pix** prioriza itens em conferência e mostra somente nome, e-mail e os dados operacionais da cobrança.
 3. **Visualizar** abre o arquivo por `/api/admin/payments/[paymentId]/receipt`; **Baixar** usa a mesma rota com `?download=1`.
 4. A rota exige sessão administrativa, aplica rate limit, impede cache compartilhado, usa `nosniff` e registra `pix.receipt_viewed`.
 5. O administrador compara valor, referência e favorecido com o extrato bancário. O comprovante sozinho não prova liquidação.
@@ -43,6 +43,8 @@ No desenvolvimento local, a mesma rota aceita o corpo binário e guarda o arquiv
 ## Armazenamento e banco
 
 - o Blob deve ser criado com acesso **Private** e conectado ao projeto Vercel;
+- nome e e-mail permanecem uma única vez em `users`; cobranças guardam apenas a referência `user_id` e não duplicam essa identificação;
+- o e-mail é normalizado e limitado a 254 caracteres. No PostgreSQL, `TEXT` e `VARCHAR` usam a mesma representação variável, portanto trocar o tipo não reduziria o espaço ocupado;
 - o banco guarda nome original normalizado, MIME, tamanho, SHA-256, chave privada, autor, organização, data e estado ativo;
 - a chave privada nunca aparece na resposta entregue ao cliente ou na listagem administrativa;
 - cada pagamento possui no máximo um comprovante ativo;

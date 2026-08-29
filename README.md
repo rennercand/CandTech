@@ -40,7 +40,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
 - Cadastro diferenciado para pessoa física e empresa.
 - Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Pix Copia e Cola individual, comprovante privado e confirmação exclusiva do administrador.
-- Perfil cadastral de cobrança sem antecipar CPF/CNPJ e sem armazenar cartão, senha ou conta bancária.
+- Identificação de cobrança reduzida ao nome e e-mail já existentes na conta, sem duplicar tipo de pessoa, telefone, CPF/CNPJ, cartão, senha ou conta bancária.
 - Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.

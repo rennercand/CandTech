@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { upload } from "@vercel/blob/client";
+import QRCode from "qrcode";
 import styles from "./page.module.css";
 import { trackMarketingEvent } from "../../lib/analytics";
 
@@ -16,6 +17,7 @@ export default function SubscribePage() {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [pixQrCode, setPixQrCode] = useState("");
 
   useEffect(() => {
     trackMarketingEvent("view_subscription", { source: "subscription_page" });
@@ -30,6 +32,27 @@ export default function SubscribePage() {
         setStatus("ready");
       }).catch(() => setStatus("ready"));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!payment?.pixCode) {
+      setPixQrCode("");
+      return () => { cancelled = true; };
+    }
+
+    QRCode.toDataURL(payment.pixCode, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 280,
+      color: { dark: "#211d38", light: "#ffffff" },
+    }).then((dataUrl) => {
+      if (!cancelled) setPixQrCode(dataUrl);
+    }).catch(() => {
+      if (!cancelled) setPixQrCode("");
+    });
+
+    return () => { cancelled = true; };
+  }, [payment?.pixCode]);
 
   const whatsappUrl = useMemo(() => {
     if (!contact?.whatsapp || !payment) return "";
@@ -93,7 +116,7 @@ export default function SubscribePage() {
       <div className={styles.billingIntro}><span>PIX SEGURO</span><h2>Pagamento com conferência humana</h2><p>Ao gerar o código, uma solicitação aparece na central administrativa. O administrador pode liberar o acesso depois de confirmar o recebimento no banco; o comprovante é opcional.</p><div className={styles.paymentPreview}><div><b>1. Gere</b><small>Copia e Cola</small></div><div><b>2. Pague</b><small>No seu banco</small></div><div><b>3. Aguarde</b><small>Confirmação manual</small></div></div></div>
       {!user && status === "ready" ? <div className={styles.signInCard}><span>PRIMEIRO PASSO</span><h3>Entre para gerar seu Pix</h3><p>A cobrança ficará vinculada somente à conta autenticada.</p><a href="/?cadastro=1">Criar minha conta</a><small>Já tem conta? <a href="/?entrar=1">Entrar</a></small></div> : <div className={styles.form}>
         <div className={styles.identityCard}><span>IDENTIFICAÇÃO DO PAGAMENTO</span><strong>{user?.name || "Nome não informado"}</strong><small>{user?.email || "E-mail não informado"}</small><p>Somente nome e e-mail da conta serão usados para localizar a cobrança na moderação central.</p></div>
-        {!active && payment?.status === "pending" && payment.pixCode ? <div className={styles.pixBox}><span>1. PIX COPIA E COLA</span><strong>{payment.amount}</strong><small>{user?.name || "Nome não informado"} · {user?.email || "E-mail não informado"}</small><small>Referência {payment.txid} · válido até {new Date(payment.dueAt).toLocaleString("pt-BR")}</small><textarea readOnly rows="5" value={payment.pixCode} aria-label="Código Pix Copia e Cola"/><button type="button" className={styles.save} onClick={copyPix}>Copiar código Pix</button><div className={styles.receiptUpload}><strong>2. Comprovante opcional</strong><p>Você não precisa enviar comprovante para a liberação. Se quiser agilizar a identificação do pagamento, envie PDF, JPG, PNG ou WEBP de até 5 MB.</p><label className={styles.filePicker}><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setSelectedReceipt(event.target.files?.[0] || null)}/><span>{selectedReceipt ? selectedReceipt.name : "Selecionar comprovante (opcional)"}</span></label><button type="button" className={styles.save} disabled={!selectedReceipt || status !== "ready"} onClick={uploadReceipt}>{status === "uploading" ? "Enviando…" : "Enviar comprovante"}</button><small className={styles.notice}>O acesso só é liberado por autorização manual da equipe CandTech após a confirmação do recebimento.</small></div>{whatsappUrl && <a className={styles.whatsapp} href={whatsappUrl} target="_blank" rel="noreferrer">Preciso falar com o suporte</a>}</div> : !active && payment?.status === "payment_review" ? <div className={styles.reviewBox}><span>COMPROVANTE RECEBIDO</span><strong>Pagamento aguardando confirmação manual</strong><p>{payment.receipt?.originalFilename || "Comprovante enviado"} · enviado em {payment.receipt?.uploadedAt ? new Date(payment.receipt.uploadedAt).toLocaleString("pt-BR") : "agora"}.</p><small>A assinatura ainda não está ativa. A equipe CandTech confirmará o recebimento antes da liberação.</small><label className={styles.filePicker}><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setSelectedReceipt(event.target.files?.[0] || null)}/><span>{selectedReceipt ? selectedReceipt.name : "Substituir comprovante"}</span></label><button type="button" className={styles.save} disabled={!selectedReceipt || status !== "ready"} onClick={uploadReceipt}>{status === "uploading" ? "Enviando…" : "Enviar substituição"}</button></div> : !active && <button type="button" className={styles.save} disabled={status !== "ready" || !user} onClick={generatePix}>{status === "generating" ? "Gerando…" : "Gerar Pix"}</button>}
+        {!active && payment?.status === "pending" && payment.pixCode ? <div className={styles.pixBox}><span>1. PAGUE POR PIX</span><strong>{payment.amount}</strong><small>{user?.name || "Nome não informado"} · {user?.email || "E-mail não informado"}</small><small>Referência {payment.txid} · válido até {new Date(payment.dueAt).toLocaleString("pt-BR")}</small>{pixQrCode && <figure className={styles.qrCode}><img src={pixQrCode} width="280" height="280" alt={`QR Code Pix de ${payment.amount}`}/><figcaption>Abra o aplicativo do seu banco e escaneie o QR Code.</figcaption></figure>}<textarea readOnly rows="5" value={payment.pixCode} aria-label="Código Pix Copia e Cola"/><button type="button" className={styles.save} onClick={copyPix}>Copiar código Pix</button><div className={styles.receiptUpload}><strong>2. Comprovante opcional</strong><p>Você não precisa enviar comprovante para a liberação. Se quiser agilizar a identificação do pagamento, envie PDF, JPG, PNG ou WEBP de até 5 MB.</p><label className={styles.filePicker}><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setSelectedReceipt(event.target.files?.[0] || null)}/><span>{selectedReceipt ? selectedReceipt.name : "Selecionar comprovante (opcional)"}</span></label><button type="button" className={styles.save} disabled={!selectedReceipt || status !== "ready"} onClick={uploadReceipt}>{status === "uploading" ? "Enviando…" : "Enviar comprovante"}</button><small className={styles.notice}>O acesso só é liberado por autorização manual da equipe CandTech após a confirmação do recebimento.</small></div>{whatsappUrl && <a className={styles.whatsapp} href={whatsappUrl} target="_blank" rel="noreferrer">Preciso falar com o suporte</a>}</div> : !active && payment?.status === "payment_review" ? <div className={styles.reviewBox}><span>COMPROVANTE RECEBIDO</span><strong>Pagamento aguardando confirmação manual</strong><p>{payment.receipt?.originalFilename || "Comprovante enviado"} · enviado em {payment.receipt?.uploadedAt ? new Date(payment.receipt.uploadedAt).toLocaleString("pt-BR") : "agora"}.</p><small>A assinatura ainda não está ativa. A equipe CandTech confirmará o recebimento antes da liberação.</small><label className={styles.filePicker}><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setSelectedReceipt(event.target.files?.[0] || null)}/><span>{selectedReceipt ? selectedReceipt.name : "Substituir comprovante"}</span></label><button type="button" className={styles.save} disabled={!selectedReceipt || status !== "ready"} onClick={uploadReceipt}>{status === "uploading" ? "Enviando…" : "Enviar substituição"}</button></div> : !active && <button type="button" className={styles.save} disabled={status !== "ready" || !user} onClick={generatePix}>{status === "generating" ? "Gerando…" : "Gerar Pix"}</button>}
         {active && <p className={styles.success}>Pagamento confirmado. Sua empresa ou conta está com acesso ativo.</p>}{message && <p className={message.startsWith("Não") || message.includes("configurado") ? styles.error : styles.success}>{message}</p>}
       </div>}
     </section>

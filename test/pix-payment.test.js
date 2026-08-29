@@ -1,11 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import QRCode from "qrcode";
 import { closeDatabaseForTests, createUser, getBillingProviderState } from "../lib/db.js";
 import { buildPixPayload } from "../lib/pix.js";
 import { createOrGetPixPaymentRequest, getLatestPixPayment, resetPixSchemaForTests, reviewPixPayment, savePixPaymentReceipt } from "../lib/pix-db.js";
+
+const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 test("Pix inicial inclui implantação, não duplica pendência e só ativa após aprovação", async () => {
   const directory = mkdtempSync(join(tmpdir(), "candtech-pix-"));
@@ -54,4 +58,14 @@ test("Pix Copia e Cola contém valor, txid e CRC sem expor segredo bancário", (
   assert.match(payload, /5406180\.00/);
   assert.match(payload, /CT123456/);
   assert.match(payload, /6304[A-F0-9]{4}$/);
+});
+
+test("QR Code Pix é gerado localmente a partir do mesmo Copia e Cola", async () => {
+  const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 18000, txid: "CT123456" });
+  const dataUrl = await QRCode.toDataURL(payload, { width: 280 });
+  const page = readFileSync(join(projectRoot, "app", "assinar", "page.js"), "utf8");
+
+  assert.match(dataUrl, /^data:image\/png;base64,/);
+  assert.match(page, /QRCode\.toDataURL\(payment\.pixCode/);
+  assert.doesNotMatch(page, /api\.qrserver|chart\.googleapis|quickchart/);
 });

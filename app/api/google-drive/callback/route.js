@@ -1,12 +1,13 @@
-import { saveGoogleDriveConnection } from "@/lib/db";
+import { appendAuditEvent, saveGoogleDriveConnection } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import {
   encryptDriveToken,
+  consumeDriveOAuthTransaction,
   exchangeAuthorizationCode,
   verifyDriveState,
 } from "@/lib/google-drive";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { requirePermission } from "@/lib/organization-access";
+import { getOrganizationAccess, requirePermission } from "@/lib/organization-access";
 import { reportServerError } from "@/lib/server-observability";
 
 export const runtime = "nodejs";
@@ -42,12 +43,24 @@ export async function GET(request) {
     ) {
       return finish(request, "state-error");
     }
+    const codeVerifier = await consumeDriveOAuthTransaction({
+      nonce: verified.nonce, userId: session.id, sessionHash: session.sessionHash,
+    });
+    if (!codeVerifier) return finish(request, "state-error");
     const refreshToken = await exchangeAuthorizationCode({
       code,
       redirectUri: verified.redirectUri,
+      codeVerifier,
     });
     // Somente a versão cifrada do token persistente entra no banco de dados.
     await saveGoogleDriveConnection(verified.userId, encryptDriveToken(refreshToken));
+    const access = await getOrganizationAccess(session);
+    await appendAuditEvent({
+      userId: session.id, actorUserId: session.id, organizationId: access?.organizationId || null,
+      action: "google_drive.connected", origin: "api/google-drive/callback",
+      subjectType: "google_drive_connection", subjectId: session.id,
+      newState: { connected: true, scope: "drive.file" },
+    });
     return finish(request, "connected", { historyId: verified.historyId, returnTo: verified.returnTo, filename: verified.filename });
   } catch (error) {
     reportServerError(error, { request, route: "/api/google-drive/callback", operation: "exchange" });

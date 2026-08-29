@@ -284,7 +284,7 @@ Desde 5 de agosto de 2026, os ambientes estão separados: Production usa a branc
 
 ## Google Drive
 
-O menu de exportação diferencia download local e envio ao Google Drive, inclusive no relatório do estoque. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. O servidor troca e renova os tokens; refresh tokens são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech. A rota de relatório do estoque não recebe ID de empresa: o `tenant_id` é sempre derivado da sessão JWT e das permissões atuais.
+O menu de exportação diferencia download local e envio ao Google Drive, inclusive no relatório do estoque. Cada usuário conecta a própria conta Google pelo OAuth 2.0 com o escopo restrito `drive.file`. A autorização usa PKCE S256 e uma transação persistida, vinculada à sessão, com nonce expirável e consumível uma única vez. O servidor troca e renova os tokens; refresh tokens e verificadores PKCE temporários são cifrados com AES-256-GCM antes de entrar no banco. Ao desconectar, a permissão é revogada no Google e removida da CandTech. A rota de relatório do estoque não recebe ID de empresa: o `tenant_id` é sempre derivado da sessão JWT e das permissões atuais.
 
 ## Analytics, consentimento e SEO
 

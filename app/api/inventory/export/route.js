@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { getGoogleDriveConnection } from "@/lib/db";
+import { appendAuditEvent, getGoogleDriveConnection } from "@/lib/db";
 import {
   decryptDriveToken,
   refreshDriveAccessToken,
@@ -37,6 +37,12 @@ export async function GET(request) {
   const inventory = await listInventory(inventoryTenant(auth.access));
   const isCsv = format === "csv";
   const content = isCsv ? Buffer.from(`\ufeff${inventoryCsv(inventory)}`, "utf8") : inventoryXlsx(inventory);
+  await appendAuditEvent({
+    userId: auth.access.ownerUserId, actorUserId: auth.user.id, organizationId: auth.access.organizationId,
+    action: "inventory.exported", origin: "api/inventory/export",
+    subjectType: "inventory", subjectId: auth.access.organizationId || auth.access.ownerUserId,
+    newState: { format, destination: "download", productCount: inventory.products.length },
+  });
   return new Response(content, {
     headers: {
       "Content-Type": isCsv
@@ -83,6 +89,12 @@ export async function POST(request) {
       filename: safeExportFilename(requestedFilename, "xlsx", inventoryFilename("xlsx")),
       content: inventoryXlsx(inventory),
       mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    await appendAuditEvent({
+      userId: auth.access.ownerUserId, actorUserId: auth.user.id, organizationId: auth.access.organizationId,
+      action: "inventory.exported", origin: "api/inventory/export",
+      subjectType: "inventory", subjectId: auth.access.organizationId || auth.access.ownerUserId,
+      newState: { format: "xlsx", destination: "google_drive", productCount: inventory.products.length, providerFileId: file?.id || null },
     });
     return Response.json({ file });
   } catch (error) {

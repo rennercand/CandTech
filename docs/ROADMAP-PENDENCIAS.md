@@ -14,7 +14,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | Estoque, variações, pedidos e movimentos | Entregue parcialmente | tabelas `inventory_*`, importação e relatórios; faltam FEFO, custo médio e curva ABC |
 | Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 180 inicial, R$ 60 renovação, comprovante privado e moderação |
 | Monitoramento, suporte e administração | Entregue para operação inicial | `monitoring_events`, `support_tickets`, `staff_access` |
-| Google Drive e e-mails transacionais | Entregue | OAuth `drive.file`, tokens cifrados e Resend |
+| Google Drive e e-mails transacionais | Entregue e endurecido | OAuth `drive.file` com PKCE, nonce persistido de uso único, tokens cifrados e Resend |
 | Conciliação financeira vendável | Pendente | não existem importador OFX nem entidades relacionais de conciliação |
 | Motor tributário e emissão fiscal | Pendente | somente pré-nota sem validade fiscal |
 
@@ -22,7 +22,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 - [ ] concluir o isolamento relacional por `tenant_id` para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados;
 - [ ] adicionar testes sistemáticos de acesso cruzado para cada nova entidade e permissão, não somente para os fluxos já cobertos;
-- [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico e Pix implementados em 29/08/2026; migration aplicada na branch `main` do Neon com 8 colunas verificadas e 63 eventos legados atualizados; faltam exportações/Drive e definir retenção/acesso de consulta**;
+- [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico, Pix, Drive e exportações implementados em 29/08/2026; migration aplicada na branch `main` do Neon com 8 colunas verificadas e 63 eventos legados atualizados; falta definir retenção/acesso de consulta**;
 - [ ] definir e testar backup completo do Neon e do Blob, restauração, RPO/RTO, retenção, exclusão e continuidade; o ZIP enviado após expiração do Pix não substitui backup da plataforma;
 - [ ] confirmar no Neon que a credencial usada pela aplicação não possui privilégios DDL; **verificador `npm run security:check-db-role` criado; falta executá-lo com a credencial real de runtime**;
 - [ ] adicionar MFA para proprietário e equipe administrativa; avaliar SSO/SAML apenas quando houver demanda empresarial;

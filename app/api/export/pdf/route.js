@@ -7,6 +7,7 @@ import { getOrganizationAccess } from "@/lib/organization-access";
 import { filterHistoryForAccess, filterWorkspaceForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
 import { reportServerError } from "@/lib/server-observability";
 import { attachmentContentDisposition, safeExportFilename } from "@/lib/export-filename";
+import { appendAuditEvent } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -47,6 +48,12 @@ export async function POST(request) {
       ? filterHistoryForAccess(candidate, access)
       : { ...candidate, payload: { ...payload, ...(payload.workspace ? { workspace: filterWorkspaceForAccess(payload.workspace, access) } : {}) } };
     const pdf = await historyPdf(report);
+    await appendAuditEvent({
+      userId: access.ownerUserId, actorUserId: user.id, organizationId: access.organizationId,
+      action: "report.exported", origin: "api/export/pdf",
+      subjectType: "ad_hoc_report", subjectId: null,
+      newState: { format: "pdf", destination: "download", calculationType: safeType },
+    });
     return new NextResponse(pdf, {
       headers: {
         "Content-Type": "application/pdf",

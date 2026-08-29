@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { getGoogleDriveConnection } from "@/lib/db";
+import { appendAuditEvent, getGoogleDriveConnection } from "@/lib/db";
 import {
   decryptDriveToken,
   refreshDriveAccessToken,
@@ -23,7 +23,7 @@ export async function POST(request, { params }) {
   if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
 
   const { id } = await params;
-  const { item, forbidden } = await getAccessibleHistory({ user, id, permissions: ["history", "exports", "drive"] });
+  const { access, item, forbidden } = await getAccessibleHistory({ user, id, permissions: ["history", "exports", "drive"] });
   if (forbidden) return Response.json({ error: "Sem permissão para enviar arquivos ao Drive." }, { status: 403 });
   if (!item) return Response.json({ error: "Registro não encontrado" }, { status: 404 });
   const connection = await getGoogleDriveConnection(user.id);
@@ -40,6 +40,12 @@ export async function POST(request, { params }) {
       filename: safeExportFilename(body.filename, "xlsx", historyXlsxFilename(item)),
       content: historyXlsx(item),
       mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    await appendAuditEvent({
+      userId: access.ownerUserId, actorUserId: user.id, organizationId: access.organizationId,
+      action: "history.exported", origin: "api/history/:id/drive",
+      subjectType: "history", subjectId: item.id,
+      newState: { format: "xlsx", destination: "google_drive", providerFileId: file?.id || null },
     });
     return Response.json({ file });
   } catch (error) {

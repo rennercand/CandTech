@@ -44,7 +44,7 @@ As mudanças abaixo foram implementadas e testadas localmente, mas só contam co
 - **SEC-01 — implementada no código:** `.vercelignore` agora exclui a pasta de segredos, padrões de credenciais, relatórios locais e ambientes;
 - **SEC-02 — implementada nas APIs próprias:** leitor JSON por streaming limita bytes, profundidade, quantidade de nós e tamanho de texto antes de bcrypt, banco, workspace, histórico ou PDF;
 - **SEC-04 — implementada no código:** novas sessões possuem identificador persistido, expiração absoluta e revogação no logout; `/api/auth/me` não renova mais o prazo indefinidamente;
-- **SEC-06 — parcialmente implementada:** o retorno do Google Drive agora precisa corresponder ao usuário e à sessão iniciadora, e há suporte a segredo OAuth separado; ainda faltam nonce consumível persistido e PKCE;
+- **SEC-06 — implementada:** o retorno do Google Drive exige usuário e sessão iniciadora, usa segredo OAuth separado, PKCE S256 e nonce persistido, expirável e consumível uma única vez;
 - **SEC-07 — implementada no código:** login usa comparação bcrypt fictícia para conta inexistente, cadastro possui resposta neutra e os limites foram separados por IP e identidade normalizada;
 - **SEC-08 — implementada no código:** as exportações personalizadas neutralizam prefixos perigosos antes de abrir no Excel;
 - **SEC-15 — parcialmente implementada:** eventos de criação de conta, login, logout e alteração do perfil de cobrança são registrados; ainda falta cobrir operações financeiras, exportações e permissões.
@@ -113,6 +113,7 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 - **Risco:** cenário de login/account-linking CSRF pode fazer outra pessoa autorizar o Drive dela para a conta CandTech de quem iniciou o link. O escopo `drive.file` reduz o impacto, mas ainda permite criação de arquivos não desejados e associação incorreta.
 - **Correção:** persistir transação OAuth de uso único com hash do nonce, sessão, usuário, expiração e consumo; exigir correspondência da sessão no callback; usar PKCE; separar segredo de estado OAuth do segredo de sessão.
 - **Aceite:** link iniciado por uma conta não pode ser concluído em outra sessão e o mesmo `state` não pode ser reutilizado.
+- **Situação em 29/08/2026:** corrigido no código e no Neon de produção. A tabela `oauth_transactions` guarda somente o hash do nonce e o verificador PKCE cifrado, vincula usuário/sessão/provedor, expira em dez minutos e realiza consumo atômico. Testes automatizados confirmam rejeição por sessão diferente e impossibilidade de reutilização.
 
 ### SEC-07 — Enumeração e diferença de tempo no login/cadastro
 
@@ -185,7 +186,7 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 ### SEC-15 — Falta trilha de auditoria de segurança e financeira
 
 - **Severidade:** média para empresas.
-- **Evidência atual:** `audit_events` v2 separa autor e conta afetada, organização, origem, versão, objeto e antes/depois minimizado. Tokens e campos sensíveis são removidos; excesso é substituído por tamanho e SHA-256. Autenticação, aceite jurídico, equipe interna/empresarial e Pix já emitem eventos estruturados. Em 29/08/2026, a migration foi aplicada na branch `main` do Neon, verificou as 8 colunas novas e preencheu o autor legado em 63 eventos. Ainda faltam exportações/Drive e a política de consulta/retenção.
+- **Evidência atual:** `audit_events` v2 separa autor e conta afetada, organização, origem, versão, objeto e antes/depois minimizado. Tokens e campos sensíveis são removidos; excesso é substituído por tamanho e SHA-256. Autenticação, aceite jurídico, equipe interna/empresarial, Pix, conexão/desconexão do Google Drive e exportações de histórico, relatório e estoque já emitem eventos estruturados. Em 29/08/2026, a migration foi aplicada na branch `main` do Neon, verificou as 8 colunas novas e preencheu o autor legado em 63 eventos. Ainda falta definir e aplicar a política de consulta/retenção.
 - **Risco:** não é possível provar quem alterou valor, exportou dados, conectou Drive ou mudou permissão.
 - **Correção:** eventos append-only com usuário, empresa, ação, origem, data e antes/depois minimizado; retenção e acesso restrito.
 - **Aceite:** eventos sensíveis podem ser investigados sem expor senhas, tokens ou documentos completos. **Situação: parcialmente implementada e coberta por testes locais.**

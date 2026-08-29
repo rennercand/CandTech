@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { deleteGoogleDriveConnection, getGoogleDriveConnection } from "@/lib/db";
+import { appendAuditEvent, deleteGoogleDriveConnection, getGoogleDriveConnection } from "@/lib/db";
 import {
   decryptDriveToken,
   googleDriveConfigured,
@@ -48,6 +48,13 @@ export async function DELETE(request) {
       reportServerError(error, { request, route: "/api/google-drive/status", operation: "revoke", status: 502 });
     }
     await deleteGoogleDriveConnection(user.id);
+    const access = await getOrganizationAccess(user);
+    await appendAuditEvent({
+      userId: user.id, actorUserId: user.id, organizationId: access?.organizationId || null,
+      action: "google_drive.disconnected", origin: "api/google-drive/status",
+      subjectType: "google_drive_connection", subjectId: user.id,
+      previousState: { connected: true }, newState: { connected: false },
+    });
   }
   return Response.json({ connected: false });
 }

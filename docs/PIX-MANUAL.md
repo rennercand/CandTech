@@ -3,6 +3,8 @@
 ## Regra comercial
 
 - primeira cobrança: R$ 180, sendo R$ 120 de implantação e R$ 60 do primeiro mês;
+- ao aprovar essa primeira cobrança, `billing_profiles.setup_paid_at` registra permanentemente a implantação na conta;
+- cobranças seguintes são de R$ 60, inclusive após vencimento, suspensão ou arquivamento do histórico de pagamentos;
 - renovação: R$ 60 por 30 dias;
 - prazo padrão do Pix: 72 horas;
 - gerar o código, enviar o comprovante ou falar no WhatsApp não ativa a assinatura;

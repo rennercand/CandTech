@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
-import { closeDatabaseForTests, createUser, getBillingProviderState } from "../lib/db.js";
+import { closeDatabaseForTests, createUser, getBillingProviderState, getDatabaseBackend } from "../lib/db.js";
+import { reviewPixPaymentManually } from "../lib/manual-payment-review.js";
 import { buildPixPayload } from "../lib/pix.js";
 import { createOrGetPixPaymentRequest, getLatestPixPayment, resetPixSchemaForTests, reviewPixPayment, savePixPaymentReceipt } from "../lib/pix-db.js";
 
@@ -40,6 +41,39 @@ test("Pix inicial inclui implantação, não duplica pendência e só ativa apó
     assert.equal(active.paymentProvider, "pix");
     assert.equal(active.status, "active");
     assert.ok(active.currentPeriodEnd);
+    assert.ok(active.setupPaidAt);
+
+    const backend = await getDatabaseBackend();
+    backend.db.prepare("DELETE FROM pix_payment_requests WHERE user_id=?").run(user.id);
+
+    const renewal = await createOrGetPixPaymentRequest(user.id);
+    assert.equal(renewal.payment.kind, "renewal");
+    assert.equal(renewal.payment.amountCents, 6000);
+  } finally {
+    await closeDatabaseForTests(); resetPixSchemaForTests();
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
+    if (previousPath === undefined) delete process.env.SQLITE_DATABASE_PATH; else process.env.SQLITE_DATABASE_PATH = previousPath;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("moderação manual guarda a implantação na conta mesmo sem comprovante", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "candtech-pix-setup-"));
+  const previousEnvironment = process.env.NODE_ENV;
+  const previousPath = process.env.SQLITE_DATABASE_PATH;
+  process.env.NODE_ENV = "test";
+  process.env.SQLITE_DATABASE_PATH = join(directory, "pix-setup.sqlite");
+  try {
+    const user = await createUser({ name: "Conta Implantada", email: "implantada@teste.local", passwordHash: "hash" });
+    const first = await createOrGetPixPaymentRequest(user.id);
+    assert.equal(first.payment.amountCents, 18000);
+
+    await reviewPixPaymentManually({ id: first.payment.id, approved: true, administratorId: user.id });
+    assert.ok((await getBillingProviderState(user.id)).setupPaidAt);
+
+    const backend = await getDatabaseBackend();
+    backend.db.prepare("DELETE FROM pix_payment_requests WHERE user_id=?").run(user.id);
+    backend.db.prepare("UPDATE billing_profiles SET subscription_status='past_due', subscription_current_period_end=NULL WHERE user_id=?").run(user.id);
 
     const renewal = await createOrGetPixPaymentRequest(user.id);
     assert.equal(renewal.payment.kind, "renewal");

@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "migrate:2026-08-26": "node scripts/apply-20260826-migrations.js",
+    "migrate:2026-08-28": "node scripts/apply-20260828-billing-setup.js",
     "test": "node --test",
     "start": "next start"
   },

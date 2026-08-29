@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
 import { closeDatabaseForTests, createUser, getBillingProviderState, getDatabaseBackend } from "../lib/db.js";
 import { reviewPixPaymentManually } from "../lib/manual-payment-review.js";
-import { buildPixPayload, decodePixPayload } from "../lib/pix.js";
+import { buildPixPayload, decodePixPayload, pixSettings } from "../lib/pix.js";
 import { createOrGetPixPaymentRequest, getLatestPixPayment, resetPixSchemaForTests, reviewPixPayment, savePixPaymentReceipt } from "../lib/pix-db.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -122,6 +122,26 @@ test("chave DICT copiada da configuração é normalizada sem alterar o destinat
   assert.equal(decodePixPayload(emailPayload).merchantAccount.dictKey, "financeiro@example.com");
   assert.equal(decodePixPayload(phonePayload).merchantAccount.dictKey, "+5511999999999");
   assert.equal(decodePixPayload(documentPayload).merchantAccount.dictKey, "12345678000190");
+});
+
+test("configuração Pix informa a causa sem revelar o conteúdo da chave", () => {
+  const previousKey = process.env.PIX_KEY;
+  try {
+    delete process.env.PIX_KEY;
+    assert.deepEqual(
+      { configured: pixSettings().configured, issue: pixSettings().configurationIssue },
+      { configured: false, issue: "PIX_KEY_MISSING" },
+    );
+    process.env.PIX_KEY = "x".repeat(78);
+    assert.equal(pixSettings().configurationIssue, "PIX_KEY_TOO_LONG");
+    process.env.PIX_KEY = "chave-aleatória";
+    assert.equal(pixSettings().configurationIssue, "PIX_KEY_INVALID_CHARACTERS");
+    process.env.PIX_KEY = "123e4567-e89b-42d3-a456-426614174000";
+    assert.equal(pixSettings().configured, true);
+    assert.equal(pixSettings().configurationIssue, null);
+  } finally {
+    if (previousKey === undefined) delete process.env.PIX_KEY; else process.env.PIX_KEY = previousKey;
+  }
 });
 
 test("QR Code Pix é gerado localmente a partir do mesmo Copia e Cola", async () => {

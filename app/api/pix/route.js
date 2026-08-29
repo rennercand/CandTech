@@ -11,6 +11,14 @@ import { publicSupportContact } from "@/lib/support-contact";
 
 export const runtime = "nodejs";
 
+const PIX_CONFIGURATION_MESSAGES = {
+  PIX_KEY_MISSING: "A variável PIX_KEY está vazia ou não chegou ao ambiente Production da Vercel.",
+  PIX_KEY_TOO_LONG: "A variável PIX_KEY ultrapassa 77 caracteres. Cole somente a chave aleatória, não o Pix Copia e Cola completo.",
+  PIX_KEY_INVALID_CHARACTERS: "A variável PIX_KEY contém caractere inválido. Copie novamente somente a chave aleatória cadastrada no banco.",
+  PIX_RECEIVER_NAME_MISSING: "Preencha PIX_RECEIVER_NAME no ambiente Production da Vercel.",
+  PIX_RECEIVER_CITY_MISSING: "Preencha PIX_RECEIVER_CITY no ambiente Production da Vercel.",
+};
+
 async function owner(request) {
   const user = await getSession(request, { allowInactiveSubscription: true });
   if (!user) return { response: NextResponse.json({ error: "Não autenticado" }, { status: 401 }) };
@@ -44,7 +52,13 @@ export async function POST(request) {
   const auth = await owner(request);
   if (auth.response) return auth.response;
   const settings = pixSettings();
-  if (!settings.configured) return NextResponse.json({ error: "O Pix ainda está sendo configurado. Fale com o suporte para receber a chave." }, { status: 503 });
+  if (!settings.configured) {
+    console.warn(JSON.stringify({ event: "pix.configuration_invalid", issue: settings.configurationIssue }));
+    return NextResponse.json({
+      error: PIX_CONFIGURATION_MESSAGES[settings.configurationIssue] || "O Pix ainda está sendo configurado.",
+      code: settings.configurationIssue || "PIX_NOT_CONFIGURED",
+    }, { status: 503 });
+  }
   try {
     const access = await getOrganizationAccess(auth.user);
     const result = await createOrGetPixPaymentRequest(auth.user.id);

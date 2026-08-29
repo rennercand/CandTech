@@ -79,7 +79,7 @@ test("eventos de marketing exigem consentimento e descartam dados pessoais", () 
   assert.equal(trackMarketingEvent("sign_up", {
     method: "email", account_type: "company", email: "cliente@exemplo.com", amount: 999,
   }), true);
-  assert.deepEqual(calls[0], ["event", "sign_up", { method: "email", account_type: "company" }]);
+  assert.deepEqual(calls[0], ["event", "sign_up", { method: "email" }]);
   assert.equal(trackMarketingEvent("financial_document_saved", { amount: 999 }), false);
   delete global.window;
 });

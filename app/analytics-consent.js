@@ -48,7 +48,7 @@ export default function AnalyticsConsent({ nonce }) {
         <aside className="cookie-banner" aria-label="Preferências de cookies">
           <div>
             <strong>Cookies de análise opcionais</strong>
-            <p>Usamos o Google Analytics somente com sua autorização para entender visitas e interesse nos planos. Não enviamos dados financeiros nem campos do seu cadastro.</p>
+            <p>Usamos o Google Analytics somente com sua autorização para medir visitas e interesse nos planos. Não enviamos nome, e-mail, tipo de conta, dados de pagamento nem conteúdo do ERP.</p>
             <a href="/cookies">Política de Cookies</a>
           </div>
           <div className="cookie-actions">

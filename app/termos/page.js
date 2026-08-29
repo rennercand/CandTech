@@ -14,6 +14,7 @@ export default function TermsPage() {
     <h2>3. Dados e responsabilidades</h2>
     <p>O cliente conserva a titularidade do conteúdo inserido e concede à CandTech licença limitada para hospedá-lo, processá-lo, protegê-lo, exportá-lo e exibi-lo somente para executar o serviço. O cliente é responsável pela exatidão, legalidade, base legal e minimização dos dados de clientes, empregados e fornecedores que inserir.</p>
     <p>Não insira CPF, dados sensíveis, senhas, números completos de cartão ou outros dados desnecessários. A CandTech não solicita CPF no cadastro comum. CNPJ empresarial é opcional quando necessário para identificação comercial.</p>
+    <p>A CandTech não vende, aluga ou comercializa dados pessoais nem conteúdo do ERP. A análise de navegação é opcional, depende de consentimento separado e não condiciona o uso do serviço. Uma finalidade futura de publicidade, perfilamento ou monetização exigirá avaliação própria, transparência e nova autorização quando exigida.</p>
     <h2>4. Cálculos e decisões</h2>
     <p>Resultados são apoio gerencial e dependem dos valores informados. Não substituem contabilidade, assessoria jurídica, fiscal ou financeira. Antes de pagar, declarar impostos, precificar ou assumir obrigações, o cliente deve revisar os dados e consultar profissional quando necessário.</p>
     <h2>5. Disponibilidade e alterações</h2>

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
 import { closeDatabaseForTests, createUser, getBillingProviderState, getDatabaseBackend } from "../lib/db.js";
 import { reviewPixPaymentManually } from "../lib/manual-payment-review.js";
-import { buildPixPayload } from "../lib/pix.js";
+import { buildPixPayload, decodePixPayload } from "../lib/pix.js";
 import { createOrGetPixPaymentRequest, getLatestPixPayment, resetPixSchemaForTests, reviewPixPayment, savePixPaymentReceipt } from "../lib/pix-db.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -86,12 +86,32 @@ test("moderação manual guarda a implantação na conta mesmo sem comprovante",
   }
 });
 
-test("Pix Copia e Cola contém valor, txid e CRC sem expor segredo bancário", () => {
+test("Pix Copia e Cola decodifica a chave DICT no campo EMV 26.01", () => {
   const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 18000, txid: "CT123456" });
+  const decoded = decodePixPayload(payload);
   assert.match(payload, /^00020126/);
   assert.match(payload, /5406180\.00/);
   assert.match(payload, /CT123456/);
   assert.match(payload, /6304[A-F0-9]{4}$/);
+  assert.equal(decoded.merchantAccount.gui, "BR.GOV.BCB.PIX");
+  assert.equal(decoded.merchantAccount.dictKey, "financeiro@example.com");
+  assert.equal(decoded.fields["54"], "180.00");
+  assert.equal(decoded.fields["62"], "0508CT123456");
+  assert.equal(decoded.validCrc, true);
+});
+
+test("campo DICT continua válido quando a chave ocupa o limite do BR Code", () => {
+  const key = "a".repeat(77);
+  const payload = buildPixPayload({ key, receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-LIMITE", description: "DESCRICAO OPCIONAL" });
+  const decoded = decodePixPayload(payload);
+
+  assert.equal(decoded.merchantAccount.dictKey, key);
+  assert.equal(decoded.merchantAccount.description, "", "a descrição opcional deve ceder espaço ao DICT obrigatório");
+  assert.equal(decoded.validCrc, true);
+  assert.throws(
+    () => buildPixPayload({ key: `${key}x`, receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-INVALIDO" }),
+    /PIX_KEY_INVALID/,
+  );
 });
 
 test("QR Code Pix é gerado localmente a partir do mesmo Copia e Cola", async () => {

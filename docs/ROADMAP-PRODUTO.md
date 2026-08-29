@@ -2,6 +2,8 @@
 
 Este documento organiza as evoluções planejadas do produto. Ele não afirma que os itens abaixo já foram implementados e não substitui validação contábil, tributária, jurídica ou de segurança.
 
+O recorte verificado em 29/08/2026, com itens entregues, parciais e pendentes, está em [ROADMAP-PENDENCIAS.md](./ROADMAP-PENDENCIAS.md). Em caso de divergência sobre o estado atual, use esse inventário e os testes do código; este documento continua descrevendo a direção de longo prazo.
+
 ## Objetivo comercial
 
 Posicionar a CandTech como uma plataforma simples para pequenas empresas que:
@@ -73,7 +75,7 @@ O roadmap de proteção técnica está separado em [ROADMAP-SEGURANCA.md](./ROAD
 
 ## Fase 0 — Preparar a base
 
-- atualizar README e arquitetura conforme as funções realmente existentes;
+- [x] atualizar README e arquitetura conforme as funções realmente existentes em 29/08/2026;
 - separar o workspace em entidades: empresas, lançamentos, contas, produtos, estoque, pedidos, entregas, documentos fiscais e configurações tributárias;
 - adicionar organizações e tenant_id;
 - criar papéis de proprietário, administrador, financeiro, estoque, vendedor e leitura;

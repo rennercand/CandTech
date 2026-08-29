@@ -2,6 +2,8 @@
 
 Este documento define a evolução técnica e de produto da CandTech para atender inicialmente micro e pequenas empresas de comércio, serviços e operações híbridas. Ele complementa `ROADMAP-PRODUTO.md` e `ROADMAP-SEGURANCA.md`.
 
+O status verificado do que existe e do que continua faltando está em [ROADMAP-PENDENCIAS.md](./ROADMAP-PENDENCIAS.md).
+
 O objetivo não é transformar a CandTech em CRM. O núcleo continuará sendo ERP: operação, vendas, serviços, estoque, compras, financeiro, caixa, cobrança, conciliação e relatórios.
 
 ## Direção do produto

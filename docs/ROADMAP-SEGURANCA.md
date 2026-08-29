@@ -2,6 +2,8 @@
 
 Este documento separa segurança da roadmap comercial. Ele registra riscos, prioridades e critérios de aceite; não significa que os controles já foram implementados nem substitui revisão independente.
 
+O estado consolidado das pendências verificadas em 29/08/2026 está em [ROADMAP-PENDENCIAS.md](./ROADMAP-PENDENCIAS.md). A auditoria específica do histórico público está em [AUDITORIA-SEGREDOS-2026-08-29.md](./AUDITORIA-SEGREDOS-2026-08-29.md).
+
 ## Esclarecimento: buffer overflow no login
 
 Um buffer overflow clássico é improvável no fluxo atual, pois o login é executado em JavaScript/Node.js, com memória gerenciada, e usa bcryptjs. Enviar uma senha enorme não deveria permitir sobrescrever memória do processo.

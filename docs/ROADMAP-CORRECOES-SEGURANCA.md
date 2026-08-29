@@ -1,6 +1,8 @@
 # Roadmap de correções de segurança verificadas — CandTech
 
-Data da revisão inicial: 2026-08-05. Última atualização verificada: 2026-08-09.
+Data da revisão inicial: 2026-08-05. Última consolidação documental: 2026-08-29.
+
+As pendências atuais reunidas por prioridade estão em [ROADMAP-PENDENCIAS.md](./ROADMAP-PENDENCIAS.md). A revisão de segredos em todos os refs públicos está em [AUDITORIA-SEGREDOS-2026-08-29.md](./AUDITORIA-SEGREDOS-2026-08-29.md).
 
 ## Escopo e limites
 

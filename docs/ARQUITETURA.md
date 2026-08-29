@@ -1,44 +1,55 @@
 # Mapa do sistema CandTech
 
-O mapa abaixo mostra como navegador, frontend, APIs, banco e serviços externos conversam entre si.
+O mapa abaixo representa o código publicado em 29 de agosto de 2026: páginas públicas, ERP autenticado, cobrança manual, administração, persistência e integrações externas.
 
 ```mermaid
-flowchart LR
-  U[Usuário] --> UI[Frontend Next.js / React]
+flowchart TB
+  CLIENT[Cliente ou colaborador] --> PUBLIC[Site público e documentos jurídicos]
+  CLIENT --> AUTHUI[Cadastro, login e recuperação]
+  CLIENT --> ERPUI[ERP autenticado]
+  OWNER[Proprietário] --> BILLINGUI[Assinatura e Pix]
+  STAFF[Equipe interna autorizada] --> ADMINUI[Central de monitoramento, suporte e cobrança]
 
-  subgraph Navegador
-    UI --> CALC[Cálculos e gráficos]
-    UI --> PDFJS[Leitor PDF.js]
-    PDFJS --> PARSER[Parser de extrato]
-    PARSER --> UI
-    UI --> EXPORTLOCAL[CSV, XLSX e solicitação de PDF]
+  subgraph Browser[Navegador]
+    PUBLIC
+    AUTHUI
+    ERPUI --> CALC[Cálculos, gráficos e PDF.js]
+    BILLINGUI --> QR[QR Code local a partir do Copia e Cola]
+    ADMINUI
+    PUBLIC --> CONSENT[Consentimento de Analytics]
   end
 
-  UI -->|HTTPS + cookie HttpOnly| API[Route Handlers / API]
+  AUTHUI -->|HTTPS| API[Route Handlers Next.js]
+  ERPUI -->|cookie HttpOnly| API
+  BILLINGUI -->|cookie HttpOnly| API
+  ADMINUI -->|sessão, chave de rota e permissão| API
 
-  subgraph Backend Vercel
-    API --> SEC[Validação de origem e rate limit]
-    SEC --> AUTH[JWT revogável + identidade atual do banco]
-    SEC --> HISTORY[Histórico e workspace]
-    SEC --> INVENTORY[Estoque relacional e pedidos]
-    SEC --> REPORTS[Gerador PDF/CSV/XLSX]
-    SEC --> DRIVE[Integração Google Drive]
+  subgraph Vercel[Backend Next.js na Vercel]
+    API --> SEC[Origem, tipo, tamanho e rate limit]
+    SEC --> AUTH[JWT revogável e identidade atual]
+    SEC --> WORKSPACE[Workspace e histórico]
+    SEC --> INVENTORY[Estoque, pedidos e movimentos]
+    SEC --> BILLING[Pix, comprovantes e moderação]
+    SEC --> SUPPORT[Suporte e observabilidade]
+    SEC --> REPORTS[PDF, CSV e XLSX]
+    SEC --> DRIVE[Google Drive OAuth]
+    CRON[Cron de expiração Pix] --> BILLING
   end
 
-  AUTH --> DB[(PostgreSQL / Neon)]
-  HISTORY --> DB
+  AUTH --> DB[(PostgreSQL Neon)]
+  WORKSPACE --> DB
   INVENTORY --> DB
-  INVENTORY --> REPORTS
-  SEC --> DB
-  DRIVE --> TOKENS[Tokens OAuth cifrados no banco]
-  TOKENS --> DB
-  DRIVE -->|OAuth 2.0 e drive.file| GOOGLE[Google Drive do usuário]
-  REPORTS --> UI
-  EXPORTLOCAL --> U
-  GOOGLE --> U
+  BILLING --> DB
+  SUPPORT --> DB
+  DRIVE --> DB
+  BILLING --> BLOB[(Vercel Blob privado)]
+  DRIVE --> GOOGLE[Google Drive do usuário]
+  AUTH --> RESEND[Resend]
+  BILLING --> RESEND
+  REPORTS --> ERPUI
+  CONSENT --> GA[Google Analytics 4]
 
-  VERCEL[Vercel: hospedagem, HTTPS e firewall] --> API
-  GITHUB[GitHub main/test] -->|Deploy automático| VERCEL
+  GITHUB[GitHub main e previews] -->|CI e deploy| Vercel
 ```
 
 ## Leitura como mapa mental
@@ -46,37 +57,54 @@ flowchart LR
 ```mermaid
 mindmap
   root((CandTech))
-    Interface
-      Dashboard
-      Calculadoras
-      Tabelas financeiras
-      Preço do produto
-      Organização financeira
-      Histórico
-    Cálculos locais
-      VPL
-      TIR
-      ROI
-      Payback
-      Índice de lucratividade
-      PRICE e SAF
-      SAC
-      SAA
-    Backend
-      Autenticação
-      Rate limit
-      Workspace automático
-      Histórico privado
-      Exportações
+    Experiência pública
+      Página inicial
+      Assinatura
+      Mapa do sistema
+      Jurídico e privacidade
+      Consentimento analítico
+    Identidade e acesso
+      Confirmação de e-mail
+      Sessões revogáveis
+      Recuperação de senha
+      Organização e cargos
+      Convites de uso único
+    ERP
+      Visão geral
+      Clientes e tarefas
+      Workspace e histórico
+      Financiamentos e análises
+      Formação de preço
+      Estoque e pedidos
+      Entregas simples
+    Cobrança
+      Primeiro Pix de R$ 180
+      Renovações de R$ 60
+      BR Code com DICT em 26.01
+      Comprovante privado opcional
+      Moderação humana
+      Expiração e backup
+    Administração
+      Monitoramento
+      Suporte
+      Cobrança
+      Privilégio mínimo
     Dados
-      PostgreSQL Neon em produção
-      SQLite no desenvolvimento
-      Separação por usuário
-      Tokens Google cifrados
-    Serviços
-      Vercel
+      Neon em produção
+      SQLite local
+      Tenant por organização
+      Blob privado
+      Auditoria mínima
+    Integrações
       Google Drive
-      GitHub
+      Resend
+      Google Analytics com consentimento
+      GitHub e Vercel
+    Governança
+      LGPD e termos
+      Migrations versionadas
+      Segredos no servidor
+      Roadmaps e checklists
 ```
 
 ## Limites importantes
@@ -109,6 +137,8 @@ mindmap
 | `google_drive_connections` | refresh token OAuth cifrado | uma linha por `user_id` |
 | `auth_sessions` | sessões ativas, expiração e revogação | `user_id` + hash da sessão |
 | `billing_profiles` | estado e metadados operacionais da assinatura; a identificação do Pix vem de `users` | uma linha por `user_id` |
+| `pix_payment_requests` | valor, tipo inicial/renovação, TXID, prazo e estado da moderação | proprietário autenticado + `public_id` |
+| `pix_payment_receipts` | metadados e hash do comprovante armazenado no Blob privado | cobrança pertencente ao proprietário; leitura administrativa autorizada |
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
 | `organizations` / `organization_jobs` | empresa e modelos de cargos personalizados | proprietário autenticado + `organization_id` |
 | `organization_members` / `organization_invitations` | colaboradores, permissões e convites de uso único | `organization_id` resolvido pela sessão |
@@ -168,8 +198,34 @@ flowchart TB
 
 ## Cadastro, assinatura e cobrança
 
+```mermaid
+flowchart TD
+  OWNER[Proprietário autenticado] --> REQUEST[POST /api/pix]
+  REQUEST --> CHECK{Implantação já aprovada?}
+  CHECK -->|não| INITIAL[Inicial: R$ 180]
+  CHECK -->|sim| RENEWAL[Renovação: R$ 60]
+  INITIAL --> EMV[Gerar e autodecodificar BR Code]
+  RENEWAL --> EMV
+  EMV --> GUI[26.00 = BR.GOV.BCB.PIX]
+  EMV --> DICT[26.01 = chave PIX do DICT]
+  EMV --> TXID[62.05 = TXID]
+  EMV --> CRC[63 = CRC16]
+  EMV --> QR[QR Code gerado no navegador]
+  QR --> BANK[Cliente paga no banco]
+  BANK --> RECEIPT{Enviar comprovante?}
+  RECEIPT -->|opcional| BLOB[Blob privado e payment_review]
+  RECEIPT -->|não| MOD[Conferência manual]
+  BLOB --> MOD
+  MOD -->|aprovar| ACTIVE[Assinatura ativa por 30 dias]
+  MOD -->|rejeitar ou expirar| BLOCKED[Acesso suspenso e backup]
+  ACTIVE --> SETUP[Registrar setup_paid_at no primeiro pagamento]
+  SETUP --> RENEWAL
+```
+
 - `/assinar` apresenta o plano de R$ 60/mês e a implantação única de R$ 120;
 - `/api/pix` cria ou recupera a solicitação pendente do proprietário autenticado e gera o Pix no servidor;
+- `lib/pix.js` monta o Merchant Account Information no template `26`, grava a GUI em `26.00` e a chave DICT em `26.01`, limita o TLV a 99 bytes, calcula o CRC16 e decodifica o resultado antes de devolvê-lo;
+- `PIX_KEY` permanece em uma variável `Secret` de Produção. A chave necessariamente entra no BR Code entregue ao pagador autenticado, mas não é publicada no bundle, HTML estático ou variável `NEXT_PUBLIC_`;
 - `/api/pix/[paymentId]/receipt` autoriza o proprietário a enviar um comprovante diretamente ao Vercel Blob privado, valida o arquivo no callback e muda a cobrança para `payment_review` sem ativar a assinatura;
 - `/api/admin/payments/[paymentId]/receipt` entrega o arquivo com sessão administrativa, auditoria e `Cache-Control: private, no-store`;
 - a central privada lista pagamentos, visualiza o comprovante e permite ao administrador aprovar ou rejeitar após conferir o extrato bancário;
@@ -184,6 +240,7 @@ flowchart TB
 - a migration `migrations/20260809_history_public_ids.sql` cria, preenche e torna obrigatório o UUID público usado nas URLs de documentos;
 - a migration `migrations/20260826_pix_payment_receipts.sql` cria os metadados dos comprovantes e o estado `payment_review`;
 - a migration `migrations/20260826_staff_access.sql` cria o controle de privilégio mínimo da equipe interna;
+- a migration `migrations/20260828_billing_setup_paid.sql` registra `setup_paid_at`; após a aprovação do Pix inicial de R$ 180, novas solicitações cobram somente R$ 60;
 - copiar o Pix ou clicar no WhatsApp não libera acesso; somente a ação administrativa autenticada altera a assinatura;
 - `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 

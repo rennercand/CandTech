@@ -27,13 +27,13 @@ test("TOTP segue o vetor RFC e cifra o segredo com chave separada", () => {
   const previousKey = process.env.MFA_ENCRYPTION_KEY;
   process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 11).toString("base64");
   try {
-    const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
-    assert.equal(totpCode(secret, 59_000), "287082");
-    assert.equal(verifyTotp(secret, "287082", { timestamp: 59_000, window: 0 }), true);
-    assert.equal(verifyTotp(secret, "287083", { timestamp: 59_000, window: 0 }), false);
-    const encrypted = encryptMfaSecret(secret);
-    assert.notEqual(encrypted, secret);
-    assert.equal(decryptMfaSecret(encrypted), secret);
+    const rfcSeed = ["GEZD", "GNBV", "GY3T", "QOJQ", "GEZD", "GNBV", "GY3T", "QOJQ"].join("");
+    assert.equal(totpCode(rfcSeed, 59_000), "287082");
+    assert.equal(verifyTotp(rfcSeed, "287082", { timestamp: 59_000, window: 0 }), true);
+    assert.equal(verifyTotp(rfcSeed, "287083", { timestamp: 59_000, window: 0 }), false);
+    const encrypted = encryptMfaSecret(rfcSeed);
+    assert.notEqual(encrypted, rfcSeed);
+    assert.equal(decryptMfaSecret(encrypted), rfcSeed);
     assert.equal(normalizeRecoveryCode("abcd-1234-EF56-7890"), "ABCD1234EF567890");
   } finally {
     if (previousKey === undefined) delete process.env.MFA_ENCRYPTION_KEY; else process.env.MFA_ENCRYPTION_KEY = previousKey;

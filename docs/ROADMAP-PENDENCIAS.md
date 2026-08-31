@@ -1,6 +1,6 @@
 # Pendências verificadas da roadmap — CandTech
 
-Data do recorte: 29/08/2026.
+Data do recorte: 31/08/2026.
 
 Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes existentes. Ele evita marcar como entregue algo que aparece apenas na interface, em um documento ou como estrutura parcial. As prioridades podem mudar depois de validação comercial, jurídica, contábil ou de segurança.
 
@@ -10,17 +10,17 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | --- | --- | --- |
 | Autenticação por e-mail, recuperação, MFA e sessão revogável | Entregue para proprietários e equipe administrativa | `app/api/auth/`, `auth_sessions`, `user_mfa`, testes de autenticação |
 | Organizações, cargos, permissões e convites | Entregue para o fluxo atual | `organization_*`, `app/api/team/`, testes de equipe |
-| Workspace e histórico privado | Entregue; clientes e tarefas já usam projeção relacional | `app/api/workspace/`, `customers`, `operational_tasks`, `app/api/history/` |
+| Workspace e histórico privado | Entregue; clientes, tarefas, entregas e financeiro usam projeções relacionais | `app/api/workspace/`, `customers`, `operational_tasks`, `operational_deliveries`, `financial_*` |
 | Estoque, variações, pedidos e movimentos | Entregue parcialmente | tabelas `inventory_*`, importação e relatórios; faltam FEFO, custo médio e curva ABC |
 | Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 180 inicial, R$ 60 renovação, comprovante privado e moderação |
 | Monitoramento, suporte e administração | Entregue para operação inicial | `monitoring_events`, `support_tickets`, `staff_access` |
 | Google Drive e e-mails transacionais | Entregue e endurecido | OAuth `drive.file` com PKCE, nonce persistido de uso único, tokens cifrados e Resend |
-| Conciliação financeira vendável | Pendente | não existem importador OFX nem entidades relacionais de conciliação |
+| Conciliação financeira vendável | Base entregue; conciliação pendente | contas, compromissos e livro realizados são relacionais; faltam importador OFX, lotes e revisão de conciliação |
 | Motor tributário e emissão fiscal | Pendente | somente pré-nota sem validade fiscal |
 
 ## P0 — faltas antes de ampliar a comercialização
 
-- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace, histórico, clientes, tarefas e a base de entregas já possuem escopo relacional, backfill e índices verificados em Preview/Production. As projeções preservam o payload apenas como compatibilidade de transição; faltam o livro financeiro e a migração do estoque textual**;
+- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace, histórico, clientes, tarefas, entregas e livro financeiro já possuem escopo relacional, backfill e índices verificados em Preview/Production. As projeções preservam o payload apenas como compatibilidade de transição; falta migrar o estoque que ainda usa `tenant_id TEXT`**;
 - [ ] adicionar testes sistemáticos de acesso cruzado para cada nova entidade e permissão, não somente para os fluxos já cobertos;
 - [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico, Pix, Drive e exportações implementados em 29/08/2026; migration aplicada na branch `main` do Neon com 8 colunas verificadas e 63 eventos legados atualizados; falta definir retenção/acesso de consulta**;
 - [ ] definir e testar backup completo do Neon e do Blob, restauração, RPO/RTO, retenção, exclusão e continuidade; o ZIP enviado após expiração do Pix não substitui backup da plataforma;
@@ -33,7 +33,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 ## P1 — núcleo financeiro vendável
 
-- [ ] criar contas financeiras e lançamentos relacionais por organização, com previsto, realizado, origem e vínculo auditável;
+- [x] criar contas financeiras e lançamentos relacionais por organização, com previsto, realizado, origem e vínculo auditável; **`financial_accounts`, `financial_commitments` e `financial_ledger_entries` foram criadas com backfill, vínculo compromisso/lançamento, deduplicação e teste negativo entre organizações; Preview e Production foram verificados em 31/08/2026**;
 - [ ] importar movimentação financeira em CSV, OFX e XLSX; hoje planilhas atendem principalmente o estoque e o PDF bancário é processado localmente;
 - [ ] mostrar prévia financeira, detectar duplicidades por identificador estável e permitir desfazer uma importação inteira;
 - [ ] conciliar recebimentos e pagamentos com vendas, compras e contas, mantendo revisão humana para exceções;

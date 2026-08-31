@@ -136,6 +136,9 @@ mindmap
 | `customers` | carteira relacional, contato, situação e observações | proprietário + `organization_id`; ID público nunca autoriza sozinho |
 | `operational_tasks` | tarefas, prazo, prioridade, situação e cliente opcional | proprietário + `organization_id`; FK interna opcional para `customers` |
 | `operational_deliveries` | entradas/saídas, prazo, rastreio e conclusão; cliente/pedido opcionais | proprietário + `organization_id`; IDs externos nunca autorizam sozinhos |
+| `financial_accounts` | contas de caixa/banco e moeda operacional | proprietário + `organization_id`; nome único dentro do escopo |
+| `financial_commitments` | contas a pagar/receber previstas, vencimento, situação e valor | proprietário + `organization_id`; ID público estável |
+| `financial_ledger_entries` | entradas/saídas realizadas, origem e vínculo opcional com compromisso | proprietário + `organization_id`; conta e compromisso validados no mesmo escopo |
 | `rate_limits` | contadores temporários de requisição | chave derivada do escopo/origem |
 | `google_drive_connections` | refresh token OAuth cifrado | uma linha por `user_id` |
 | `auth_sessions` | sessões ativas, expiração, revogação e confirmação MFA | `user_id` + hash da sessão |
@@ -251,6 +254,7 @@ flowchart TD
 - a migration `migrations/20260831_workspace_history_tenants.sql` adiciona e preenche `organization_id` em workspace e histórico; todas as rotas combinam organização e proprietário resolvidos no servidor, com teste de acesso cruzado;
 - a migration `migrations/20260831_relational_clients_tasks.sql` cria clientes e tarefas relacionais, preserva os registros do payload legado, vincula tarefas a clientes, marca o workspace migrado e foi verificada em Preview e Production;
 - a migration `migrations/20260831_relational_deliveries.sql` cria entregas relacionais, preserva registros legados, prepara os vínculos com cliente/pedido e foi verificada em Preview e Production;
+- a migration `migrations/20260831_relational_finance.sql` cria contas financeiras, compromissos previstos e lançamentos realizados, preserva os arrays legados durante a transição e foi verificada em Preview e Production;
 - copiar o Pix ou clicar no WhatsApp não libera acesso; somente a ação administrativa autenticada altera a assinatura;
 - `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 

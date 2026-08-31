@@ -68,6 +68,7 @@ const formatDate = (value) => {
     : new Date(value).toLocaleDateString("pt-BR");
 };
 const today = () => new Date().toISOString().slice(0, 10);
+const newWorkspaceEntityId = (prefix) => globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 function projectedDate(index) {
   // Sugere uma data mensal para cada período, mas o usuário pode alterá-la.
@@ -94,6 +95,7 @@ function normalizeProjectionFlow(flow, index) {
 }
 
 const blankCashRow = () => ({
+  id: "",
   date: new Date().toISOString().slice(0, 10),
   category: "Geral",
   description: "",
@@ -1226,6 +1228,7 @@ export default function CandTechApp({ publicFallback = null }) {
       return;
     }
     const cashType = account.type === "pagar" ? "saida" : "entrada";
+    const commitmentId = account.id || globalThis.crypto?.randomUUID?.() || `commitment-${Date.now()}-${index}`;
     const similar = cashEntries.some((entry) =>
       entry.type === cashType && Math.abs(Number(entry.amount) - Number(account.amount)) < 0.01 &&
       (!account.dueDate || !entry.date || entry.date === account.dueDate),
@@ -1238,6 +1241,8 @@ export default function CandTechApp({ publicFallback = null }) {
     if ((similar || similarAccount) && !confirm("Já existe uma conta ou lançamento de tipo, valor e data parecidos. Deseja lançar mesmo assim?")) return;
     setCashEntries((current) => [...current, {
       ...blankCashRow(),
+      id: newWorkspaceEntityId("entry"),
+      sourceCommitmentId: commitmentId,
       date: account.dueDate || today(),
       category: account.category || "Geral",
       description: account.type === "receber"
@@ -1246,7 +1251,9 @@ export default function CandTechApp({ publicFallback = null }) {
       type: cashType,
       amount: account.amount,
     }]);
-    setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus, postedAt: new Date().toISOString() } : item));
+    setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index
+      ? { ...item, id: commitmentId, status: nextStatus, postedAt: new Date().toISOString() }
+      : item));
     setNotice(account.type === "pagar" ? "Conta paga e saída lançada no caixa." : "Conta recebida e entrada lançada no caixa.");
   }
 
@@ -1330,7 +1337,7 @@ export default function CandTechApp({ publicFallback = null }) {
     const postedAt = new Date().toISOString();
     if (Number(order.amount) > 0 && canAccess("cashflow")) {
       setCashEntries((current) => current.some((entry) => entry.sourceOrderKey === postingKey) ? current : [...current, {
-        ...blankCashRow(), sourceOrderKey: postingKey,
+        ...blankCashRow(), id: newWorkspaceEntityId("entry"), sourceOrderKey: postingKey,
         date: order.date || today(), category: order.type === "venda" ? "Vendas" : "Compras",
         description: `${order.type === "venda" ? "Venda" : "Compra"} ${order.number || order.productName || order.sku || "comercial"}`,
         type: order.type === "venda" ? "entrada" : "saida", amount: String(Math.abs(Number(order.amount))),
@@ -2716,14 +2723,14 @@ function CashFlow({
   function edit(index, field, value) {
     setEntries((current) => {
       const copy = [...current];
-      copy[index] = { ...copy[index], [field]: value };
+      copy[index] = { ...copy[index], id: copy[index].id || newWorkspaceEntityId("entry"), [field]: value };
       return copy;
     });
   }
   function addEntry() {
     // Remove filtros para garantir que o lançamento recém-criado fique visível.
     setFilters({ month: "", type: "todos", category: "todos" });
-    setEntries((current) => [...current, blankCashRow()]);
+    setEntries((current) => [...current, { ...blankCashRow(), id: newWorkspaceEntityId("entry") }]);
   }
   function removeEntry(index) {
     const entry = entries[index];
@@ -2787,7 +2794,7 @@ function CashFlow({
         const existing = current.filter(
           (entry) => entry.description || Number(entry.amount) > 0,
         );
-        return [...existing, ...imported].sort((a, b) =>
+        return [...existing, ...imported.map((entry) => ({ ...entry, id: entry.id || newWorkspaceEntityId("entry") }))].sort((a, b) =>
           String(a.date).localeCompare(String(b.date)),
         );
       });

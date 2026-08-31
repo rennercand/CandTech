@@ -43,9 +43,9 @@ export function FinancialCommitments({ accounts, setAccounts, categories = ["Ger
     ...categories,
     ...accounts.map((account) => account.category),
   ].map((category) => String(category || "").trim()).filter(Boolean))], [categories, accounts]);
-  const update = (index, field, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
+  const update = (index, field, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, id: row.id || newId(), [field]: value } : row));
   const changeType = (index, value) => setAccounts((current) => current.map((row, rowIndex) => rowIndex === index
-    ? { ...row, type: value, ...(value === "receber" ? { description: "" } : {}) }
+    ? { ...row, id: row.id || newId(), type: value, ...(value === "receber" ? { description: "" } : {}) }
     : row));
   const remove = (index) => setAccounts((current) => current.filter((_, rowIndex) => rowIndex !== index));
   function createCategory() {

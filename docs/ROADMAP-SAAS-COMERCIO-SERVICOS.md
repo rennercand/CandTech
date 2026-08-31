@@ -45,7 +45,7 @@ Só reconsiderar a infraestrutura quando existirem métricas concretas que justi
 
 A CandTech já possui `organizations.id` relacional. Novos módulos devem usar preferencialmente:
 
-**Progresso em 31/08/2026:** workspace e histórico concluíram a etapa gradual de escopo. Clientes, tarefas e a base de entregas agora possuem tabelas relacionais próprias, FK organização, vínculos internos, backfill e marcadores de transição verificados em Preview e Production. A leitura relacional substitui os arrays legados após a migração e os testes negativos cobrem duas organizações. O financeiro e o estoque textual continuam na migração; entregas ainda precisam da interface, eventos e comprovante.
+**Progresso em 31/08/2026:** workspace e histórico concluíram a etapa gradual de escopo. Clientes, tarefas, entregas e o livro financeiro agora possuem tabelas relacionais próprias, FK organização, vínculos internos, backfill e marcadores de transição verificados em Preview e Production. A leitura relacional substitui os arrays legados após a migração e os testes negativos cobrem duas organizações. O estoque que usa `tenant_id TEXT` continua na migração; entregas ainda precisam da interface, eventos e comprovante, e o financeiro ainda precisa de importação/conciliação.
 
 ```text
 organization_id BIGINT NOT NULL

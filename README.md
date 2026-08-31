@@ -4,7 +4,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
-**Estado atual:** ERP web funcional com autenticação por e-mail e MFA TOTP obrigatório para proprietários/equipe administrativa, workspace multiempresa, estoque relacional, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix BR Code com QR Code, comprovante privado e conferência manual. O primeiro Pix soma R$ 60 da mensalidade e R$ 120 da implantação; depois de aprovado, as renovações são de R$ 60. A ativação obrigatória permanece controlada por `BILLING_ENFORCEMENT_ENABLED`.
+**Estado atual:** ERP web funcional com autenticação por e-mail e MFA TOTP obrigatório para proprietários/equipe administrativa, workspace multiempresa, estoque e livro financeiro relacionais, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix BR Code com QR Code, comprovante privado e conferência manual. O primeiro Pix soma R$ 60 da mensalidade e R$ 120 da implantação; depois de aprovado, as renovações são de R$ 60. A ativação obrigatória permanece controlada por `BILLING_ENFORCEMENT_ENABLED`.
 
 ## Funcionalidades
 
@@ -28,6 +28,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Tabelas de amortização PRICE, SAF, SAA e SAC com memória de cálculo.
 - Formação de preço unitário a partir de despesas, unidades e margem de lucro.
 - Organização financeira com categorias reutilizáveis criadas pelo usuário, seletores padronizados e gráfico de distribuição de custos.
+- Contas financeiras, compromissos previstos e lançamentos realizados persistidos por organização, com origem estável e vínculo entre pagamento e compromisso.
 - Importação local de extratos bancários em PDF.
 - Salvamento automático do workspace vinculado à conta.
 - Rascunho automático no histórico quando a pessoa sai sem salvar manualmente.
@@ -92,7 +93,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
 - Novos cadastros recebem confirmação de e-mail e só acessam as APIs do ERP após confirmar; contas anteriores são preservadas como verificadas. A recuperação usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
 - Proprietários e equipe administrativa precisam ativar MFA TOTP. O segredo fica cifrado com uma chave exclusiva, o login usa desafio persistido de cinco minutos e uso único, e oito códigos de recuperação são mostrados uma única vez e guardados apenas como hashes.
-- Históricos e workspaces combinam `user_id` com `organization_id`. Clientes, tarefas e entregas usam tabelas relacionais próprias, com `organization_id`, identificador público estável e vínculos opcionais entre tarefa/entrega, cliente e pedido. A organização e o proprietário são derivados da sessão, conferidos novamente na camada de banco e nunca aceitos do navegador; contas pessoais usam o escopo organizacional nulo.
+- Históricos e workspaces combinam `user_id` com `organization_id`. Clientes, tarefas, entregas, contas financeiras, compromissos e lançamentos usam tabelas relacionais próprias, com `organization_id`, identificador público estável e vínculos internos. A organização e o proprietário são derivados da sessão, conferidos novamente na camada de banco e nunca aceitos do navegador; contas pessoais usam o escopo organizacional nulo.
 - Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
 - Todas as APIs privadas exigem sessão. Cadastro, login, solicitação de recuperação, redefinição e confirmação de e-mail são públicos por necessidade do fluxo, com proteção de origem, limites de corpo e rate limit.
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
@@ -121,7 +122,7 @@ A TIR é exibida como `N/D` quando o fluxo não possui uma raiz única verificá
 
 ## Salvamento automático
 
-Cada conta pessoal ou organização possui um workspace isolado no banco. Clientes, tarefas e entregas são sincronizados em tabelas relacionais como fonte de verdade, mantendo o formato do workspace durante a transição sem quebrar a interface. Após uma pequena pausa na edição, o site salva automaticamente:
+Cada conta pessoal ou organização possui um workspace isolado no banco. Clientes, tarefas, entregas, compromissos e lançamentos financeiros são sincronizados em tabelas relacionais como fonte de verdade, mantendo o formato do workspace durante a transição sem quebrar a interface. Após uma pequena pausa na edição, o site salva automaticamente:
 
 - dados das calculadoras;
 - fluxos e organização financeira;
@@ -179,7 +180,7 @@ BILLING_ENFORCEMENT_ENABLED=false
 
 Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
 
-As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026.
+As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance` e foi validada nos dois branches em 31/08/2026 antes do deploy.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -258,6 +259,9 @@ executam DDL durante uma requisição:
 - `workspaces`: estado mais recente da interface, revisão e controle de arquivamento.
 - `customers` / `operational_tasks`: carteira e tarefas relacionais isoladas por organização, incluindo o vínculo opcional da tarefa ao cliente.
 - `operational_deliveries`: entrega relacional isolada por organização, preparada para vínculo com cliente, pedido e comprovante privado.
+- `financial_accounts`: contas de caixa/banco isoladas por organização.
+- `financial_commitments`: contas a pagar e receber previstas, com vencimento, situação e valor.
+- `financial_ledger_entries`: entradas e saídas realizadas, vinculáveis a compromisso ou pedido por origem estável.
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
 - `google_drive_connections`: refresh token cifrado e vinculado ao usuário.
 - `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa;

@@ -180,7 +180,7 @@ BILLING_ENFORCEMENT_ENABLED=false
 
 Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
 
-As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance` e foi validada nos dois branches em 31/08/2026 antes do deploy.
+As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance` e foi validada nos dois branches em 31/08/2026 antes do deploy. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -264,9 +264,9 @@ executam DDL durante uma requisição:
 - `financial_ledger_entries`: entradas e saídas realizadas, vinculáveis a compromisso ou pedido por origem estável.
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
 - `google_drive_connections`: refresh token cifrado e vinculado ao usuário.
-- `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa;
-- `inventory_batches` e `inventory_movements`: livro auditável de entradas, vendas, compras e reversões;
-- `inventory_orders` e `inventory_order_items`: pedidos com vários produtos.
+- `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa; durante a transição, novas escritas guardam `organization_id` e o `tenant_id` legado.
+- `inventory_batches` e `inventory_movements`: livro auditável de entradas, vendas, compras e reversões, com o mesmo escopo organizacional duplo.
+- `inventory_orders` e `inventory_order_items`: pedidos com vários produtos; o pedido herda a organização do lote operacional.
 - `monitoring_events`: resumos técnicos sem segredos, agrupados por tipo de falha;
 - `support_tickets`: mensagens do suporte vinculadas ao usuário e respostas administrativas.
 - `staff_access`: módulos administrativos concedidos a contas verificadas, sem guardar ou criar senhas;

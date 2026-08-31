@@ -149,9 +149,9 @@ mindmap
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
 | `organizations` / `organization_jobs` | empresa e modelos de cargos personalizados | proprietário autenticado + `organization_id` |
 | `organization_members` / `organization_invitations` | colaboradores, permissões e convites de uso único | `organization_id` resolvido pela sessão |
-| `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | `tenant_id` derivado da sessão e da organização |
-| `inventory_batches` / `inventory_movements` | livro de movimentos e reversões | `tenant_id` + autor autenticado |
-| `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | `tenant_id` + lote de movimentação |
+| `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | escrita dupla com `organization_id` e `tenant_id` legado; ambos derivados da sessão |
+| `inventory_batches` / `inventory_movements` | livro de movimentos e reversões | organização herdada e validada no lote + autor autenticado |
+| `inventory_orders` / `inventory_order_items` | vendas e compras multi-item | organização herdada do lote; `tenant_id` mantido só durante a transição |
 | `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
 | `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou equipe com permissão `can_support` |
 | `staff_access` | módulos internos concedidos a contas verificadas | administrador principal em `ADMIN_EMAILS` |
@@ -255,6 +255,7 @@ flowchart TD
 - a migration `migrations/20260831_relational_clients_tasks.sql` cria clientes e tarefas relacionais, preserva os registros do payload legado, vincula tarefas a clientes, marca o workspace migrado e foi verificada em Preview e Production;
 - a migration `migrations/20260831_relational_deliveries.sql` cria entregas relacionais, preserva registros legados, prepara os vínculos com cliente/pedido e foi verificada em Preview e Production;
 - a migration `migrations/20260831_relational_finance.sql` cria contas financeiras, compromissos previstos e lançamentos realizados, preserva os arrays legados durante a transição e foi verificada em Preview e Production;
+- a migration `migrations/20260831_inventory_organization_scope.sql` inicia a transição não destrutiva do estoque, adicionando `organization_id`, backfill e índices sem retirar o `tenant_id` legado; foi aplicada e verificada em Preview e Production antes da escrita dupla;
 - copiar o Pix ou clicar no WhatsApp não libera acesso; somente a ação administrativa autenticada altera a assinatura;
 - `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { closeDatabaseForTests, createUser } from "../lib/db.js";
+import { closeDatabaseForTests, createUser, ensureOwnedOrganization, getDatabaseBackend } from "../lib/db.js";
 import {
   applyInventoryBatch,
   createInventoryOrder,
@@ -26,8 +26,10 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
   try {
     const ownerA = await createUser({ name: "Loja A", email: "a@inventory.test", passwordHash: "hash", accountType: "company" });
     const ownerB = await createUser({ name: "Loja B", email: "b@inventory.test", passwordHash: "hash", accountType: "company" });
-    const tenantA = "organization:101";
-    const tenantB = "organization:202";
+    const organizationA = await ensureOwnedOrganization({ userId: ownerA.id, name: "Loja A" });
+    const organizationB = await ensureOwnedOrganization({ userId: ownerB.id, name: "Loja B" });
+    const tenantA = `organization:${organizationA.organizationId}`;
+    const tenantB = `organization:${organizationB.organizationId}`;
     const source = [{
       name: "PelÃºcia", category: "Presentes", unit: "un", variants: [
         { name: "Cachorro", sku: "PEL-CACH", minimumQuantity: 2, unitCost: 10, salePrice: 25 },
@@ -61,6 +63,19 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
 
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: entry.id });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [0, 0]);
+
+    const backend = await getDatabaseBackend();
+    const scopes = backend.db.prepare(`
+      SELECT tenant_id, organization_id FROM inventory_products
+      UNION ALL SELECT tenant_id, organization_id FROM inventory_variants
+      UNION ALL SELECT tenant_id, organization_id FROM inventory_batches
+      UNION ALL SELECT tenant_id, organization_id FROM inventory_movements
+      UNION ALL SELECT tenant_id, organization_id FROM inventory_orders
+    `).all();
+    assert.ok(scopes.length > 0);
+    for (const scope of scopes) {
+      assert.equal(scope.organization_id, Number(scope.tenant_id.replace("organization:", "")));
+    }
   } finally {
     await closeDatabaseForTests();
     await resetInventorySchemaForTests();

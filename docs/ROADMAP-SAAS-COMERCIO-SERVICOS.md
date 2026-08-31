@@ -45,7 +45,7 @@ Só reconsiderar a infraestrutura quando existirem métricas concretas que justi
 
 A CandTech já possui `organizations.id` relacional. Novos módulos devem usar preferencialmente:
 
-**Progresso em 30/08/2026:** workspace e histórico concluíram a etapa gradual: coluna/FK no PostgreSQL, backfill verificado em Preview e Production, índices, consultas com proprietário + organização e testes de escopo cruzado. Clientes, tarefas, entregas, financeiro e o estoque textual continuam na migração.
+**Progresso em 31/08/2026:** workspace e histórico concluíram a etapa gradual de escopo. Clientes e tarefas agora possuem tabelas relacionais próprias, FK organização, vínculo tarefa→cliente, backfill e marcadores de transição verificados em Preview e Production. A leitura relacional substitui os arrays legados após a migração e os testes negativos cobrem duas organizações. Entregas, financeiro e o estoque textual continuam na migração.
 
 ```text
 organization_id BIGINT NOT NULL

@@ -10,7 +10,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | --- | --- | --- |
 | Autenticação por e-mail, recuperação, MFA e sessão revogável | Entregue para proprietários e equipe administrativa | `app/api/auth/`, `auth_sessions`, `user_mfa`, testes de autenticação |
 | Organizações, cargos, permissões e convites | Entregue para o fluxo atual | `organization_*`, `app/api/team/`, testes de equipe |
-| Workspace e histórico privado | Entregue, ainda com partes em payload JSON | `app/api/workspace/`, `app/api/history/` |
+| Workspace e histórico privado | Entregue; clientes e tarefas já usam projeção relacional | `app/api/workspace/`, `customers`, `operational_tasks`, `app/api/history/` |
 | Estoque, variações, pedidos e movimentos | Entregue parcialmente | tabelas `inventory_*`, importação e relatórios; faltam FEFO, custo médio e curva ABC |
 | Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 180 inicial, R$ 60 renovação, comprovante privado e moderação |
 | Monitoramento, suporte e administração | Entregue para operação inicial | `monitoring_events`, `support_tickets`, `staff_access` |
@@ -20,7 +20,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 ## P0 — faltas antes de ampliar a comercialização
 
-- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace e histórico agora possuem `organization_id`, backfill e índices verificados em Preview/Production, e todas as consultas combinam proprietário + organização derivados da sessão; faltam clientes, tarefas, entregas, financeiro e migração do estoque textual**;
+- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace, histórico, clientes e tarefas já possuem escopo relacional, backfill e índices verificados em Preview/Production. Clientes/tarefas preservam o payload apenas como compatibilidade de transição, mas a leitura usa `customers` e `operational_tasks`; faltam entregas, financeiro e migração do estoque textual**;
 - [ ] adicionar testes sistemáticos de acesso cruzado para cada nova entidade e permissão, não somente para os fluxos já cobertos;
 - [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico, Pix, Drive e exportações implementados em 29/08/2026; migration aplicada na branch `main` do Neon com 8 colunas verificadas e 63 eventos legados atualizados; falta definir retenção/acesso de consulta**;
 - [ ] definir e testar backup completo do Neon e do Blob, restauração, RPO/RTO, retenção, exclusão e continuidade; o ZIP enviado após expiração do Pix não substitui backup da plataforma;

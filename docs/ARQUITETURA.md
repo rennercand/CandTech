@@ -133,6 +133,8 @@ mindmap
 | `users` | nome, e-mail e hash bcrypt da senha | e-mail único |
 | `histories` | documentos e payloads salvos; UUID público para URLs | `user_id` + `organization_id` derivados da sessão |
 | `workspaces` | estado atual e revisão do autosave | proprietário + organização; escopo nulo somente para conta pessoal |
+| `customers` | carteira relacional, contato, situação e observações | proprietário + `organization_id`; ID público nunca autoriza sozinho |
+| `operational_tasks` | tarefas, prazo, prioridade, situação e cliente opcional | proprietário + `organization_id`; FK interna opcional para `customers` |
 | `rate_limits` | contadores temporários de requisição | chave derivada do escopo/origem |
 | `google_drive_connections` | refresh token OAuth cifrado | uma linha por `user_id` |
 | `auth_sessions` | sessões ativas, expiração, revogação e confirmação MFA | `user_id` + hash da sessão |
@@ -246,6 +248,7 @@ flowchart TD
 - a migration `migrations/20260828_billing_setup_paid.sql` registra `setup_paid_at`; após a aprovação do Pix inicial de R$ 180, novas solicitações cobram somente R$ 60;
 - a migration `migrations/20260830_idempotency_outbox.sql` cria chaves de idempotência persistidas e a fila outbox; o salvamento do histórico já rejeita reutilização conflitante, repete respostas concluídas e cria evento deduplicado;
 - a migration `migrations/20260831_workspace_history_tenants.sql` adiciona e preenche `organization_id` em workspace e histórico; todas as rotas combinam organização e proprietário resolvidos no servidor, com teste de acesso cruzado;
+- a migration `migrations/20260831_relational_clients_tasks.sql` cria clientes e tarefas relacionais, preserva os registros do payload legado, vincula tarefas a clientes, marca o workspace migrado e foi verificada em Preview e Production;
 - copiar o Pix ou clicar no WhatsApp não libera acesso; somente a ação administrativa autenticada altera a assinatura;
 - `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 

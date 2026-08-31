@@ -135,7 +135,8 @@ mindmap
 | `workspaces` | estado atual e revisão do autosave | uma linha por `user_id` |
 | `rate_limits` | contadores temporários de requisição | chave derivada do escopo/origem |
 | `google_drive_connections` | refresh token OAuth cifrado | uma linha por `user_id` |
-| `auth_sessions` | sessões ativas, expiração e revogação | `user_id` + hash da sessão |
+| `auth_sessions` | sessões ativas, expiração, revogação e confirmação MFA | `user_id` + hash da sessão |
+| `user_mfa` / `mfa_login_challenges` / `mfa_recovery_codes` | segredo TOTP cifrado, desafios e recuperação de uso único | `user_id`; valores sensíveis cifrados ou em hash |
 | `billing_profiles` | estado e metadados operacionais da assinatura; a identificação do Pix vem de `users` | uma linha por `user_id` |
 | `pix_payment_requests` | valor, tipo inicial/renovação, TXID, prazo e estado da moderação | proprietário autenticado + `public_id` |
 | `pix_payment_receipts` | metadados e hash do comprovante armazenado no Blob privado | cobrança pertencente ao proprietário; leitura administrativa autorizada |
@@ -156,6 +157,8 @@ O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extra
 
 - cadastro e login são as únicas APIs públicas, pois criam a sessão;
 - todas as outras APIs validam o JWT em cookie `HttpOnly` e confirmam a sessão persistida, não revogada e dentro da expiração absoluta;
+- após a senha, contas com TOTP ativo concluem um desafio persistido, expirável, limitado e consumível; somente então a sessão recebe `mfa_verified_at`;
+- proprietários e equipe administrativa sem MFA confirmado não acessam as rotas privilegiadas, mesmo que contornem a interface;
 - após validar o token, nome, e-mail e tipo de conta são recarregados da tabela `users`, evitando decisões com atributos antigos gravados no JWT;
 - `organizationId`, papel, permissões e proprietário dos dados são resolvidos no servidor; identificadores enviados pelo navegador nunca escolhem livremente a empresa;
 - `/api/inventory/export` não recebe ID de usuário, empresa ou estoque; download e envio ao Drive usam o `tenant_id` resolvido a partir da sessão JWT;

@@ -4,7 +4,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
-**Estado atual:** ERP web funcional com autenticação por e-mail, workspace multiempresa, estoque relacional, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix BR Code com QR Code, comprovante privado e conferência manual. O primeiro Pix soma R$ 60 da mensalidade e R$ 120 da implantação; depois de aprovado, as renovações são de R$ 60. A ativação obrigatória permanece controlada por `BILLING_ENFORCEMENT_ENABLED`.
+**Estado atual:** ERP web funcional com autenticação por e-mail e MFA TOTP obrigatório para proprietários/equipe administrativa, workspace multiempresa, estoque relacional, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix BR Code com QR Code, comprovante privado e conferência manual. O primeiro Pix soma R$ 60 da mensalidade e R$ 120 da implantação; depois de aprovado, as renovações são de R$ 60. A ativação obrigatória permanece controlada por `BILLING_ENFORCEMENT_ENABLED`.
 
 ## Funcionalidades
 
@@ -91,6 +91,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - A sessão usa um JWT assinado, com duração absoluta de 8 horas, armazenado em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. O identificador da sessão também é persistido para permitir revogação.
 - Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
 - Novos cadastros recebem confirmação de e-mail e só acessam as APIs do ERP após confirmar; contas anteriores são preservadas como verificadas. A recuperação usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
+- Proprietários e equipe administrativa precisam ativar MFA TOTP. O segredo fica cifrado com uma chave exclusiva, o login usa desafio persistido de cinco minutos e uso único, e oito códigos de recuperação são mostrados uma única vez e guardados apenas como hashes.
 - Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
 - Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
 - Todas as APIs privadas exigem sessão. Cadastro, login, solicitação de recuperação, redefinição e confirmação de e-mail são públicos por necessidade do fluxo, com proteção de origem, limites de corpo e rate limit.
@@ -110,7 +111,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 Os controles acima formam uma base de segurança, mas não representam certificação nem deixam o produto automaticamente pronto para empresas. Antes da comercialização, o projeto ainda deve receber:
 
 - concluir a normalização multiempresa com `tenant_id` em todas as entidades; organizações, proprietário, gerente, atendente e permissões por área já possuem uma primeira versão;
-- MFA e, conforme o cliente, SSO/SAML;
+- SSO/SAML, somente quando houver demanda empresarial comprovada;
 - limitador distribuído, trilha de auditoria imutável e alertas de segurança;
 - cálculos oficiais executados e validados no servidor, com versão da fórmula e testes de referência;
 - políticas LGPD, retenção e exclusão de dados, recuperação de backup e resposta a incidentes;
@@ -177,6 +178,8 @@ BILLING_ENFORCEMENT_ENABLED=false
 `PIX_KEY` deve conter a chave cadastrada no DICT — e-mail, telefone, CPF/CNPJ ou chave aleatória EVP. O servidor remove aspas, espaços invisíveis e formatação comum; e-mail é normalizado em minúsculas, telefone vira `+55...` e CPF/CNPJ ficam somente com dígitos. Ela e `BLOB_READ_WRITE_TOKEN` não usam `NEXT_PUBLIC_`. O servidor monta e valida o BR Code, incluindo GUI em `26.00`, chave DICT em `26.01`, TXID em `62.05` e CRC16 em `63`; somente então entrega o Copia e Cola ao proprietário autenticado. Conecte ao projeto um Vercel Blob com acesso **Private**; o navegador recebe apenas uma autorização curta e limitada a 5 MB, nunca o token permanente. Ative `BILLING_ENFORCEMENT_ENABLED=true` apenas depois de aplicar as migrations, testar geração, decodificação EMV, envio/substituição do comprovante, visualização administrativa, aprovação, rejeição e expiração.
 
 Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
+
+As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -265,6 +268,7 @@ executam DDL durante uma requisição:
 - `pix_payment_requests`: cobranças Pix e estado da revisão manual;
 - `pix_payment_receipts`: metadados e hash dos comprovantes; o conteúdo fica no armazenamento privado.
 - `audit_events`: trilha append-only com autor, conta afetada, organização, origem, versão, objeto e antes/depois minimizado.
+- `user_mfa`, `mfa_login_challenges` e `mfa_recovery_codes`: segredo TOTP cifrado, desafios expirados/consumíveis e recuperação de uso único.
 
 ### Como o banco atual funciona
 
@@ -315,7 +319,7 @@ O uso, a segurança e a operação da central privada estão em [MONITORAMENTO-E
 
 As fórmulas, premissas, testes de referência e limitações estão registradas em [AUDITORIA-FINANCEIRA.md](./docs/AUDITORIA-FINANCEIRA.md).
 
-As variáveis `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `DRIVE_TOKEN_ENCRYPTION_KEY` devem ficar somente no `.env.local` e nas variáveis sensíveis da Vercel, nunca no repositório.
+As variáveis `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY` e `MFA_ENCRYPTION_KEY` devem ficar somente no `.env.local` e nas variáveis sensíveis da Vercel, nunca no repositório. As duas chaves de criptografia devem ser independentes e conter 32 bytes aleatórios em Base64.
 
 Em produção, configure `DATABASE_URL` e `JWT_SECRET` nas configurações da Vercel. Não coloque valores reais em `.env.example`.
 

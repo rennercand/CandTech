@@ -8,6 +8,7 @@ import { reportServerError } from "@/lib/server-observability";
 import { listPaymentsForPrivateCentral } from "@/lib/admin-payment-list";
 import { reviewPixPaymentManually } from "@/lib/manual-payment-review";
 import { processPixExpirations } from "@/lib/pix-expiration";
+import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,7 @@ async function authorize(request) {
   if (!user.legalAccepted) return { response: NextResponse.json({ error: "Aceite jurídico pendente." }, { status: 403 }) };
   const access = await getAdministratorAccess(user);
   if (!access.isStaff) return { response: NextResponse.json({ error: "Acesso restrito" }, { status: 403 }) };
+  if (!hasVerifiedMfa(user)) return { response: mfaRequiredResponse() };
   return { user, access };
 }
 

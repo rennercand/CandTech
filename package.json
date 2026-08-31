@@ -10,6 +10,7 @@
     "migrate:2026-08-28": "node scripts/apply-20260828-billing-setup.js",
     "migrate:2026-08-29:audit": "node scripts/apply-20260829-audit-events-v2.js",
     "migrate:2026-08-29:oauth": "node scripts/apply-20260829-google-drive-oauth.js",
+    "migrate:2026-08-29:mfa": "node scripts/apply-20260829-mfa.js",
     "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",
     "start": "next start"

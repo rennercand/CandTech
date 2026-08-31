@@ -4,6 +4,7 @@ import { getAdminOverview } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { reportServerError } from "@/lib/server-observability";
 import { getAdministratorAccess, getMonitoringAccessPath } from "@/lib/admin-access";
+import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,7 @@ export async function GET(request) {
   if (!user.legalAccepted) return NextResponse.json({ error: "Aceite jurídico pendente." }, { status: 403 });
   const access = await getAdministratorAccess(user);
   if (!access.isStaff) return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
+  if (!hasVerifiedMfa(user)) return mfaRequiredResponse();
 
   const privateView = new URL(request.url).searchParams.get("private") === "1";
 

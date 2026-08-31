@@ -18,6 +18,7 @@ import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/
 import { sendTeamInvitation, teamEmailConfigured } from "@/lib/team-email";
 import { TEAM_AREAS } from "@/lib/team-permissions";
 import { reportServerError } from "@/lib/server-observability";
+import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,7 @@ async function ownerContext(request) {
   if (!access?.organizationId || access.role !== "owner") {
     return { error: NextResponse.json({ error: "Somente o proprietário pode gerenciar a equipe." }, { status: 403 }) };
   }
+  if (!hasVerifiedMfa(user)) return { error: mfaRequiredResponse() };
   return { user, access };
 }
 

@@ -472,6 +472,10 @@ select:focus {
   color: #bd2744;
   font-size: 13px;
 }
+.mfa-qr { width: min(280px, 100%); margin: 0 auto; border: 1px solid #ddd7fb; border-radius: 16px; background: #fff; }
+.mfa-secret { display: block; margin-top: 8px; padding: 10px; border-radius: 9px; background: #f4f1ff; color: #36268b; overflow-wrap: anywhere; user-select: all; }
+.mfa-recovery-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 18px 0; }
+.mfa-recovery-list code { padding: 9px 10px; border: 1px solid #ddd7fb; border-radius: 9px; background: #f8f6ff; color: #36268b; text-align: center; user-select: all; }
 .email-exists-alert {
   display: grid;
   gap: 4px;

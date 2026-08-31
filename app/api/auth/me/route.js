@@ -15,6 +15,7 @@ export async function GET(request) {
   const access = await getOrganizationAccess(user);
   const adminAccess = await getAdministratorAccess(user);
   const administrator = adminAccess.isStaff;
+  const mfaRequired = access?.role === "owner" || administrator;
   return NextResponse.json(
     {
       user: {
@@ -25,6 +26,7 @@ export async function GET(request) {
         administrator,
         administrativePermissions: administrator ? adminAccess : null,
         monitoringPath: administrator ? getMonitoringAccessPath() : null,
+        mfaRequired,
       },
     },
     { headers: { "Cache-Control": "private, no-store" } },

@@ -52,7 +52,7 @@ As mudanças abaixo foram implementadas e testadas localmente, mas só contam co
 ## Progresso local em 9 de agosto de 2026
 
 - **SEC-04 — endurecida:** a sessão persistida continua sendo a fonte da identidade e os atributos atuais do usuário são consultados no banco a cada validação;
-- **SEC-14 — parcialmente endurecida:** a consulta e o aceite de convite exigem sessão, e os detalhes do convite só são devolvidos quando o e-mail atual da conta corresponde ao destinatário; verificação de e-mail, recuperação e MFA continuam pendentes;
+- **SEC-14 — implementada para o escopo atual:** verificação de e-mail, recuperação de senha com token único, convite autenticado e MFA TOTP obrigatório para proprietários/equipe administrativa estão implementados;
 - **SEC-16 — parcialmente implementada:** a suíte agora cobre duas empresas, UUID público, tentativa de leitura, sobrescrita, exclusão e administração cruzadas, além de falhar quando uma nova API privada não declara validação de sessão;
 - **IDOR de documentos — mitigado no código:** URLs deixaram de expor IDs sequenciais, mas o controle principal continua sendo a consulta com UUID público e proprietário derivado da sessão;
 - **Dependências — corrigidas:** `npm audit fix` atualizou a dependência transitiva vulnerável e a auditoria final retornou zero achados;
@@ -60,7 +60,7 @@ As mudanças abaixo foram implementadas e testadas localmente, mas só contam co
 
 Essas mudanças ainda precisam passar por preview da branch `test` e verificação no domínio publicado antes de serem consideradas efetivas em produção.
 
-Continuam dependendo de configuração ou validação externa: WAF na borda, rotação de credenciais potencialmente antigas, confirmação de backup/restauração, `OAUTH_STATE_SECRET` em produção, CSP sem `unsafe-inline`, e-mail verificado, MFA, pentest e monitoramento independente.
+Continuam dependendo de configuração ou validação externa: WAF na borda, rotação de credenciais potencialmente antigas, confirmação prática de backup/restauração, pentest e monitoramento independente.
 
 ## P0 — Correções imediatas
 
@@ -175,13 +175,14 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 - **Correção:** chaves distintas, versionadas e com procedimento de rotação; validar comprimento e entropia na inicialização.
 - **Aceite:** segredos separados e rotação de um fluxo não invalida nem compromete o outro.
 
-### SEC-14 — Ausência de MFA, verificação de e-mail e recuperação segura
+### SEC-14 — MFA, verificação de e-mail e recuperação segura
 
 - **Severidade:** média para oferta empresarial.
-- **Evidência:** autenticação atual oferece somente e-mail e senha; não existem segundo fator, verificação ou recuperação.
+- **Evidência atual:** cadastro exige confirmação de e-mail, a recuperação usa token aleatório de uso único e proprietários/equipe administrativa são direcionados à ativação TOTP antes das áreas privilegiadas.
 - **Risco:** maior impacto de senha reutilizada, phishing e perda de acesso.
 - **Correção:** verificação de e-mail; recuperação com token de uso único; MFA por TOTP ou passkey; autenticação recente para exportações e alterações sensíveis.
 - **Aceite:** fluxos possuem proteção contra enumeração, abuso e reutilização de token.
+- **Situação em 30/08/2026:** entregue. O segredo TOTP é cifrado com AES-256-GCM e chave independente; o QR expira em dez minutos; o desafio posterior à senha expira em cinco minutos, aceita no máximo cinco falhas e é consumido atomicamente; códigos de recuperação possuem alta entropia, são exibidos uma vez e persistidos apenas como SHA-256. Ativar MFA revoga as outras sessões, e as APIs administrativas e de gestão de equipe exigem uma sessão marcada como verificada por MFA. A migration foi aplicada no Neon e as quatro estruturas retornaram `true` na verificação.
 
 ### SEC-15 — Falta trilha de auditoria de segurança e financeira
 

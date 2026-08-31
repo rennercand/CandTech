@@ -465,6 +465,52 @@ function LegalAcceptanceScreen({ onAccepted, onLogout }) {
   return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">ATUALIZAÇÃO JURÍDICA</span><h1>Regras claras para proteger sua empresa e seus dados.</h1></div><p>Registramos a versão aceita para que qualquer alteração relevante seja transparente.</p></section><section className="auth-card"><p className="eyebrow">ACEITE NECESSÁRIO</p><h2>Revise os documentos atuais</h2><p className="auth-subtitle">O acesso continua depois de um aceite expresso. Direitos obrigatórios previstos em lei permanecem preservados.</p><form onSubmit={submit}><label className="legal-acceptance"><input type="checkbox" required checked={checked} onChange={(event) => setChecked(event.target.checked)} /><span>Li e aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a> e o <a href="/privacidade" target="_blank" rel="noreferrer">Aviso de Privacidade</a>.</span></label>{error && <p className="form-error">{error}</p>}<button className="primary-button" disabled={loading || !checked}>{loading ? "Registrando…" : "Aceitar e continuar"}</button></form><button type="button" className="text-button" disabled={loading} onClick={onLogout}>Sair sem aceitar</button></section></main>;
 }
 
+function MfaEnrollmentScreen({ user, onCompleted, onLogout }) {
+  const [password, setPassword] = useState("");
+  const [setup, setSetup] = useState(null);
+  const [code, setCode] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function begin(event) {
+    event.preventDefault(); setLoading(true); setError("");
+    try {
+      const response = await fetch("/api/auth/mfa/setup", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ currentPassword: password }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Não foi possível gerar o QR Code.");
+      setPassword(""); setSetup(body);
+    } catch (setupError) { setError(setupError.message); }
+    finally { setLoading(false); }
+  }
+
+  async function confirm(event) {
+    event.preventDefault(); setLoading(true); setError("");
+    try {
+      const response = await fetch("/api/auth/mfa/setup", {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Não foi possível ativar o MFA.");
+      setRecoveryCodes(body.recoveryCodes || []);
+    } catch (confirmationError) { setError(confirmationError.message); }
+    finally { setLoading(false); }
+  }
+
+  if (user.mfaEnabled && !user.mfaVerified) {
+    return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">SEGUNDO FATOR</span><h1>Confirme o autenticador para continuar.</h1></div><p>Esta sessão foi criada antes da verificação MFA e precisa ser autenticada novamente.</p></section><section className="auth-card"><p className="eyebrow">SESSÃO PROTEGIDA</p><h2>Entre novamente</h2><p className="auth-subtitle">Sua configuração está ativa. Saia e informe o código de seis dígitos depois da senha.</p><button className="primary-button" type="button" onClick={onLogout}>Sair e confirmar MFA</button></section></main>;
+  }
+
+  return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">PROTEÇÃO OBRIGATÓRIA</span><h1>Adicione uma segunda etapa ao seu acesso.</h1></div><p>Proprietários e equipe administrativa usam um aplicativo autenticador para reduzir o risco de invasão por senha roubada.</p></section><section className="auth-card"><p className="eyebrow">AUTENTICAÇÃO EM DUAS ETAPAS</p><h2>{recoveryCodes.length ? "Guarde seus códigos" : setup ? "Leia o QR Code" : "Proteja sua conta"}</h2>
+    {recoveryCodes.length ? <><p className="auth-subtitle">Cada código funciona uma única vez. Guarde-os fora deste computador; eles não serão mostrados novamente.</p><div className="mfa-recovery-list">{recoveryCodes.map((item) => <code key={item}>{item}</code>)}</div><button className="primary-button" type="button" onClick={onCompleted}>Já guardei, continuar</button></>
+      : setup ? <form onSubmit={confirm}><p className="auth-subtitle">No Google Authenticator, Microsoft Authenticator, 1Password ou similar, leia o QR e informe o código exibido.</p><img className="mfa-qr" src={setup.qrCode} alt="QR Code para configurar o autenticador" /><details><summary>Não consegue ler o QR?</summary><code className="mfa-secret">{setup.secret}</code></details><label>Código de 6 dígitos<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength="6" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={loading}>{loading ? "Confirmando…" : "Ativar MFA"}</button></form>
+      : <form onSubmit={begin}><p className="auth-subtitle">Confirme primeiro a senha atual. A CandTech gerará um segredo exclusivo e cifrado.</p><label>Senha atual<input required type="password" autoComplete="current-password" minLength="8" maxLength="128" value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={loading}>{loading ? "Gerando…" : "Gerar QR Code seguro"}</button></form>}
+    {!recoveryCodes.length && <button type="button" className="text-button" disabled={loading} onClick={onLogout}>Sair desta conta</button>}
+  </section></main>;
+}
+
 function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, onSwitchAccount }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person", legalAccepted: false });
@@ -475,6 +521,8 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
   const [inviteLoading, setInviteLoading] = useState(Boolean(inviteToken));
   const [inviteError, setInviteError] = useState("");
   const [showLicense, setShowLicense] = useState(false);
+  const [mfaChallenge, setMfaChallenge] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
   const emailInputRef = useRef(null);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
@@ -506,12 +554,13 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
     setError("");
     setErrorCode("");
     try {
+      const verifyingMfa = Boolean(mfaChallenge);
       const response = await fetch(
-        `/api/auth/${mode === "login" ? "login" : "register"}`,
+        verifyingMfa ? "/api/auth/mfa/verify" : `/api/auth/${mode === "login" ? "login" : "register"}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify(verifyingMfa ? { challenge: mfaChallenge, code: mfaCode } : form),
         },
       );
       const data = await response.json();
@@ -521,6 +570,12 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
           requestAnimationFrame(() => emailInputRef.current?.focus());
         }
         throw new Error(data.error || "Não foi possível continuar.");
+      }
+      if (data.mfaRequired) {
+        setMfaChallenge(data.challenge);
+        setMfaCode("");
+        setForm((current) => ({ ...current, password: "" }));
+        return;
       }
       trackMarketingEvent(mode === "login" ? "login" : "sign_up", {
         method: "email",
@@ -545,6 +600,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
     }
   }
   const isInvitation = Boolean(inviteToken);
+  if (mfaChallenge) return <main className="auth-layout"><section className="auth-aside"><div className="brand"><img className="brand-mark" src="/candtech-mark.svg" alt="" /> CandTech</div><div className="auth-message"><span className="auth-badge">SEGUNDO FATOR</span><h1>Uma etapa curta para proteger sua conta.</h1></div><p>Abra o aplicativo autenticador ou use um dos códigos de recuperação guardados na ativação.</p></section><section className="auth-card"><p className="eyebrow">VERIFICAÇÃO MFA</p><h2>Informe o código</h2><p className="auth-subtitle">O código de seis dígitos muda a cada 30 segundos. Um código de recuperação também é aceito.</p><form onSubmit={submit}><label>Código do autenticador<input autoFocus required autoComplete="one-time-code" value={mfaCode} maxLength="24" onChange={(event) => setMfaCode(event.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={loading}>{loading ? "Verificando…" : "Confirmar e entrar"}</button></form><button type="button" className="text-button" onClick={() => { setMfaChallenge(""); setMfaCode(""); setError(""); }}>Voltar para e-mail e senha</button></section></main>;
   return (
     <main className="auth-layout">
       <section className="auth-aside">
@@ -1918,6 +1974,8 @@ export default function CandTechApp({ publicFallback = null }) {
     return <EmailVerificationScreen user={user} onVerified={completeAuthentication} onLogout={switchInvitationAccount} />;
   if (user && !user.legalAccepted)
     return <LegalAcceptanceScreen onAccepted={setUser} onLogout={switchInvitationAccount} />;
+  if (user && user.mfaRequired && (!user.mfaEnabled || !user.mfaVerified))
+    return <MfaEnrollmentScreen user={user} onCompleted={async () => setUser(await hydrateAuthenticatedUser())} onLogout={switchInvitationAccount} />;
   if (inviteToken && !inviteComplete)
     return (
       <AuthScreen

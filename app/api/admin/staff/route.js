@@ -6,6 +6,7 @@ import { getStaffAccessByUserId, listStaffAccess, revokeStaffAccess, saveStaffAc
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
+import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,7 @@ async function authorizeRoot(request) {
   if (!user.legalAccepted) return { response: NextResponse.json({ error: "Aceite jurídico pendente." }, { status: 403 }) };
   const access = await getAdministratorAccess(user);
   if (!access.canManageStaff) return { response: NextResponse.json({ error: "Somente o administrador principal gerencia a equipe interna." }, { status: 403 }) };
+  if (!hasVerifiedMfa(user)) return { response: mfaRequiredResponse() };
   return { user };
 }
 

@@ -11,6 +11,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - nenhum campo de cartão, senha bancária ou conta é armazenado diretamente;
 - sessão revogável no servidor e expiração absoluta;
 - confirmação de e-mail e recuperação de senha com tokens de uso único, hash no banco, expiração, resposta anti-enumeração e encerramento das sessões anteriores;
+- MFA TOTP obrigatório para proprietários/equipe administrativa, com segredo cifrado, desafio de uso único e códigos de recuperação;
 - APIs privadas protegidas por sessão JWT, com teste que detecta rota privada criada sem validação de sessão;
 - documentos identificados externamente por UUID aleatório e consultas sempre vinculadas ao proprietário obtido da sessão;
 - teste automatizado de IDOR entre duas empresas para leitura, sobrescrita e administração cruzadas;
@@ -88,7 +89,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - papéis, permissões e isolamento por empresa testados automaticamente;
 - auditoria de alterações financeiras, exportações e permissões;
 - backup e restauração realmente testados com RPO/RTO definidos;
-- e-mail verificado, recuperação segura e MFA para ações sensíveis;
+- [x] e-mail verificado, recuperação segura e MFA para áreas administrativas e gestão de equipe;
 - teste de carga com orçamento e limites conhecidos;
 - pentest independente com correção dos achados críticos e altos;
 - plano de incidente, responsáveis e comunicação definidos;

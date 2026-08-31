@@ -14,6 +14,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { normalizePermissions, normalizeRole } from "@/lib/team-permissions";
 import { reportServerError } from "@/lib/server-observability";
+import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,7 @@ async function ownerContext(request) {
   if (!access?.organizationId || access.role !== "owner") {
     return { error: NextResponse.json({ error: "Somente o proprietário pode gerenciar cargos." }, { status: 403 }) };
   }
+  if (!hasVerifiedMfa(user)) return { error: mfaRequiredResponse() };
   return { user, access };
 }
 

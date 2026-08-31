@@ -6,6 +6,7 @@ import { getActivePixReceiptForAdmin } from "@/lib/pix-db";
 import { readPrivatePixReceipt } from "@/lib/pix-receipt-storage";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { reportServerError } from "@/lib/server-observability";
+import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 
 export const runtime = "nodejs";
 const publicIdPattern = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
@@ -24,6 +25,7 @@ export async function GET(request, { params }) {
   if (!user.legalAccepted) return NextResponse.json({ error: "Aceite jurídico pendente." }, { status: 403 });
   const access = await getAdministratorAccess(user);
   if (!access.canBilling) return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
+  if (!hasVerifiedMfa(user)) return mfaRequiredResponse();
 
   const { paymentId } = await params;
   if (!publicIdPattern.test(String(paymentId || ""))) {

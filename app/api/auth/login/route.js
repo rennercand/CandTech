@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { authCookie, createToken } from "@/lib/auth";
-import { appendAuditEvent, findUserByEmail } from "@/lib/db";
+import { appendAuditEvent, createMfaLoginChallenge, findUserByEmail, getUserMfa } from "@/lib/db";
+import { generateMfaChallenge, hashMfaValue } from "@/lib/mfa";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
 import { reportServerError } from "@/lib/server-observability";
@@ -47,6 +48,15 @@ export async function POST(request) {
       emailVerified: !user.email_verification_required || Boolean(user.email_verified_at),
       legalAccepted: Boolean(user.legal_accepted_at) && user.terms_version === TERMS_VERSION && user.privacy_version === PRIVACY_VERSION,
     };
+    const mfa = await getUserMfa(user.id);
+    if (mfa?.enabled_at) {
+      const challenge = generateMfaChallenge();
+      await createMfaLoginChallenge({
+        challengeHash: hashMfaValue(challenge), userId: user.id,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1_000),
+      });
+      return NextResponse.json({ mfaRequired: true, challenge });
+    }
     await appendAuditEvent({
       userId: user.id, actorUserId: user.id, action: "session.created", origin: "api/auth/login",
       subjectType: "auth_session", newState: { active: true },

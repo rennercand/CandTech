@@ -18,7 +18,7 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 | `app/candtech-app.js` | Fluxo principal da interface: autenticação, aceite jurídico, assinatura e workspace |
 | `app/client-manager.js` | Carteira de clientes, busca, status e atalhos seguros de contato |
 | `app/task-kanban.js` | Quadro de tarefas com prazos, prioridade, cliente e etapas |
-| `app/api/auth/` | Cadastro, login, sessão, confirmação de e-mail e recuperação de senha |
+| `app/api/auth/` | Cadastro, login, sessão, confirmação de e-mail, recuperação de senha e MFA TOTP |
 | `app/api/pix/` | Geração autenticada, consulta e envio de comprovante Pix |
 | `app/api/admin/payments/` | Leitura administrativa privada do comprovante |
 | `app/api/admin/staff/` | Concessão e revogação de acessos internos pelo administrador principal |

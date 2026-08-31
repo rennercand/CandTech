@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getAdministratorAccess, isMonitoringAccessKey } from "@/lib/admin-access";
 import MonitoringPortal from "../../admin/monitoramento/portal";
 import SystemOverviewPanel from "../../admin/monitoramento/system-overview-panel";
+import { hasVerifiedMfa } from "@/lib/mfa-access";
 
 export const metadata = {
   title: "Monitoramento privado",
@@ -20,6 +21,7 @@ export default async function MonitoringPage({ params }) {
   if (!user.legalAccepted) redirect("/");
   const access = await getAdministratorAccess(user);
   if (!access.isStaff) notFound();
+  if (!hasVerifiedMfa(user)) redirect("/?entrar=1&mfa=1");
 
   return <>
     {access.canViewSystemOverview && <SystemOverviewPanel />}

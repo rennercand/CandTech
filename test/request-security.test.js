@@ -51,6 +51,9 @@ test("toda API privada exige sessão JWT no servidor", () => {
     join("app", "api", "auth", "forgot-password", "route.js"),
     join("app", "api", "auth", "reset-password", "route.js"),
     join("app", "api", "auth", "verify-email", "route.js"),
+    // Conclui a autenticação com um desafio aleatório, expirável, de uso único
+    // e limitado a cinco tentativas; a sessão ainda não existe nesta etapa.
+    join("app", "api", "auth", "mfa", "verify", "route.js"),
     // A prévia usa um token aleatório, limita requisições e nunca retorna o
     // e-mail completo, IDs ou dados da empresa.
     join("app", "api", "team", "invitation", "preview", "route.js"),

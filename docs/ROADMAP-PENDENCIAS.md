@@ -20,7 +20,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 ## P0 — faltas antes de ampliar a comercialização
 
-- [ ] concluir o isolamento relacional por `tenant_id` para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados;
+- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace e histórico agora possuem `organization_id`, backfill e índices verificados em Preview/Production, e todas as consultas combinam proprietário + organização derivados da sessão; faltam clientes, tarefas, entregas, financeiro e migração do estoque textual**;
 - [ ] adicionar testes sistemáticos de acesso cruzado para cada nova entidade e permissão, não somente para os fluxos já cobertos;
 - [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico, Pix, Drive e exportações implementados em 29/08/2026; migration aplicada na branch `main` do Neon com 8 colunas verificadas e 63 eventos legados atualizados; falta definir retenção/acesso de consulta**;
 - [ ] definir e testar backup completo do Neon e do Blob, restauração, RPO/RTO, retenção, exclusão e continuidade; o ZIP enviado após expiração do Pix não substitui backup da plataforma;

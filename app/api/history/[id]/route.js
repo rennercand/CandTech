@@ -21,7 +21,7 @@ export async function DELETE(request, { params }) {
   if (forbidden) return NextResponse.json({ error: "Sem permissão para alterar o histórico." }, { status: 403 });
   if (!item) return NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });
   // A exclusão inclui user.id para impedir que alguém apague dados de outra conta.
-  const deleted = await deleteHistory(id, access.ownerUserId);
+  const deleted = await deleteHistory(id, access.ownerUserId, access.organizationId);
   return deleted
     ? NextResponse.json({ ok: true })
     : NextResponse.json({ error: "Registro não encontrado" }, { status: 404 });

@@ -33,7 +33,7 @@ async function authorized(request, permissions = ["inventory"]) {
 async function migrateLegacyInventory({ access, tenantId, userId }) {
   const current = await listInventory(tenantId);
   if (current.products.length) return current;
-  const workspace = await getWorkspace(access.ownerUserId);
+  const workspace = await getWorkspace(access.ownerUserId, access.organizationId);
   const legacy = (workspace?.payload?.inventoryState?.products || []).filter((item) => item?.name && item?.sku);
   if (!legacy.length) return current;
   const checked = validateProducts(legacy.map((item) => ({

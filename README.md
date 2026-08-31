@@ -92,7 +92,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
 - Novos cadastros recebem confirmação de e-mail e só acessam as APIs do ERP após confirmar; contas anteriores são preservadas como verificadas. A recuperação usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
 - Proprietários e equipe administrativa precisam ativar MFA TOTP. O segredo fica cifrado com uma chave exclusiva, o login usa desafio persistido de cinco minutos e uso único, e oito códigos de recuperação são mostrados uma única vez e guardados apenas como hashes.
-- Históricos e workspaces possuem `user_id`. As consultas usam o identificador obtido da sessão para impedir que uma conta leia ou altere registros de outra.
+- Históricos e workspaces combinam `user_id` com `organization_id`. A organização e o proprietário são derivados da sessão, conferidos novamente na camada de banco e nunca aceitos do navegador; contas pessoais usam o escopo organizacional nulo.
 - Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
 - Todas as APIs privadas exigem sessão. Cadastro, login, solicitação de recuperação, redefinição e confirmação de e-mail são públicos por necessidade do fluxo, com proteção de origem, limites de corpo e rate limit.
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.
@@ -121,7 +121,7 @@ A TIR é exibida como `N/D` quando o fluxo não possui uma raiz única verificá
 
 ## Salvamento automático
 
-Cada usuário possui um workspace próprio no banco. Após uma pequena pausa na edição, o site salva automaticamente:
+Cada conta pessoal ou organização possui um workspace isolado no banco. Após uma pequena pausa na edição, o site salva automaticamente:
 
 - dados das calculadoras;
 - fluxos e organização financeira;

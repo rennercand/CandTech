@@ -45,6 +45,8 @@ Só reconsiderar a infraestrutura quando existirem métricas concretas que justi
 
 A CandTech já possui `organizations.id` relacional. Novos módulos devem usar preferencialmente:
 
+**Progresso em 30/08/2026:** workspace e histórico concluíram a etapa gradual: coluna/FK no PostgreSQL, backfill verificado em Preview e Production, índices, consultas com proprietário + organização e testes de escopo cruzado. Clientes, tarefas, entregas, financeiro e o estoque textual continuam na migração.
+
 ```text
 organization_id BIGINT NOT NULL
 REFERENCES organizations(id)

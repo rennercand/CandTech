@@ -27,7 +27,7 @@ export async function GET(request) {
   const cursor = searchParams.get("cursor");
   const limit = searchParams.get("limit");
   // O ID do proprietário delimita o espaço compartilhado da empresa.
-  const page = await listHistories(access.ownerUserId, type, { cursor, limit });
+  const page = await listHistories(access.ownerUserId, type, { cursor, limit, organizationId: access.organizationId });
   if (page.invalidCursor) {
     return NextResponse.json({ error: "Cursor de paginação inválido." }, { status: 400 });
   }
@@ -95,6 +95,7 @@ export async function POST(request) {
     const saved = await saveHistory({
       id: safeId,
       userId: access.ownerUserId,
+      organizationId: access.organizationId,
       title: safeTitle,
       calculationType: safeType,
       payload: filteredItem.payload,

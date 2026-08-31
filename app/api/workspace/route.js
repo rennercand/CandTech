@@ -37,7 +37,7 @@ export async function GET(request) {
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const access = await getOrganizationAccess(user);
 
-  let workspace = await getWorkspace(access.ownerUserId);
+  let workspace = await getWorkspace(access.ownerUserId, access.organizationId);
   // Garante o histórico no próximo login mesmo se o navegador encerrou antes do pagehide terminar.
   if (
     workspace &&
@@ -45,8 +45,8 @@ export async function GET(request) {
     workspace.revision > workspace.archived_revision &&
     hasMeaningfulWorkspaceContent(workspace.payload)
   ) {
-    await archiveWorkspace({ userId: access.ownerUserId, title: automaticTitle() });
-    workspace = await getWorkspace(access.ownerUserId);
+    await archiveWorkspace({ userId: access.ownerUserId, organizationId: access.organizationId, title: automaticTitle() });
+    workspace = await getWorkspace(access.ownerUserId, access.organizationId);
   }
   const visibleWorkspace = workspace
     ? { ...workspace, payload: filterWorkspaceForAccess(workspace.payload, access) }
@@ -71,9 +71,9 @@ export async function PUT(request) {
     if (!validPayload(payload)) {
       return NextResponse.json({ error: "Rascunho inválido ou muito grande." }, { status: 400 });
     }
-    const current = await getWorkspace(access.ownerUserId);
+    const current = await getWorkspace(access.ownerUserId, access.organizationId);
     const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
-    await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: Boolean(markSaved) });
+    await saveWorkspace({ userId: access.ownerUserId, organizationId: access.organizationId, payload: merged, markSaved: Boolean(markSaved) });
     // A interface já possui o estado salvo e precisa somente da confirmação.
     // A resposta constante impede que revisão/data de um autosave façam um
     // scanner interpretar a mutação normal como resultado de uma condição SQL.
@@ -103,17 +103,18 @@ export async function POST(request) {
       return NextResponse.json({ error: "Rascunho inválido ou muito grande." }, { status: 400 });
     }
 
-    const current = await getWorkspace(access.ownerUserId);
+    const current = await getWorkspace(access.ownerUserId, access.organizationId);
     const merged = mergeWorkspaceForAccess(current?.payload || {}, payload, access);
-    await saveWorkspace({ userId: access.ownerUserId, payload: merged });
+    await saveWorkspace({ userId: access.ownerUserId, organizationId: access.organizationId, payload: merged });
     if (!hasMeaningfulWorkspaceContent(merged)) {
       // Marca o estado vazio como tratado para não tentar arquivá-lo em toda saída.
-      await saveWorkspace({ userId: access.ownerUserId, payload: merged, markSaved: true });
+      await saveWorkspace({ userId: access.ownerUserId, organizationId: access.organizationId, payload: merged, markSaved: true });
       return NextResponse.json({ archived: false });
     }
 
     const item = await archiveWorkspace({
       userId: access.ownerUserId,
+      organizationId: access.organizationId,
       title: automaticTitle(),
     });
     return NextResponse.json({ archived: Boolean(item), id: item?.id || null });

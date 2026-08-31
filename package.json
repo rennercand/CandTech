@@ -14,6 +14,7 @@
     "migrate:2026-08-30:idempotency": "node scripts/apply-20260830-idempotency-outbox.js",
     "migrate:2026-08-31:tenant-scope": "node scripts/apply-20260831-workspace-history-tenants.js",
     "migrate:2026-08-31:clients-tasks": "node scripts/apply-20260831-relational-clients-tasks.js",
+    "migrate:2026-08-31:deliveries": "node scripts/apply-20260831-relational-deliveries.js",
     "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",
     "start": "next start"

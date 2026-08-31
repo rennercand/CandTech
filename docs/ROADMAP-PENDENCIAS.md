@@ -20,7 +20,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 ## P0 — faltas antes de ampliar a comercialização
 
-- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace, histórico, clientes e tarefas já possuem escopo relacional, backfill e índices verificados em Preview/Production. Clientes/tarefas preservam o payload apenas como compatibilidade de transição, mas a leitura usa `customers` e `operational_tasks`; faltam entregas, financeiro e migração do estoque textual**;
+- [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace, histórico, clientes, tarefas e a base de entregas já possuem escopo relacional, backfill e índices verificados em Preview/Production. As projeções preservam o payload apenas como compatibilidade de transição; faltam o livro financeiro e a migração do estoque textual**;
 - [ ] adicionar testes sistemáticos de acesso cruzado para cada nova entidade e permissão, não somente para os fluxos já cobertos;
 - [ ] transformar `audit_events` em trilha suficiente para operações críticas, com autor, organização, origem, versão e antes/depois minimizado; **estrutura v2, minimização e eventos de autenticação, equipe, aceite jurídico, Pix, Drive e exportações implementados em 29/08/2026; migration aplicada na branch `main` do Neon com 8 colunas verificadas e 63 eventos legados atualizados; falta definir retenção/acesso de consulta**;
 - [ ] definir e testar backup completo do Neon e do Blob, restauração, RPO/RTO, retenção, exclusão e continuidade; o ZIP enviado após expiração do Pix não substitui backup da plataforma;
@@ -46,7 +46,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 ## P1 — operação de comércio e serviços
 
 - [ ] completar baixa por lote/FEFO, custo médio histórico, curva ABC, itens parados e sugestão de reposição;
-- [ ] transformar entregas do workspace em entidades relacionais ligadas a pedido, estoque e cliente, com eventos e comprovante;
+- [ ] transformar entregas do workspace em entidades relacionais ligadas a pedido, estoque e cliente, com eventos e comprovante; **a entidade relacional, os vínculos opcionais com cliente/pedido, o rastreio e a conclusão foram criados em 31/08/2026; faltam a interface operacional, vínculo automático ao pedido, eventos de domínio e comprovante privado**;
 - [ ] criar ordem de serviço, orçamento, agenda, recorrência e cobrança de serviços;
 - [ ] consolidar venda rápida/PDV com recebimento, caixa, estoque e desfazimento transacional;
 - [ ] criar uma tela “Hoje” orientada a ações pendentes, atrasos e exceções;

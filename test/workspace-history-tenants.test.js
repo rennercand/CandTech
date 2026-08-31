@@ -14,6 +14,7 @@ import {
   getWorkspace,
   listCustomers,
   listHistories,
+  listOperationalDeliveries,
   listOperationalTasks,
   saveHistory,
   saveWorkspace,
@@ -34,16 +35,20 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
       cashEntries: [{ description: "Privado A", amount: 50 }],
       clients: [{ id: "client-a", name: "Cliente A", email: "cliente-a@test.local", phone: "11999999999", status: "active", notes: "Somente A", createdAt: "2026-08-31T10:00:00.000Z" }],
       tasks: [{ id: "task-a", clientId: "client-a", title: "Atender cliente A", dueDate: "2026-09-01", priority: "high", status: "doing", createdAt: "2026-08-31T10:05:00.000Z", completedAt: "" }],
+      inventoryState: { deliveries: [{ id: "delivery-a", clientId: "client-a", description: "Enviar pedido A", partner: "Cliente A", direction: "saida", date: "2026-09-02", status: "em-transito", tracking: "RASTREIO-A" }] },
     };
     await saveWorkspace({ userId: ownerA.id, organizationId: organizationA.organizationId, payload: workspacePayload });
     const restoredWorkspace = await getWorkspace(ownerA.id, organizationA.organizationId);
     assert.equal(restoredWorkspace.payload.cashEntries[0].description, "Privado A");
     assert.equal(restoredWorkspace.payload.clients[0].name, "Cliente A");
     assert.equal(restoredWorkspace.payload.tasks[0].clientId, "client-a");
+    assert.equal(restoredWorkspace.payload.inventoryState.deliveries[0].clientId, "client-a");
     assert.deepEqual((await listCustomers(ownerA.id, organizationA.organizationId)).map((client) => client.id), ["client-a"]);
     assert.deepEqual((await listOperationalTasks(ownerA.id, organizationA.organizationId)).map((task) => task.id), ["task-a"]);
+    assert.deepEqual((await listOperationalDeliveries(ownerA.id, organizationA.organizationId)).map((delivery) => delivery.id), ["delivery-a"]);
     assert.deepEqual(await listCustomers(ownerB.id, organizationA.organizationId), []);
     assert.deepEqual(await listOperationalTasks(ownerB.id, organizationA.organizationId), []);
+    assert.deepEqual(await listOperationalDeliveries(ownerB.id, organizationA.organizationId), []);
     assert.equal(await getWorkspace(ownerA.id, null), null);
     assert.equal(await getWorkspace(ownerB.id, organizationA.organizationId), null);
     await assert.rejects(
@@ -74,17 +79,20 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
     assert.equal(exported.workspace.cashEntries[0].description, "Privado A");
     assert.equal(exported.workspace.clients[0].name, "Cliente A");
     assert.equal(exported.workspace.tasks[0].title, "Atender cliente A");
+    assert.equal(exported.workspace.inventoryState.deliveries[0].tracking, "RASTREIO-A");
     assert.deepEqual(exported.documents.map((item) => item.id), [history.id]);
 
     await saveWorkspace({
       userId: ownerA.id,
       organizationId: organizationA.organizationId,
-      payload: { ...workspacePayload, clients: [], tasks: [] },
+      payload: { ...workspacePayload, clients: [], tasks: [], inventoryState: { deliveries: [] } },
     });
     assert.deepEqual((await getWorkspace(ownerA.id, organizationA.organizationId)).payload.clients, []);
     assert.deepEqual((await getWorkspace(ownerA.id, organizationA.organizationId)).payload.tasks, []);
+    assert.deepEqual((await getWorkspace(ownerA.id, organizationA.organizationId)).payload.inventoryState.deliveries, []);
     assert.deepEqual(await listCustomers(ownerA.id, organizationA.organizationId), []);
     assert.deepEqual(await listOperationalTasks(ownerA.id, organizationA.organizationId), []);
+    assert.deepEqual(await listOperationalDeliveries(ownerA.id, organizationA.organizationId), []);
   } finally {
     await closeDatabaseForTests();
     if (previous.nodeEnv === undefined) delete process.env.NODE_ENV;

@@ -667,6 +667,8 @@ Não armazenar SQL sensível ou dados pessoais completos em logs.
 
 Listagens operacionais não devem carregar histórico inteiro.
 
+**Progresso em 30/08/2026:** o histórico já usa cursor opaco, limite máximo e carregamento incremental na interface, com teste de isolamento por conta. As listas abaixo continuam no escopo até que todas adotem o mesmo contrato.
+
 Prioridade:
 
 - vendas;

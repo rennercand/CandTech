@@ -796,6 +796,7 @@ export default function CandTechApp({ publicFallback = null }) {
   const [financialCategories, setFinancialCategories] = useState(DEFAULT_FINANCIAL_CATEGORIES);
   const [organizationName, setOrganizationName] = useState("Minha organização");
   const [history, setHistory] = useState([]);
+  const [historyNextCursor, setHistoryNextCursor] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [driveStatus, setDriveStatus] = useState({
@@ -1174,13 +1175,19 @@ export default function CandTechApp({ publicFallback = null }) {
     setNotice(`Categoria ${category} criada e disponível no Financeiro.`);
     return true;
   }
-  async function loadHistory(type) {
+  async function loadHistory(type, { append = false, cursor = null } = {}) {
     setHistoryLoading(true);
     try {
-      const response = await fetch(
-        `/api/history${type ? `?type=${encodeURIComponent(type)}` : ""}`,
-      );
-      if (response.ok) setHistory((await response.json()).items);
+      const search = new URLSearchParams();
+      if (type) search.set("type", type);
+      if (cursor) search.set("cursor", cursor);
+      search.set("limit", "20");
+      const response = await fetch(`/api/history?${search.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHistory((current) => append ? [...current, ...data.items] : data.items);
+        setHistoryNextCursor(data.nextCursor || null);
+      }
     } finally {
       setHistoryLoading(false);
     }
@@ -2250,6 +2257,9 @@ export default function CandTechApp({ publicFallback = null }) {
             onRestore={restoreAutomaticDraft}
             onDelete={deleteHistory}
             onRefresh={loadHistory}
+            nextCursor={historyNextCursor}
+            loading={historyLoading}
+            onLoadMore={() => loadHistory(null, { append: true, cursor: historyNextCursor })}
             driveStatus={driveStatus}
             onConnectDrive={connectGoogleDrive}
             onSendToDrive={sendHistoryToDrive}
@@ -3054,6 +3064,9 @@ function History({
   onRestore,
   onDelete,
   onRefresh,
+  nextCursor,
+  loading,
+  onLoadMore,
   driveStatus,
   onConnectDrive,
   onSendToDrive,
@@ -3086,8 +3099,9 @@ function History({
           começar.
         </div>
       ) : (
-        <div className="history-list">
-          {items.map((item) => (
+        <>
+          <div className="history-list">
+            {items.map((item) => (
             <article className="history-item" key={item.id}>
               <div>
                 <span className="type-badge">{item.calculation_type}</span>
@@ -3169,8 +3183,14 @@ function History({
                 </button>
               </div>
             </article>
-          ))}
-        </div>
+            ))}
+          </div>
+          {nextCursor && (
+            <button type="button" className="secondary-button" disabled={loading} onClick={onLoadMore}>
+              {loading ? "Carregando…" : "Carregar mais registros"}
+            </button>
+          )}
+        </>
       )}
     </article>
   );

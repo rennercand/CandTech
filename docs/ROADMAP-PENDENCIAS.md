@@ -41,7 +41,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 - [ ] adicionar alertas e calendário financeiro, além de previsão de caixa para 7, 30 e 90 dias;
 - [ ] criar regras determinísticas de categorização, versionadas, explicáveis e revisáveis pela empresa;
 - [ ] implementar idempotência persistida para mutações críticas e uma outbox antes de ampliar integrações e jobs;
-- [ ] paginar listas de crescimento contínuo e medir latência, conexões, tamanho das tabelas e custo do Neon.
+- [ ] paginar listas de crescimento contínuo e medir latência, conexões, tamanho das tabelas e custo do Neon; **histórico ganhou paginação por cursor no banco, API e interface em 30/08/2026, com limite máximo, ordenação determinística e teste multiempresa; faltam as demais listas e as métricas operacionais**.
 
 ## P1 — operação de comércio e serviços
 

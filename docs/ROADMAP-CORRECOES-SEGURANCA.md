@@ -134,7 +134,8 @@ Continuam dependendo de configuração ou validação externa: WAF na borda, rot
 ### SEC-09 — Histórico sem paginação e geradores com limites apenas por bytes
 
 - **Severidade:** média.
-- **Evidência:** `listHistories()` devolve todos os registros e payloads do usuário, sem `LIMIT`. PDF aceita até 500 KB, mas percorre todas as linhas; não há limite estrutural de tabelas ou timeout próprio.
+- **Estado em 30/08/2026:** paginação por cursor implementada no banco, API e interface, com limite máximo, ordenação determinística, rejeição de cursor inválido e teste de isolamento entre contas. A resposta da lista ainda inclui o payload e os geradores continuam pendentes.
+- **Evidência restante:** PDF aceita até 500 KB, mas percorre todas as linhas; não há limite estrutural de tabelas ou timeout próprio.
 - **Risco:** crescimento do histórico aumenta memória, transferência e tempo; muitas linhas pequenas podem tornar PDF/XLSX caros mesmo dentro do limite de bytes.
 - **Correção:** paginação por cursor; listagem apenas de metadados; endpoint separado para abrir o payload; limites de linhas, colunas e páginas; processamento assíncrono para relatórios grandes.
 - **Aceite:** tempo e memória permanecem limitados com histórico extenso e relatório no máximo permitido.

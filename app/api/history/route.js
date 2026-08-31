@@ -20,11 +20,18 @@ export async function GET(request) {
     return NextResponse.json({ error: "Sem permissão para acessar o histórico." }, { status: 403 });
   }
 
-  const type = new URL(request.url).searchParams.get("type");
+  const searchParams = new URL(request.url).searchParams;
+  const type = searchParams.get("type");
+  const cursor = searchParams.get("cursor");
+  const limit = searchParams.get("limit");
   // O ID do proprietário delimita o espaço compartilhado da empresa.
-  const rows = await listHistories(access.ownerUserId, type);
+  const page = await listHistories(access.ownerUserId, type, { cursor, limit });
+  if (page.invalidCursor) {
+    return NextResponse.json({ error: "Cursor de paginação inválido." }, { status: 400 });
+  }
+  const rows = page.rows;
   const items = rows.map(serializeHistory).map((item) => filterHistoryForAccess(item, access)).filter(Boolean);
-  return NextResponse.json({ items });
+  return NextResponse.json({ items, nextCursor: page.nextCursor });
 }
 
 export async function POST(request) {

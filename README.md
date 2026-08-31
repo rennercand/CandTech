@@ -30,6 +30,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Organização financeira com categorias reutilizáveis criadas pelo usuário, seletores padronizados e gráfico de distribuição de custos.
 - Contas financeiras, compromissos previstos e lançamentos realizados persistidos por organização, com origem estável e vínculo entre pagamento e compromisso.
 - Importação local de extratos bancários em PDF, CSV, OFX/QFX e XLSX; os formatos tabulares mostram prévia, descartam linhas inválidas, identificam reimportações por SHA-256 e permitem desfazer o último lote inteiro.
+- Conciliação assistida entre lançamentos, contas a pagar/receber e pedidos de venda/compra, com motivo, nível de confiança, confirmação humana e desvinculação reversível.
 - Salvamento automático do workspace vinculado à conta.
 - Rascunho automático no histórico quando a pessoa sai sem salvar manualmente.
 - Exportação em CSV com BOM, separador e decimais compatíveis com Excel em pt-BR.

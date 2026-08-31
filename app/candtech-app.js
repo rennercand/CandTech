@@ -9,7 +9,7 @@ import {
 } from "./advanced-tools";
 import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations";
 import { calculateInvestment } from "../lib/investment-calculations";
-import { ordersFromCashEntries } from "../lib/business-calculations";
+import { ordersFromCashEntries, suggestFinancialReconciliations } from "../lib/business-calculations";
 import {
   FinancialCommitments,
   AdminOverview,
@@ -1258,6 +1258,56 @@ export default function CandTechApp({ publicFallback = null }) {
     setNotice(account.type === "pagar" ? "Conta paga e saída lançada no caixa." : "Conta recebida e entrada lançada no caixa.");
   }
 
+  function reconcileFinancialSuggestion(suggestion) {
+    const entry = cashEntries[suggestion?.entryIndex];
+    if (!entry || entry.sourceCommitmentId || entry.sourceOrderKey) return;
+    const target = suggestion.targetType === "commitment"
+      ? financialAccounts[suggestion.targetIndex]
+      : commerceOrders[suggestion.targetIndex];
+    if (!target) return;
+    if (!confirm(`Conciliar “${entry.description}” com “${suggestion.targetLabel}”? O vínculo e a baixa serão salvos na organização.`)) return;
+    const reconciledAt = new Date().toISOString();
+    if (suggestion.targetType === "commitment") {
+      const commitmentId = target.id || newWorkspaceEntityId("commitment");
+      setCashEntries((current) => current.map((item, index) => index === suggestion.entryIndex
+        ? { ...item, sourceCommitmentId: commitmentId, category: target.category || item.category || "Geral" }
+        : item));
+      setFinancialAccounts((current) => current.map((item, index) => index === suggestion.targetIndex
+        ? { ...item, id: commitmentId, status: item.type === "receber" ? "recebido" : "pago", postedAt: reconciledAt }
+        : item));
+      setNotice("Lançamento conciliado com a conta após sua confirmação.");
+      return;
+    }
+    const orderKey = target.postingKey || target.id || newWorkspaceEntityId("order");
+    setCashEntries((current) => current.map((item, index) => index === suggestion.entryIndex
+      ? { ...item, sourceOrderKey: orderKey, category: target.type === "venda" ? "Vendas" : "Compras" }
+      : item));
+    setCommerceOrders((current) => current.map((item, index) => index === suggestion.targetIndex
+      ? { ...item, id: item.id || orderKey, postingKey: orderKey, financePostedAt: reconciledAt, financeReversedAt: null, reconciledEntryId: entry.id || "" }
+      : item));
+    setNotice("Lançamento conciliado com o pedido após sua confirmação.");
+  }
+
+  function undoFinancialReconciliation(entryIndex) {
+    const entry = cashEntries[entryIndex];
+    if (!entry || (!entry.sourceCommitmentId && !entry.sourceOrderKey)) return;
+    if (!confirm(`Desvincular “${entry.description || "este lançamento"}”? O lançamento bancário será mantido.`)) return;
+    if (entry.sourceCommitmentId) {
+      setFinancialAccounts((current) => current.map((item) => item.id === entry.sourceCommitmentId
+        ? { ...item, status: "pendente", postedAt: "" }
+        : item));
+    }
+    if (entry.sourceOrderKey) {
+      setCommerceOrders((current) => current.map((item) => (item.postingKey || item.id) === entry.sourceOrderKey
+        ? { ...item, financePostedAt: null, financeReversedAt: null, reconciledEntryId: "" }
+        : item));
+    }
+    setCashEntries((current) => current.map((item, index) => index === entryIndex
+      ? { ...item, sourceCommitmentId: undefined, sourceOrderKey: undefined }
+      : item));
+    setNotice("Conciliação desfeita; o lançamento bancário foi preservado.");
+  }
+
   async function scanBillImage(file) {
     if (!file) return;
     // TextDetector mantém a imagem no aparelho; quando indisponível, nenhuma leitura é inventada.
@@ -2249,6 +2299,8 @@ export default function CandTechApp({ publicFallback = null }) {
             <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}
               entries={cashEntries} filteredEntries={filteredCashEntries} filters={cashFilters}
               setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals} categories={financialCategories}
+              financialAccounts={financialAccounts} commerceOrders={commerceOrders}
+              onReconcile={reconcileFinancialSuggestion} onUndoReconciliation={undoFinancialReconciliation}
               onSave={saveCashFlow} />
           </div>
         )}
@@ -2714,6 +2766,10 @@ function CashFlow({
   setEntries,
   totals,
   categories,
+  financialAccounts,
+  commerceOrders,
+  onReconcile,
+  onUndoReconciliation,
   onSave,
 }) {
   const [pdfState, setPdfState] = useState({ loading: false, message: "" });
@@ -2733,6 +2789,10 @@ function CashFlow({
     });
     return [...batches.values()].sort((a, b) => b.importedAt.localeCompare(a.importedAt))[0] || null;
   }, [entries]);
+  const reconciliationSuggestions = useMemo(
+    () => suggestFinancialReconciliations(entries, financialAccounts, commerceOrders),
+    [entries, financialAccounts, commerceOrders],
+  );
   const availableCategories = [...new Set([
     ...(categories || []),
     ...entries.map((entry) => entry.category),
@@ -3001,6 +3061,23 @@ function CashFlow({
         {fileImport.message ? (
           <p className={fileImport.message.includes("importado") || fileImport.message.includes("removidos") ? "import-status success" : "import-status"}>{fileImport.message}</p>
         ) : null}
+        {reconciliationSuggestions.length ? (
+          <section className="reconciliation-panel" aria-label="Sugestões de conciliação">
+            <div>
+              <span className="eyebrow">CONCILIAÇÃO ASSISTIDA</span>
+              <h3>{reconciliationSuggestions.length} vínculo(s) para revisar</h3>
+              <p>O sistema compara direção e valor exato. Nenhuma conta ou pedido recebe baixa sem sua confirmação.</p>
+            </div>
+            <div className="reconciliation-list">
+              {reconciliationSuggestions.slice(0, 8).map((suggestion) => (
+                <article key={`${suggestion.entryIndex}-${suggestion.targetType}-${suggestion.targetIndex}`}>
+                  <div><strong>{suggestion.entryLabel}</strong><span>↔ {suggestion.targetLabel}</span><small>{suggestion.reason} · confiança: {suggestion.confidence}</small></div>
+                  <div><strong>{money.format(suggestion.amount)}</strong><button className="primary-button compact" onClick={() => onReconcile?.(suggestion)}>Revisar e conciliar</button></div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
         {pdfState.message ? (
           <p
             className={
@@ -3139,6 +3216,15 @@ function CashFlow({
                     {money.format(entry.runningBalance)}
                   </td>
                   <td>
+                    {(entry.sourceCommitmentId || entry.sourceOrderKey) ? (
+                      <button
+                        type="button"
+                        className="secondary-button compact"
+                        onClick={() => onUndoReconciliation?.(entry.originalIndex)}
+                      >
+                        Desvincular
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="danger-button compact"

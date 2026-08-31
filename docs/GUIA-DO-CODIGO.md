@@ -101,6 +101,8 @@ Regras importantes:
 
 Antes da confirmação, a interface mostra novos, duplicados e linhas inválidas. A impressão digital SHA-256 combina a versão do importador, o formato e o identificador bancário estável; quando o arquivo não oferece ID, usa os campos normalizados e a ocorrência determinística. Cada confirmação recebe `importBatchId` e `importedAt`; desfazer remove todas as linhas desse lote. O índice único no banco é a última barreira contra reimportação concorrente.
 
+`suggestFinancialReconciliations` mantém a conciliação determinística e sem efeitos colaterais: direção e valor precisam coincidir, enquanto proximidade de data e palavras compartilhadas apenas ordenam os candidatos. A interface apresenta motivo e confiança; a confirmação vincula o lançamento a uma conta ou pedido e a ação “Desvincular” reverte o vínculo sem excluir o registro bancário.
+
 ## Navegação e relatório geral
 
 A página autenticada abre em `home`, que representa a Visão geral. O `workspace` é uma área separada para documentos e modelos. A ordem operacional do menu é intencional: clientes e tarefas → pedidos → logística e estoque → movimentações → financiamentos → análises → formação de preço.

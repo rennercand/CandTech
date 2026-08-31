@@ -1850,6 +1850,50 @@ select:focus {
   color: #8a581d;
   background: #fff0d4;
 }
+.reconciliation-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  background: #f4fbff;
+  border: 1px solid #cce8f5;
+  border-radius: 12px;
+}
+.reconciliation-panel h3 {
+  margin: 5px 0 3px;
+}
+.reconciliation-panel > div > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.reconciliation-list {
+  display: grid;
+  gap: 8px;
+}
+.reconciliation-list article {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  background: #fff;
+  border: 1px solid #dcecf4;
+  border-radius: 9px;
+}
+.reconciliation-list article > div {
+  display: grid;
+  gap: 3px;
+}
+.reconciliation-list article > div:last-child {
+  justify-items: end;
+}
+.reconciliation-list span,
+.reconciliation-list small {
+  color: var(--muted);
+  font-size: 10px;
+}
 .organization-visuals {
   display: grid;
   grid-template-columns: minmax(280px, 0.72fr) minmax(450px, 1.28fr);

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ordersFromCashEntries,
+  suggestFinancialReconciliations,
   summarizeAccounts,
   summarizeInventory,
   summarizeOrders,
@@ -14,6 +15,35 @@ test("contas separam compromissos pendentes e identificam vencimentos", () => {
     { type: "pagar", amount: 200, dueDate: "2026-01-01", status: "pago" },
   ], "2026-08-01");
   assert.deepEqual(result, { payable: 500, receivable: 900, overdue: 1 });
+});
+
+test("conciliação sugere vínculos exatos sem alterar contas e exige revisão", () => {
+  const entries = [
+    { id: "entry-1", date: "2026-08-31", type: "entrada", amount: 180, description: "PIX Cliente Aurora" },
+    { id: "entry-2", date: "2026-08-30", type: "saida", amount: 60, description: "Pagamento Fornecedor Sul" },
+  ];
+  const accounts = [
+    { id: "account-1", type: "receber", amount: 180, party: "Cliente Aurora", dueDate: "2026-08-31", status: "pendente" },
+    { id: "account-2", type: "pagar", amount: 60, party: "Fornecedor Sul", dueDate: "2026-09-01", status: "pendente" },
+  ];
+  const original = structuredClone(accounts);
+  const suggestions = suggestFinancialReconciliations(entries, accounts, []);
+  assert.equal(suggestions.length, 2);
+  assert.equal(suggestions[0].targetType, "commitment");
+  assert.equal(suggestions[0].confidence, "alta");
+  assert.deepEqual(accounts, original);
+});
+
+test("conciliação ignora lançamentos já vinculados e não cruza entrada com conta a pagar", () => {
+  const entries = [
+    { id: "linked", date: "2026-08-31", type: "entrada", amount: 100, description: "Já usado", sourceCommitmentId: "account-a" },
+    { id: "wrong-direction", date: "2026-08-31", type: "entrada", amount: 50, description: "Tarifa" },
+  ];
+  const accounts = [
+    { id: "account-a", type: "receber", amount: 100, status: "pendente" },
+    { id: "account-b", type: "pagar", amount: 50, status: "pendente" },
+  ];
+  assert.deepEqual(suggestFinancialReconciliations(entries, accounts, []), []);
 });
 
 test("estoque calcula quantidade, custo e alertas sem arredondamento intermediário", () => {

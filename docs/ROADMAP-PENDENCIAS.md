@@ -15,7 +15,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 180 inicial, R$ 60 renovação, comprovante privado e moderação |
 | Monitoramento, suporte e administração | Entregue para operação inicial | `monitoring_events`, `support_tickets`, `staff_access` |
 | Google Drive e e-mails transacionais | Entregue e endurecido | OAuth `drive.file` com PKCE, nonce persistido de uso único, tokens cifrados e Resend |
-| Conciliação financeira vendável | Base entregue; conciliação pendente | contas, compromissos e livro realizados são relacionais; faltam importador OFX, lotes e revisão de conciliação |
+| Conciliação financeira vendável | Importação entregue; conciliação pendente | contas, compromissos e livro realizados são relacionais; CSV/OFX/XLSX possuem prévia, lote e deduplicação; falta a revisão de conciliação |
 | Motor tributário e emissão fiscal | Pendente | somente pré-nota sem validade fiscal |
 
 ## P0 — faltas antes de ampliar a comercialização
@@ -34,8 +34,8 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 ## P1 — núcleo financeiro vendável
 
 - [x] criar contas financeiras e lançamentos relacionais por organização, com previsto, realizado, origem e vínculo auditável; **`financial_accounts`, `financial_commitments` e `financial_ledger_entries` foram criadas com backfill, vínculo compromisso/lançamento, deduplicação e teste negativo entre organizações; Preview e Production foram verificados em 31/08/2026**;
-- [ ] importar movimentação financeira em CSV, OFX e XLSX; hoje planilhas atendem principalmente o estoque e o PDF bancário é processado localmente;
-- [ ] mostrar prévia financeira, detectar duplicidades por identificador estável e permitir desfazer uma importação inteira;
+- [x] importar movimentação financeira em CSV, OFX/QFX e XLSX; **leitura local no navegador, normalização de datas/valores brasileiros e descarte explicado de linhas inválidas entregues em 31/08/2026**;
+- [x] mostrar prévia financeira, detectar duplicidades por identificador estável e permitir desfazer uma importação inteira; **SHA-256 estável, índice único por organização, identificador/data do lote e ação de desfazer o último lote foram testados; migration verificada em Preview e Production em 31/08/2026**;
 - [ ] conciliar recebimentos e pagamentos com vendas, compras e contas, mantendo revisão humana para exceções;
 - [ ] implementar contas recorrentes e parceladas, pagamento parcial, juros, multa, desconto e inadimplência;
 - [ ] adicionar alertas e calendário financeiro, além de previsão de caixa para 7, 30 e 90 dias;

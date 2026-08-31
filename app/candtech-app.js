@@ -24,6 +24,7 @@ import TaskKanban from "./task-kanban";
 import SupportCenter from "./support-center";
 import { trackMarketingEvent } from "../lib/analytics";
 import FileNameDialog, { useFileNameDialog } from "./file-name-dialog";
+import { markFinancialDuplicates, parseFinancialFile } from "../lib/financial-import";
 
 async function hydrateAuthenticatedUser() {
   const response = await fetch("/api/auth/me", { cache: "no-store" });
@@ -2716,6 +2717,22 @@ function CashFlow({
   onSave,
 }) {
   const [pdfState, setPdfState] = useState({ loading: false, message: "" });
+  const [fileImport, setFileImport] = useState({ loading: false, message: "", preview: null, filename: "" });
+  const markedPreview = useMemo(
+    () => fileImport.preview ? markFinancialDuplicates(fileImport.preview.rows, entries) : null,
+    [fileImport.preview, entries],
+  );
+  const latestImportBatch = useMemo(() => {
+    const batches = new Map();
+    entries.forEach((entry) => {
+      if (!entry.importBatchId) return;
+      const current = batches.get(entry.importBatchId) || { id: entry.importBatchId, importedAt: entry.importedAt || "", count: 0 };
+      current.count += 1;
+      if (String(entry.importedAt || "") > current.importedAt) current.importedAt = entry.importedAt;
+      batches.set(entry.importBatchId, current);
+    });
+    return [...batches.values()].sort((a, b) => b.importedAt.localeCompare(a.importedAt))[0] || null;
+  }, [entries]);
   const availableCategories = [...new Set([
     ...(categories || []),
     ...entries.map((entry) => entry.category),
@@ -2811,6 +2828,46 @@ function CashFlow({
       });
     }
   }
+  async function previewFinancialImport(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setFileImport({ loading: true, message: "Lendo o arquivo no seu navegador…", preview: null, filename: file.name });
+    try {
+      const preview = await parseFinancialFile(file);
+      setFileImport({ loading: false, message: "", preview, filename: file.name });
+    } catch (error) {
+      setFileImport({ loading: false, message: error?.message || "Não foi possível ler o arquivo.", preview: null, filename: file.name });
+    }
+  }
+  function confirmFinancialImport() {
+    if (!markedPreview?.accepted.length) {
+      setFileImport((current) => ({ ...current, message: "Todos os lançamentos desta prévia já foram importados." }));
+      return;
+    }
+    const importedAt = new Date().toISOString();
+    const batchId = `import-${Date.now()}-${newWorkspaceEntityId("batch")}`;
+    const imported = markedPreview.accepted.map((entry) => ({
+      ...entry,
+      id: newWorkspaceEntityId("entry"),
+      importBatchId: batchId,
+      importedAt,
+    }));
+    setEntries((current) => {
+      const existing = current.filter((entry) => entry.description || Number(entry.amount) > 0);
+      return [...existing, ...imported].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    });
+    setFilters({ month: "", type: "todos", category: "todos" });
+    setFileImport({ loading: false, preview: null, filename: "", message: `${imported.length} lançamento(s) importado(s); ${markedPreview.duplicateCount} duplicado(s) ignorado(s).` });
+  }
+  function undoImportBatch(batch) {
+    if (!batch || !confirm(`Desfazer os ${batch.count} lançamentos da última importação?`)) return;
+    setEntries((current) => {
+      const remaining = current.filter((entry) => entry.importBatchId !== batch.id);
+      return remaining.length ? remaining : [blankCashRow()];
+    });
+    setFileImport({ loading: false, preview: null, filename: "", message: `${batch.count} lançamento(s) da importação foram removidos.` });
+  }
   let runningBalance = 0;
   // O saldo de cada linha é derivado dos valores digitados e se atualiza a cada render.
   const rowsWithBalance = filteredEntries.map((entry) => {
@@ -2858,6 +2915,15 @@ function CashFlow({
           </div>
           <div className="save-actions">
             <label className="secondary-button file-button">
+              {fileImport.loading ? "Lendo arquivo…" : "Importar CSV/OFX/XLSX"}
+              <input
+                type="file"
+                accept=".csv,.tsv,.txt,.ofx,.qfx,.xlsx"
+                disabled={fileImport.loading}
+                onChange={previewFinancialImport}
+              />
+            </label>
+            <label className="secondary-button file-button">
               {pdfState.loading ? "Lendo PDF…" : "Importar extrato PDF"}
               <input
                 type="file"
@@ -2872,6 +2938,11 @@ function CashFlow({
             <button className="danger-button" onClick={clearOrganization}>
               Limpar organização
             </button>
+            {latestImportBatch ? (
+              <button className="danger-button" onClick={() => undoImportBatch(latestImportBatch)}>
+                Desfazer última importação
+              </button>
+            ) : null}
             <button className="primary-button compact" onClick={onSave}>
               Salvar organização
             </button>
@@ -2887,10 +2958,49 @@ function CashFlow({
             />
           </label>
           <small>
-            O PDF é processado localmente no navegador e não é enviado ao
-            servidor.
+            PDF, CSV, OFX e XLSX são processados localmente no navegador e não são enviados ao servidor.
           </small>
         </div>
+        {fileImport.preview && markedPreview ? (
+          <section className="financial-import-preview" aria-label="Prévia da importação financeira">
+            <div className="financial-import-summary">
+              <div>
+                <span className="eyebrow">PRÉVIA — {fileImport.filename}</span>
+                <h3>{markedPreview.accepted.length} novos, {markedPreview.duplicateCount} duplicados</h3>
+                <p>Nada será salvo antes da confirmação. Linhas inválidas permanecem fora do lote.</p>
+              </div>
+              <div className="module-actions">
+                <button className="secondary-button" onClick={() => setFileImport({ loading: false, message: "", preview: null, filename: "" })}>Cancelar</button>
+                <button className="primary-button compact" disabled={!markedPreview.accepted.length} onClick={confirmFinancialImport}>
+                  Importar {markedPreview.accepted.length}
+                </button>
+              </div>
+            </div>
+            {(fileImport.preview.warnings.length || fileImport.preview.errors.length) ? (
+              <p className="import-status">
+                {[...fileImport.preview.warnings, ...fileImport.preview.errors.slice(0, 3)].join(" ")}
+                {fileImport.preview.errors.length > 3 ? ` Mais ${fileImport.preview.errors.length - 3} linha(s) inválida(s).` : ""}
+              </p>
+            ) : null}
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Situação</th></tr></thead>
+                <tbody>
+                  {markedPreview.rows.slice(0, 12).map((entry, index) => (
+                    <tr key={`${entry.fingerprint}-${index}`}>
+                      <td>{formatDate(entry.date)}</td><td>{entry.description}</td><td>{entry.type === "entrada" ? "Entrada" : "Saída"}</td>
+                      <td>{signedMoney(entry.amount, entry.type)}</td><td><span className={`import-badge ${entry.duplicate ? "duplicate" : "new"}`}>{entry.duplicate ? "Duplicado" : "Novo"}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {markedPreview.rows.length > 12 ? <small>Mostrando 12 de {markedPreview.rows.length} linhas.</small> : null}
+          </section>
+        ) : null}
+        {fileImport.message ? (
+          <p className={fileImport.message.includes("importado") || fileImport.message.includes("removidos") ? "import-status success" : "import-status"}>{fileImport.message}</p>
+        ) : null}
         {pdfState.message ? (
           <p
             className={

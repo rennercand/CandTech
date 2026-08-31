@@ -38,7 +38,7 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
       tasks: [{ id: "task-a", clientId: "client-a", title: "Atender cliente A", dueDate: "2026-09-01", priority: "high", status: "doing", createdAt: "2026-08-31T10:05:00.000Z", completedAt: "" }],
       inventoryState: { deliveries: [{ id: "delivery-a", clientId: "client-a", description: "Enviar pedido A", partner: "Cliente A", direction: "saida", date: "2026-09-02", status: "em-transito", tracking: "RASTREIO-A" }] },
       financialAccounts: [{ id: "commitment-a", type: "receber", description: "Projeto A", party: "Cliente A", category: "Serviços", dueDate: "2026-09-05", amount: "250", status: "recebido", postedAt: "2026-08-31T12:00:00.000Z" }],
-      cashEntries: [{ id: "entry-a", sourceCommitmentId: "commitment-a", date: "2026-08-31", category: "Serviços", description: "Recebimento Projeto A", type: "entrada", amount: "250" }],
+      cashEntries: [{ id: "entry-a", sourceCommitmentId: "commitment-a", date: "2026-08-31", category: "Serviços", description: "Recebimento Projeto A", type: "entrada", amount: "250", importBatchId: "batch-a", fingerprint: "a".repeat(64), importedAt: "2026-08-31T12:30:00.000Z" }],
     };
     await saveWorkspace({ userId: ownerA.id, organizationId: organizationA.organizationId, payload: workspacePayload });
     const restoredWorkspace = await getWorkspace(ownerA.id, organizationA.organizationId);
@@ -48,6 +48,9 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
     assert.equal(restoredWorkspace.payload.inventoryState.deliveries[0].clientId, "client-a");
     assert.equal(restoredWorkspace.payload.financialAccounts[0].status, "recebido");
     assert.equal(restoredWorkspace.payload.cashEntries[0].sourceCommitmentId, "commitment-a");
+    assert.equal(restoredWorkspace.payload.cashEntries[0].importBatchId, "batch-a");
+    assert.equal(restoredWorkspace.payload.cashEntries[0].fingerprint, "a".repeat(64));
+    assert.equal(restoredWorkspace.payload.cashEntries[0].importedAt, "2026-08-31T12:30:00.000Z");
     assert.deepEqual((await listCustomers(ownerA.id, organizationA.organizationId)).map((client) => client.id), ["client-a"]);
     assert.deepEqual((await listOperationalTasks(ownerA.id, organizationA.organizationId)).map((task) => task.id), ["task-a"]);
     assert.deepEqual((await listOperationalDeliveries(ownerA.id, organizationA.organizationId)).map((delivery) => delivery.id), ["delivery-a"]);

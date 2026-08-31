@@ -1807,6 +1807,49 @@ select:focus {
   background: #e9fff7;
   border-color: #b4ebd9;
 }
+.financial-import-preview {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background: #faf9ff;
+  border: 1px solid #ddd7ff;
+  border-radius: 12px;
+}
+.financial-import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.financial-import-summary h3 {
+  margin: 5px 0 3px;
+}
+.financial-import-summary p,
+.financial-import-preview > small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.financial-import-preview .table-scroll {
+  margin-top: 0;
+}
+.import-badge {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.import-badge.new {
+  color: #087b59;
+  background: #ddf8ee;
+}
+.import-badge.duplicate {
+  color: #8a581d;
+  background: #fff0d4;
+}
 .organization-visuals {
   display: grid;
   grid-template-columns: minmax(280px, 0.72fr) minmax(450px, 1.28fr);

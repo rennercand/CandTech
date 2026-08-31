@@ -36,6 +36,7 @@ Este documento é o ponto de entrada técnico para quem for manter, revisar ou t
 | `lib/pix-db.js` | Solicitações, aprovação, rejeição e expiração dos pagamentos |
 | `lib/account-backup.js` | Exportação ZIP limitada, sem senha, sessão ou token |
 | `lib/inventory-import.js` | Leitura de CSV, TSV, TXT e XLSX e normalização das colunas |
+| `lib/financial-import.js` | Leitura local de CSV, OFX/QFX e XLSX, prévia e fingerprint estável |
 | `lib/db.js` | Persistência PostgreSQL/Neon e fallback SQLite local |
 | `migrations/` | Alterações versionadas do banco PostgreSQL |
 | `test/` | Testes de cálculo, isolamento, autenticação, cobrança e importação |
@@ -93,6 +94,12 @@ Regras importantes:
 - entrada em SKU existente exige coluna de quantidade e valor maior que zero;
 - valores brasileiros como `1.234,56` são normalizados antes da prévia;
 - nenhuma linha é persistida antes da confirmação do usuário.
+
+## Importação financeira
+
+`lib/financial-import.js` lê `.csv`, `.tsv`, `.txt`, `.ofx`, `.qfx` e `.xlsx` no navegador. O parser reconhece Data, Valor ou o par Crédito/Débito, aceita decimal brasileiro, datas brasileiras e número serial do Excel. Em OFX, usa `FITID` quando disponível.
+
+Antes da confirmação, a interface mostra novos, duplicados e linhas inválidas. A impressão digital SHA-256 combina a versão do importador, o formato e o identificador bancário estável; quando o arquivo não oferece ID, usa os campos normalizados e a ocorrência determinística. Cada confirmação recebe `importBatchId` e `importedAt`; desfazer remove todas as linhas desse lote. O índice único no banco é a última barreira contra reimportação concorrente.
 
 ## Navegação e relatório geral
 

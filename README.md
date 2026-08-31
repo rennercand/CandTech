@@ -1,6 +1,6 @@
 # CandTech
 
-Aplicação web para análise e organização financeira, construída com Next.js. A CandTech reúne calculadoras de investimentos, sistemas de amortização, formação de preço, organização de custos, importação de extratos bancários em PDF e histórico privado por conta.
+Aplicação web para análise e organização financeira, construída com Next.js. A CandTech reúne calculadoras de investimentos, sistemas de amortização, formação de preço, organização de custos, importação local de extratos bancários em PDF/CSV/OFX/XLSX e histórico privado por conta.
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
@@ -29,7 +29,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Formação de preço unitário a partir de despesas, unidades e margem de lucro.
 - Organização financeira com categorias reutilizáveis criadas pelo usuário, seletores padronizados e gráfico de distribuição de custos.
 - Contas financeiras, compromissos previstos e lançamentos realizados persistidos por organização, com origem estável e vínculo entre pagamento e compromisso.
-- Importação local de extratos bancários em PDF.
+- Importação local de extratos bancários em PDF, CSV, OFX/QFX e XLSX; os formatos tabulares mostram prévia, descartam linhas inválidas, identificam reimportações por SHA-256 e permitem desfazer o último lote inteiro.
 - Salvamento automático do workspace vinculado à conta.
 - Rascunho automático no histórico quando a pessoa sai sem salvar manualmente.
 - Exportação em CSV com BOM, separador e decimais compatíveis com Excel em pt-BR.
@@ -100,7 +100,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - APIs possuem rate limit compartilhado no PostgreSQL/Neon; o IP é armazenado somente como hash e limites excedidos retornam `429`.
 - O Next.js envia CSP, HSTS, bloqueio de iframe, `nosniff`, política de referência e restrições de permissões do navegador.
 - Contas aceitam senha entre 8 e 128 caracteres; a interface recomenda frases com 15 ou mais caracteres para maior segurança.
-- O extrato PDF é processado no navegador e não é enviado ao servidor pelo importador.
+- Os extratos PDF, CSV, OFX/QFX e XLSX são processados no navegador e não são enviados ao servidor pelo importador; somente os lançamentos confirmados são salvos.
 - Comprovantes Pix aceitam PDF/JPG/PNG/WEBP de até 5 MB, são validados por MIME e assinatura binária, armazenados de forma privada e só podem ser abertos por administradores autorizados.
 - `.env.local`, bancos locais, configurações da Vercel, logs e relatórios de segurança são ignorados pelo Git.
 - Segredos de produção ficam nas Environment Variables criptografadas da Vercel.
@@ -180,7 +180,7 @@ BILLING_ENFORCEMENT_ENABLED=false
 
 Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
 
-As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance` e foi validada nos dois branches em 31/08/2026 antes do deploy. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla.
+As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance`; os metadados de lote e deduplicação usam `npm run migrate:2026-08-31:finance-import`. Ambas foram validadas nos dois branches em 31/08/2026 antes do deploy. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -235,6 +235,7 @@ lib/
   db.js              PostgreSQL/Neon e fallback SQLite
   inventory-db.js    produtos, variações e movimentos transacionais
   inventory-import.js leitura local de CSV/TSV/TXT/XLSX
+  financial-import.js leitura local, prévia e deduplicação de CSV/OFX/XLSX
   inventory-report.js relatório CSV/XLSX reimportável do estoque
   finance-calculations.js
   request-security.js valida origem e formato das mutações

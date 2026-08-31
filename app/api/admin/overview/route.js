@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { reportServerError } from "@/lib/server-observability";
 import { getAdministratorAccess, getMonitoringAccessPath } from "@/lib/admin-access";
 import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
+import { getRuntimeDatabaseSecurity } from "@/lib/database-security";
 
 export const runtime = "nodejs";
 
@@ -32,13 +33,16 @@ export async function GET(request) {
       }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
-    const metrics = await getAdminOverview();
+    const [metrics, databaseSecurity] = await Promise.all([
+      getAdminOverview(),
+      getRuntimeDatabaseSecurity(),
+    ]);
     const trafficLevel = metrics.peak_per_identity >= 100 ? "critical" : metrics.peak_per_identity >= 60 ? "attention" : "normal";
     return NextResponse.json({
       metrics,
       monitoringPath: getMonitoringAccessPath(),
       permissions: access,
-      health: { database: "online", server: "online", trafficLevel, checkedAt: new Date().toISOString() },
+      health: { database: "online", server: "online", trafficLevel, databaseSecurity, checkedAt: new Date().toISOString() },
       privacy: "Somente métricas agregadas; nenhum dado financeiro de usuários é consultado.",
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

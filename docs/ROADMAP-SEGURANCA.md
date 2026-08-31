@@ -167,6 +167,8 @@ O rate limit atual no PostgreSQL reduz abuso, mas cada tentativa ainda pode gera
 
 ## Fase 6 — Banco, segredos e disponibilidade
 
+Em 30/08/2026, a central privada passou a executar no próprio runtime uma verificação segura de superusuário, criação de banco/papel/schema e propriedade de objetos. O resultado não expõe o papel nem a conexão; a troca por credencial restrita continua obrigatória se o painel reprovar.
+
 ### Estado atual verificado em 5 de agosto de 2026
 
 - PostgreSQL/Neon é usado na Vercel; SQLite é somente fallback local.

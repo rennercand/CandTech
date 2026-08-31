@@ -30,6 +30,10 @@ export default function SystemOverviewPanel({ permissions, onNavigate }) {
   }
 
   const { metrics, health } = overview;
+  const databaseSecurity = health.databaseSecurity;
+  const dangerousDatabasePrivileges = databaseSecurity?.checks
+    ? Object.entries(databaseSecurity.checks).filter(([, enabled]) => enabled).map(([name]) => name)
+    : [];
   return <section className="monitor-panel" aria-labelledby="system-overview-title">
     <div className="monitor-panel-heading">
       <div>
@@ -52,6 +56,18 @@ export default function SystemOverviewPanel({ permissions, onNavigate }) {
         <header><div><span className="ticket-status approved">Saúde</span><h3>Infraestrutura</h3></div></header>
         <p>Servidor: <strong>{health.server === "online" ? "Online" : "Indisponível"}</strong> · Banco de dados: <strong>{health.database === "online" ? "Online" : "Indisponível"}</strong> · Tráfego: <strong>{health.trafficLevel === "normal" ? "Normal" : health.trafficLevel === "attention" ? "Atenção" : "Crítico"}</strong>.</p>
         <small>Atualizado em {new Date(health.checkedAt).toLocaleString("pt-BR")}.</small>
+      </article>
+
+      <article className="monitor-ticket">
+        <header><div><span className={`ticket-status ${databaseSecurity?.approved ? "approved" : "pending"}`}>Banco</span><h3>Privilégio mínimo da credencial de runtime</h3></div></header>
+        {databaseSecurity?.approved === true ? (
+          <p>Aprovada: a credencial usada pela aplicação não possui os privilégios DDL verificados.</p>
+        ) : databaseSecurity?.approved === false ? (
+          <p>Atenção: a credencial de runtime ainda possui privilégios elevados ({dangerousDatabasePrivileges.join(", ")}). Crie um papel dedicado antes de ampliar a comercialização.</p>
+        ) : (
+          <p>Verificação disponível somente no ambiente PostgreSQL de produção.</p>
+        )}
+        <small>A verificação não expõe nome do papel, URL, usuário ou senha. Atualizado em {new Date(databaseSecurity?.checkedAt || health.checkedAt).toLocaleString("pt-BR")}.</small>
       </article>
 
       <article className="monitor-ticket">

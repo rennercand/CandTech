@@ -1448,9 +1448,10 @@ export default function CandTechApp({ publicFallback = null }) {
     setNotice("CSV das seções selecionadas baixado.");
   }
   async function saveActiveDocument({ title, calculationType: type, payload, success, navigate = true, workspace = workspacePayload }) {
+    const idempotencyKey = globalThis.crypto?.randomUUID?.() || `history-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const response = await fetch("/api/history", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
       body: JSON.stringify({
         id: activeDocumentId,
         title,

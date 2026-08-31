@@ -6,6 +6,8 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOrganizationAccess, isPublicHistoryId } from "@/lib/organization-access";
 import { filterHistoryForAccess, hasPermission, permissionForCalculationType } from "@/lib/team-permissions";
 import { reportServerError } from "@/lib/server-observability";
+import { claimIdempotency, completeIdempotency, enqueueOutboxEvent, failIdempotency } from "@/lib/idempotency-db";
+import { hashIdempotencyRequest, hashIdempotencyValue, normalizeIdempotencyKey } from "@/lib/idempotency";
 
 export const runtime = "nodejs";
 
@@ -42,6 +44,12 @@ export async function POST(request) {
   const user = await getSession(request);
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const access = await getOrganizationAccess(user);
+  const idempotencyKey = normalizeIdempotencyKey(request.headers.get("idempotency-key"));
+  if (!idempotencyKey) {
+    return NextResponse.json({ error: "Idempotency-Key obrigatório ou inválido." }, { status: 400 });
+  }
+  const operation = "history.save";
+  let idempotencyContext = null;
 
   const contentLength = Number(request.headers.get("content-length") || 0);
   // Rejeita históricos excessivamente grandes antes de carregar o corpo inteiro.
@@ -66,6 +74,23 @@ export async function POST(request) {
     const filteredItem = filterHistoryForAccess({ calculation_type: safeType, payload }, access);
     if (!filteredItem) return NextResponse.json({ error: "Tipo de documento não autorizado." }, { status: 403 });
 
+    const keyHash = hashIdempotencyValue(idempotencyKey);
+    const requestHash = hashIdempotencyRequest({ id: safeId, title: safeTitle, calculationType: safeType, payload: filteredItem.payload });
+    idempotencyContext = { userId: user.id, operation, keyHash, requestHash };
+    const claim = await claimIdempotency({
+      ...idempotencyContext,
+      organizationId: access.organizationId,
+    });
+    if (claim.state === "conflict") {
+      return NextResponse.json({ error: "A mesma chave de idempotência foi usada com outro conteúdo." }, { status: 409 });
+    }
+    if (claim.state === "pending") {
+      return NextResponse.json({ error: "Esta gravação ainda está em processamento." }, { status: 409, headers: { "Retry-After": "2" } });
+    }
+    if (claim.state === "replay") {
+      return NextResponse.json(claim.body, { status: claim.status, headers: { "Idempotent-Replayed": "true" } });
+    }
+
     // Com um ID ativo, salvar atualiza o mesmo documento em vez de criar cópias no histórico.
     const saved = await saveHistory({
       id: safeId,
@@ -74,11 +99,21 @@ export async function POST(request) {
       calculationType: safeType,
       payload: filteredItem.payload,
     });
-    return NextResponse.json(
-      { item: serializeHistory(saved.item), created: saved.created, limit: MAX_DOCUMENTS_PER_USER },
-      { status: saved.created ? 201 : 200 },
-    );
+    const responseBody = { item: serializeHistory(saved.item), created: saved.created, limit: MAX_DOCUMENTS_PER_USER };
+    const responseStatus = saved.created ? 201 : 200;
+    const completed = await completeIdempotency({ ...idempotencyContext, status: responseStatus, body: responseBody });
+    if (!completed) throw new Error("IDEMPOTENCY_COMPLETION_FAILED");
+    await enqueueOutboxEvent({
+      organizationId: access.organizationId,
+      aggregateType: "history",
+      aggregateId: saved.item.id,
+      eventType: saved.created ? "history.created" : "history.updated",
+      dedupeKey: keyHash,
+      payload: { calculationType: safeType },
+    }).catch((outboxError) => reportServerError(outboxError, { request, route: "/api/history", operation: "enqueue-outbox" }));
+    return NextResponse.json(responseBody, { status: responseStatus });
   } catch (error) {
+    if (idempotencyContext) await failIdempotency(idempotencyContext).catch(() => {});
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
     if (error?.code === "DOCUMENT_LIMIT_REACHED") {

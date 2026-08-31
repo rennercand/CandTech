@@ -40,7 +40,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 - [ ] implementar contas recorrentes e parceladas, pagamento parcial, juros, multa, desconto e inadimplência;
 - [ ] adicionar alertas e calendário financeiro, além de previsão de caixa para 7, 30 e 90 dias;
 - [ ] criar regras determinísticas de categorização, versionadas, explicáveis e revisáveis pela empresa;
-- [ ] implementar idempotência persistida para mutações críticas e uma outbox antes de ampliar integrações e jobs;
+- [ ] implementar idempotência persistida para mutações críticas e uma outbox antes de ampliar integrações e jobs; **tabelas, migration, hashing canônico, replay/conflito e deduplicação foram aplicados no Neon em 30/08/2026; o histórico usa o contrato e cria evento interno, mas faltam as operações críticas, transação domínio+outbox e worker**;
 - [ ] paginar listas de crescimento contínuo e medir latência, conexões, tamanho das tabelas e custo do Neon; **histórico ganhou paginação por cursor no banco, API e interface em 30/08/2026, com limite máximo, ordenação determinística e teste multiempresa; faltam as demais listas e as métricas operacionais**.
 
 ## P1 — operação de comércio e serviços

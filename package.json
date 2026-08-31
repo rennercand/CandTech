@@ -11,6 +11,7 @@
     "migrate:2026-08-29:audit": "node scripts/apply-20260829-audit-events-v2.js",
     "migrate:2026-08-29:oauth": "node scripts/apply-20260829-google-drive-oauth.js",
     "migrate:2026-08-29:mfa": "node scripts/apply-20260829-mfa.js",
+    "migrate:2026-08-30:idempotency": "node scripts/apply-20260830-idempotency-outbox.js",
     "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",
     "start": "next start"

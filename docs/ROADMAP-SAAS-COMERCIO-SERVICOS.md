@@ -45,7 +45,7 @@ Só reconsiderar a infraestrutura quando existirem métricas concretas que justi
 
 A CandTech já possui `organizations.id` relacional. Novos módulos devem usar preferencialmente:
 
-**Progresso em 31/08/2026:** workspace e histórico concluíram a etapa gradual de escopo. Clientes, tarefas, entregas e o livro financeiro agora possuem tabelas relacionais próprias, FK organização, vínculos internos, backfill e marcadores de transição verificados em Preview e Production. A leitura relacional substitui os arrays legados após a migração e os testes negativos cobrem duas organizações. No estoque, `organization_id`, backfill coerente e índices foram aplicados em Preview e Production sem remover `tenant_id`; leituras e novas escritas conferem ambos e o teste cobre duas organizações reais. Falta apenas observar a transição antes de retirar o identificador legado em deploy posterior. O financeiro importa CSV/OFX/XLSX com prévia, fingerprint e desfazimento por lote, sugere conciliação reversível com contas e pedidos, controla séries recorrentes, parcelas, ajustes, pagamentos parciais, saldo e inadimplência e deriva alertas, agenda e previsão de 7/30/90 dias, sempre com regras explicáveis e confirmação humana. Entregas ainda precisam da interface, eventos e comprovante.
+**Progresso em 01/09/2026:** workspace e histórico concluíram a etapa gradual de escopo. Clientes, tarefas, entregas e o livro financeiro possuem tabelas relacionais próprias, FK organização, vínculos internos, backfill e marcadores de transição verificados em Preview e Production. A leitura relacional substitui os arrays legados após a migração e os testes negativos cobrem duas organizações. No estoque, `organization_id`, backfill coerente e índices foram aplicados em Preview e Production sem remover `tenant_id`; leituras e novas escritas conferem ambos e o teste cobre duas organizações reais. Falta apenas observar a transição antes de retirar o identificador legado em deploy posterior. O financeiro importa CSV/OFX/XLSX com prévia, fingerprint e desfazimento por lote, sugere conciliação reversível, controla séries, ajustes, pagamentos parciais, saldo e inadimplência e deriva alertas, agenda e previsão de 7/30/90 dias. Entregas agora possuem interface, eventos, comprovante privado e vínculo transacional com vendas. Ordens de serviço cobrem orçamento, agenda, execução, materiais, custo, recorrência e cobrança; tabelas e índices foram aplicados e retornaram prontos em Preview e Production antes do deploy.
 
 ```text
 organization_id BIGINT NOT NULL
@@ -525,6 +525,8 @@ Ao concluir ou vencer um ciclo recorrente:
 - alertar quando execução estiver próxima;
 - nunca cobrar ou alterar financeiro silenciosamente sem regra previamente configurada.
 
+**Entregue em 01/09/2026:** os itens 22 a 24 possuem tela, API e tabelas relacionais. A conclusão só parte de `in_progress`, usa idempotência persistida, baixa materiais por FEFO com saldo condicional, registra custo real, cria a conta a receber, publica `service.completed` e agenda o próximo ciclo finito na mesma transação. A migration foi aplicada e verificada nas branches Preview e Production do Neon antes do deploy.
+
 ---
 
 # P1 — Tela Hoje
@@ -866,8 +868,8 @@ Nunca tentar descobrir vendas externas sem integração ou importação.
 2. baixa de estoque transacional;
 3. financeiro automático da venda;
 4. compras e fornecedores;
-5. ordem de serviço;
-6. materiais consumidos por serviço;
+5. ~~ordem de serviço~~ — implementada em 01/09/2026;
+6. ~~materiais consumidos por serviço~~ — implementado com FEFO e rollback integral em 01/09/2026;
 7. Tela Hoje;
 8. contas a pagar/receber integradas;
 9. reposição inteligente;

@@ -51,6 +51,8 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
 - Baixa de vendas por FEFO (vence primeiro, sai primeiro), saldo atual por lote, custo médio histórico ponderado, curva ABC por faturamento, alerta de itens sem venda há 90 dias e sugestão de compra até o estoque mínimo.
 - Logística operacional: toda venda cria uma entrega ligada ao pedido, e a equipe acompanha cliente, previsão, status e rastreio na mesma área do estoque, com comprovante PDF/imagem guardado em armazenamento privado.
+- Ordens de serviço com orçamento, cliente, responsável, agenda, local, recorrência finita e itens separados entre mão de obra e materiais.
+- Conclusão transacional de serviço: exige execução iniciada, baixa materiais por FEFO, consolida custo e margem, cria a conta a receber, publica o evento e agenda o próximo ciclo sem efeitos parciais ou duplicados.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.
@@ -78,7 +80,7 @@ flowchart LR
   GITHUB[GitHub main e previews] -->|deploy| WEB
   WEB --> API[Route Handlers protegidos]
   API --> AUTH[Autenticação e autorização]
-  API --> ERP[Workspace, estoque, pedidos e relatórios]
+  API --> ERP[Workspace, estoque, pedidos, serviços e relatórios]
   API --> PIX[Pix BR Code e moderação]
   AUTH --> NEON[(PostgreSQL Neon)]
   ERP --> NEON
@@ -88,7 +90,7 @@ flowchart LR
   API --> EMAIL[Resend]
 ```
 
-O fluxo completo, o mapa mental, os ambientes e a cobrança Pix estão em [ARQUITETURA.md](./docs/ARQUITETURA.md). O inventário objetivo do que ainda falta está em [ROADMAP-PENDENCIAS.md](./docs/ROADMAP-PENDENCIAS.md).
+O fluxo completo, o mapa mental, os ambientes e a cobrança Pix estão em [ARQUITETURA.md](./docs/ARQUITETURA.md). O inventário objetivo do que ainda falta está em [ROADMAP-PENDENCIAS.md](./docs/ROADMAP-PENDENCIAS.md). A rotina de orçamento até cobrança está em [GUIA-OPERACAO-SERVICOS.md](./docs/GUIA-OPERACAO-SERVICOS.md).
 
 ## Como os dados são protegidos
 
@@ -99,7 +101,7 @@ O banco inteiro não é transformado em hash. Hash é irreversível e, por isso,
 - Após validar o JWT e a sessão persistida, a API recarrega nome, e-mail e tipo de conta atuais do banco.
 - Novos cadastros recebem confirmação de e-mail e só acessam as APIs do ERP após confirmar; contas anteriores são preservadas como verificadas. A recuperação usa token aleatório de uso único, guarda somente seu hash, expira em 30 minutos e revoga todas as sessões anteriores.
 - Proprietários e equipe administrativa precisam ativar MFA TOTP. O segredo fica cifrado com uma chave exclusiva, o login usa desafio persistido de cinco minutos e uso único, e oito códigos de recuperação são mostrados uma única vez e guardados apenas como hashes.
-- Históricos e workspaces combinam `user_id` com `organization_id`. Clientes, tarefas, entregas, contas financeiras, compromissos e lançamentos usam tabelas relacionais próprias, com `organization_id`, identificador público estável e vínculos internos. A organização e o proprietário são derivados da sessão, conferidos novamente na camada de banco e nunca aceitos do navegador; contas pessoais usam o escopo organizacional nulo.
+- Históricos e workspaces combinam `user_id` com `organization_id`. Clientes, tarefas, entregas, ordens de serviço, contas financeiras, compromissos e lançamentos usam tabelas relacionais próprias, com `organization_id`, identificador público estável e vínculos internos. A organização e o proprietário são derivados da sessão, conferidos novamente na camada de banco e nunca aceitos do navegador; contas pessoais usam o escopo organizacional nulo.
 - Documentos usam UUID público aleatório nas URLs; o ID sequencial do banco não é exposto. Toda busca combina o UUID com o proprietário derivado da sessão.
 - Todas as APIs privadas exigem sessão. Cadastro, login, solicitação de recuperação, redefinição e confirmação de e-mail são públicos por necessidade do fluxo, com proteção de origem, limites de corpo e rate limit.
 - Requisições que alteram dados validam `Origin`, `Sec-Fetch-Site` e o tipo `application/json` antes de acessar o banco.

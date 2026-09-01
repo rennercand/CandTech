@@ -21,6 +21,7 @@ import TeamAccess from "./team-access";
 import InventoryOperations from "./inventory-operations";
 import ClientManager from "./client-manager";
 import TaskKanban from "./task-kanban";
+import ServiceOperations from "./service-operations";
 import SupportCenter from "./support-center";
 import { trackMarketingEvent } from "../lib/analytics";
 import FileNameDialog, { useFileNameDialog } from "./file-name-dialog";
@@ -1087,7 +1088,7 @@ export default function CandTechApp({ publicFallback = null }) {
   useEffect(() => {
     const permission = {
       dashboard: "dashboard", calculator: "calculator", financing: "financing", pricing: "pricing",
-      cashflow: "cashflow", inventory: "inventory", commerce: "commerce", clients: "clients", tasks: "tasks", history: "history",
+      cashflow: "cashflow", inventory: "inventory", commerce: "commerce", services: "services", clients: "clients", tasks: "tasks", history: "history",
     }[view];
     if (permission && !canAccess(permission)) setView("home");
     if (view === "team" && user?.access?.role !== "owner") setView("home");
@@ -2119,6 +2120,7 @@ export default function CandTechApp({ publicFallback = null }) {
             ...(canAccess("clients") ? [["clients", "Clientes", "♧"]] : []),
             ...(canAccess("tasks") ? [["tasks", "Tarefas", "✓"]] : []),
             ...(canAccess("commerce") ? [["commerce", "Pedidos e vendas", "⇄"]] : []),
+            ...(canAccess("services") ? [["services", "Ordens de serviço", "⌘"]] : []),
             ...(canAccess("inventory") ? [["inventory", "Logística e estoque", "▣"]] : []),
             ...(canAccess("cashflow") ? [["cashflow", "Movimentações", "▤"]] : []),
             ...(canAccess("financing") ? [["financing", "Financiamentos", "▦"]] : []),
@@ -2185,6 +2187,8 @@ export default function CandTechApp({ publicFallback = null }) {
                           ? "Logística e estoque"
                           : view === "commerce"
                             ? "Pedidos e vendas"
+                            : view === "services"
+                              ? "Ordens de serviço"
                             : view === "clients"
                               ? "Clientes"
                               : view === "tasks"
@@ -2215,7 +2219,7 @@ export default function CandTechApp({ publicFallback = null }) {
                 year: "numeric",
               })}
             </span>
-            {canAccess("exports") && view !== "history" && view !== "home" && view !== "workspace" && view !== "team" && view !== "clients" && view !== "tasks" && (
+            {canAccess("exports") && view !== "history" && view !== "home" && view !== "workspace" && view !== "team" && view !== "clients" && view !== "tasks" && view !== "services" && (
               <div className="context-export-actions" aria-label="Exportar aba atual">
                 <button className="secondary-button compact" onClick={() => setShowExportCenter((current) => !current)}>
                   Exportar seleção
@@ -2330,6 +2334,7 @@ export default function CandTechApp({ publicFallback = null }) {
         )}
         {view === "inventory" && <InventoryOperations clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
         {view === "commerce" && <InventoryOperations initialSection="orders" clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "services" && <ServiceOperations clients={clients} />}
         {view === "clients" && <ClientManager clients={clients} setClients={setClients} orders={[...commerceOrders, ...(inventoryState.orders || [])]} />}
         {view === "tasks" && <TaskKanban tasks={tasks} setTasks={setTasks} clients={clients} />}
         {view === "admin" && isAdministrator && <AdminOverview overview={adminOverview} monitoringPath={user.monitoringPath} onRefresh={loadAdminOverview} />}

@@ -1,6 +1,6 @@
 # Mapa do sistema CandTech
 
-O mapa abaixo representa o código publicado em 29 de agosto de 2026: páginas públicas, ERP autenticado, cobrança manual, administração, persistência e integrações externas.
+O mapa abaixo representa o código preparado em 1º de setembro de 2026: páginas públicas, ERP autenticado, comércio, serviços, cobrança manual, administração, persistência e integrações externas.
 
 ```mermaid
 flowchart TB
@@ -28,7 +28,8 @@ flowchart TB
     API --> SEC[Origem, tipo, tamanho e rate limit]
     SEC --> AUTH[JWT revogável e identidade atual]
     SEC --> WORKSPACE[Workspace e histórico]
-    SEC --> INVENTORY[Estoque, pedidos e movimentos]
+    SEC --> INVENTORY[Estoque, pedidos, entregas e movimentos]
+    SEC --> SERVICES[Orçamentos, agenda e ordens de serviço]
     SEC --> BILLING[Pix, comprovantes e moderação]
     SEC --> SUPPORT[Suporte e observabilidade]
     SEC --> REPORTS[PDF, CSV e XLSX]
@@ -39,6 +40,7 @@ flowchart TB
   AUTH --> DB[(PostgreSQL Neon)]
   WORKSPACE --> DB
   INVENTORY --> DB
+  SERVICES --> DB
   BILLING --> DB
   SUPPORT --> DB
   DRIVE --> DB
@@ -76,7 +78,11 @@ mindmap
       Financiamentos e análises
       Formação de preço
       Estoque e pedidos
-      Entregas simples
+      Entregas e comprovantes
+      Ordens de serviço
+        Orçamento e agenda
+        Materiais e custos
+        Recorrência e cobrança
     Cobrança
       Primeiro Pix de R$ 180
       Renovações de R$ 60
@@ -153,6 +159,7 @@ mindmap
 | `inventory_batches` / `inventory_movements` | livro de movimentos, saldo por lote, FEFO e reversões | organização herdada e validada no lote + autor autenticado; a baixa usa validade crescente e o desfazimento preserva rastreabilidade |
 | `inventory_orders` / `inventory_order_items` | vendas, compras, curva ABC e histórico de faturamento | organização herdada do lote; pedido desfeito fica cancelado; `tenant_id` mantido só durante a transição |
 | `operational_deliveries` | preparação, previsão, cliente, pedido, rastreio e referência do comprovante privado | venda cria entrega na mesma transação e publica `delivery.created`; mudanças publicam `delivery.status_changed`; cancelamento do pedido cancela a entrega |
+| `service_orders` / `service_order_items` | orçamento, agenda, responsável, recorrência, serviços, materiais, preço, custo e cobrança vinculada | proprietário + organização derivados da sessão; material pertence ao mesmo estoque; conclusão exige execução ativa e idempotência persistida |
 | `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
 | `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou equipe com permissão `can_support` |
 | `staff_access` | módulos internos concedidos a contas verificadas | administrador principal em `ADMIN_EMAILS` |
@@ -177,6 +184,30 @@ O navegador conversa apenas com as APIs. A API valida o cookie de sessão, extra
 - o link do convite usa token aleatório de uso único, expira em 72 horas e só é aceito após autenticação com o mesmo e-mail destinatário.
 
 O UUID reduz enumeração, mas não substitui autorização. O isolamento efetivo vem do escopo de proprietário/organização aplicado em todas as consultas.
+
+### Conclusão de ordem de serviço
+
+```mermaid
+flowchart LR
+  QUOTE[Orçamento] --> APPROVED[Aprovado]
+  APPROVED --> SCHEDULED[Agendado]
+  APPROVED --> RUNNING[Em execução]
+  SCHEDULED --> RUNNING
+  RUNNING --> COMPLETE{Concluir com chave idempotente}
+  COMPLETE --> FEFO[Baixar materiais por lote/FEFO]
+  COMPLETE --> COST[Fixar custo e margem reais]
+  COMPLETE --> RECEIVABLE[Criar conta a receber]
+  COMPLETE --> EVENT[Publicar evento na outbox]
+  COMPLETE --> NEXT[Agendar próximo ciclo, se configurado]
+  FEFO --> COMMIT[Commit único]
+  COST --> COMMIT
+  RECEIVABLE --> COMMIT
+  EVENT --> COMMIT
+  NEXT --> COMMIT
+  COMPLETE -->|saldo insuficiente ou conflito| ROLLBACK[Rollback integral]
+```
+
+A API aceita somente transições previstas. A conclusão existe apenas para uma ordem `in_progress`; um SKU inexistente ou de outra organização não pode ser gravado como material. A transação usa trava lógica, atualização condicional de saldo e evento único para impedir baixa ou cobrança duplicada. O guia operacional está em `docs/GUIA-OPERACAO-SERVICOS.md`.
 
 ### Monitoramento e suporte
 

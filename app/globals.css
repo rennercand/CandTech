@@ -2676,6 +2676,28 @@ select:focus {
 .commitment-details-grid { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); gap: 9px; margin-top: 11px; }
 .commitment-balance { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; color: var(--muted); font-size: 11px; }
 .commitment-details > small { display: block; margin-bottom: 8px; color: var(--muted); }
+.financial-planning { display: grid; gap: 14px; padding: 16px; border: 1px solid #dfe4f5; border-radius: 14px; background: linear-gradient(145deg, #fbfcff, #f5f3ff); }
+.financial-planning-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.financial-planning-heading h3, .financial-calendar h4 { margin: 3px 0 0; }
+.financial-alerts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.financial-alerts span { padding: 6px 9px; border: 1px solid #dfe4f5; border-radius: 999px; background: #fff; color: var(--muted); font-size: 11px; font-weight: 800; }
+.financial-alerts span.warning { border-color: #f0cb82; background: #fff8e8; color: #986000; }
+.financial-alerts span.danger { border-color: #f0b5c0; background: #fff3f5; color: #b51f3c; }
+.forecast-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.forecast-grid article { display: grid; gap: 5px; padding: 13px; border: 1px solid #e3e5f2; border-radius: 11px; background: #fff; }
+.forecast-grid article span, .forecast-grid article small, .planning-note { color: var(--muted); font-size: 11px; }
+.forecast-grid article strong { font-size: 18px; }
+.financial-calendar { display: grid; gap: 10px; }
+.financial-calendar-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.financial-calendar-list article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid #e3e5f2; border-radius: 10px; background: #fff; }
+.financial-calendar-list article.overdue { border-left: 4px solid #c92b48; }
+.financial-calendar-list article.today, .financial-calendar-list article.soon { border-left: 4px solid #d89a20; }
+.financial-calendar-list time { color: #5542bd; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+.financial-calendar-list div { display: grid; gap: 2px; min-width: 0; }
+.financial-calendar-list div strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.financial-calendar-list div small { color: var(--muted); }
+.financial-calendar-list > article > span { font-weight: 800; white-space: nowrap; }
+.planning-note { margin: 0; }
 .financial-category-manager { display: grid; grid-template-columns: minmax(210px, 1fr) minmax(220px, .8fr) auto; gap: 12px; align-items: end; padding: 14px; border: 1px solid #dfe4f5; border-radius: 13px; background: #f8f9ff; }
 .financial-category-manager > div, .financial-category-manager label { display: grid; gap: 5px; }
 .financial-category-manager > div span, .financial-category-manager label span { color: var(--muted); font-size: 12px; }
@@ -2830,6 +2852,7 @@ select:focus {
   .operation-row .remove-row { grid-column: 1 / -1; justify-self: end; }
   .commitment-actions { grid-column: 1 / -1; grid-template-columns: 1fr; }
   .commitment-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .financial-calendar-list { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -2845,6 +2868,9 @@ select:focus {
   }
   .financial-category-manager { grid-template-columns: 1fr; }
   .commitment-details-grid { grid-template-columns: 1fr; }
+  .financial-planning-heading { flex-direction: column; }
+  .financial-alerts { justify-content: flex-start; }
+  .forecast-grid { grid-template-columns: 1fr; }
   .workspace-overview-controls { align-items: stretch; flex-direction: column; }
   .workspace-overview-controls > label { min-width: 0; }
 }

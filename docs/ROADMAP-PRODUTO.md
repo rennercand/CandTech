@@ -100,7 +100,7 @@ O roadmap de proteção técnica está separado em [ROADMAP-SEGURANCA.md](./ROAD
 
 ### Contas a pagar e receber
 
-**Entregue em 31/08/2026:** recorrência finita, parcelamento, pagamento parcial, juros, multa, desconto, saldo em aberto e identificação de inadimplência. Comprovantes, alertas e calendário permanecem nas próximas etapas.
+**Entregue em 31/08/2026:** recorrência finita, parcelamento, pagamento parcial, juros, multa, desconto, saldo em aberto, identificação de inadimplência, alertas, agenda e projeção de caixa em 7, 30 e 90 dias. Comprovantes e anexos permanecem nas próximas etapas.
 
 - recorrência e parcelamento;
 - pagamento parcial;

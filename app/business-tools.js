@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import {
   commitmentAmounts,
   expandCommitmentSeries,
+  financialOutlook,
   summarizeAccounts,
   summarizeInventory,
   summarizeOrders,
 } from "../lib/business-calculations";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const shortDate = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" });
 const signedMoney = (value, type) => `${type === "entrada" ? "+" : "-"}${money.format(Math.abs(Number(value) || 0))}`;
 const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -40,8 +42,9 @@ function Field({ label, children }) {
   return <label className="operation-field"><span>{label}</span>{children}</label>;
 }
 
-export function FinancialCommitments({ accounts, setAccounts, categories = ["Geral"], onCreateCategory, onStatusChange, onPayment, onScanRequest }) {
+export function FinancialCommitments({ accounts, setAccounts, cashEntries = [], categories = ["Geral"], onCreateCategory, onStatusChange, onPayment, onScanRequest }) {
   const summary = useMemo(() => summarizeAccounts(accounts), [accounts]);
+  const outlook = useMemo(() => financialOutlook(accounts, cashEntries), [accounts, cashEntries]);
   const [newCategory, setNewCategory] = useState("");
   const availableCategories = useMemo(() => [...new Set([
     ...categories,
@@ -88,6 +91,12 @@ export function FinancialCommitments({ accounts, setAccounts, categories = ["Ger
       { label: "A pagar", value: signedMoney(summary.payable, "saida"), tone: "negative", caption: "Obrigações ainda pendentes" },
       { label: "Vencidas", value: summary.overdue, caption: `${money.format(summary.overdueAmount)} em atraso · ${summary.partial} parcial(is)` },
     ]} />
+    <section className="financial-planning" aria-labelledby="financial-planning-title">
+      <div className="financial-planning-heading"><div><span className="eyebrow">PREVISÃO</span><h3 id="financial-planning-title">Caixa e agenda financeira</h3></div><div className="financial-alerts" aria-label="Alertas de vencimento"><span className={outlook.alerts.overdue ? "danger" : ""}>{outlook.alerts.overdue} vencida(s)</span><span className={outlook.alerts.today ? "warning" : ""}>{outlook.alerts.today} para hoje</span><span>{outlook.alerts.next7Days} nos próximos 7 dias</span></div></div>
+      <div className="forecast-grid">{outlook.horizons.map((forecast) => <article key={forecast.days}><span>Saldo em {forecast.days} dias</span><strong className={forecast.projected >= 0 ? "positive" : "negative"}>{money.format(forecast.projected)}</strong><small>+{money.format(forecast.incoming)} · −{money.format(forecast.outgoing)}</small></article>)}</div>
+      <div className="financial-calendar"><h4>Próximos vencimentos</h4>{outlook.calendar.length ? <div className="financial-calendar-list">{outlook.calendar.slice(0, 12).map((item) => <article key={item.id} className={item.state}><time dateTime={item.dueDate}>{shortDate.format(new Date(`${item.dueDate}T00:00:00Z`))}</time><div><strong>{item.title}</strong><small>{item.state === "overdue" ? `${Math.abs(item.daysUntil)} dia(s) em atraso` : item.state === "today" ? "Vence hoje" : `Vence em ${item.daysUntil} dia(s)`}</small></div><span className={item.type === "receber" ? "positive" : "negative"}>{signedMoney(item.balance, item.type === "receber" ? "entrada" : "saida")}</span></article>)}</div> : <p className="empty-state">Nenhum vencimento em aberto com data definida.</p>}</div>
+      <p className="planning-note">Projeção determinística: saldo realizado atual mais recebimentos em aberto, menos pagamentos em aberto até cada horizonte. Itens vencidos entram em todos os cenários.</p>
+    </section>
     <div className="financial-category-manager"><div><strong>Categorias financeiras</strong><span>Crie uma vez e selecione nas contas e nos lançamentos.</span></div><label><span>Nova categoria</span><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} placeholder="Ex.: Fornecedores" maxLength="50" /></label><button type="button" className="secondary-button" onClick={createCategory} disabled={!newCategory.trim()}>+ Criar categoria</button></div>
     <div className="operation-list">{accounts.map((account, index) => <article className={`operation-row ${account.type === "receber" ? "receiving-row" : ""}`} key={account.id || `account-${index}`}>
       <Field label="Tipo"><select value={account.type} onChange={(e) => changeType(index, e.target.value)}><option value="pagar">A pagar</option><option value="receber">A receber</option></select></Field>

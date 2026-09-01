@@ -5,6 +5,7 @@ import {
   suggestFinancialReconciliations,
   commitmentAmounts,
   expandCommitmentSeries,
+  financialOutlook,
   summarizeAccounts,
   summarizeInventory,
   summarizeOrders,
@@ -37,6 +38,26 @@ test("série mensal mantém fim do mês e identifica todas as parcelas", () => {
   assert.deepEqual(rows.map((row) => row.dueDate), ["2026-01-31", "2026-02-28", "2026-03-31"]);
   assert.deepEqual(rows.map((row) => row.installmentNumber), [1, 2, 3]);
   assert.equal(new Set(rows.map((row) => row.seriesId)).size, 1);
+});
+
+test("previsão de caixa inclui vencidos e separa horizontes de 7, 30 e 90 dias", () => {
+  const outlook = financialOutlook([
+    { id: "late", type: "pagar", amount: 50, dueDate: "2026-08-30", status: "pendente" },
+    { id: "week", type: "receber", amount: 200, paidAmount: 20, dueDate: "2026-09-05", status: "parcial" },
+    { id: "month", type: "pagar", amount: 40, dueDate: "2026-09-20", status: "pendente" },
+    { id: "quarter", type: "receber", amount: 300, dueDate: "2026-11-01", status: "pendente" },
+    { id: "done", type: "pagar", amount: 999, dueDate: "2026-09-01", status: "pago" },
+  ], [
+    { type: "entrada", amount: 500 }, { type: "saida", amount: 100 },
+  ], "2026-08-31");
+  assert.equal(outlook.currentBalance, 400);
+  assert.deepEqual(outlook.alerts, { overdue: 1, today: 0, next7Days: 1 });
+  assert.deepEqual(outlook.horizons.map(({ days, incoming, outgoing, projected }) => ({ days, incoming, outgoing, projected })), [
+    { days: 7, incoming: 180, outgoing: 50, projected: 530 },
+    { days: 30, incoming: 180, outgoing: 90, projected: 490 },
+    { days: 90, incoming: 480, outgoing: 90, projected: 790 },
+  ]);
+  assert.deepEqual(outlook.calendar.map((item) => item.id), ["late", "week", "month", "quarter"]);
 });
 
 test("conciliação sugere vínculos exatos sem alterar contas e exige revisão", () => {

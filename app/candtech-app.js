@@ -2309,6 +2309,7 @@ export default function CandTechApp({ publicFallback = null }) {
         {view === "cashflow" && (
           <div className="business-stack">
             <FinancialCommitments accounts={financialAccounts} setAccounts={setFinancialAccounts}
+              cashEntries={cashEntries}
               categories={financialCategories} onCreateCategory={createFinancialCategory}
               onStatusChange={changeAccountStatus} onPayment={recordAccountPayment} onScanRequest={scanBillImage} />
             <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}

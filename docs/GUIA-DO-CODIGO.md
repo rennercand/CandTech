@@ -109,6 +109,8 @@ Antes da confirmação, a interface mostra novos, duplicados e linhas inválidas
 
 Cada pagamento integral ou parcial cria uma entrada/saída realizada vinculada ao compromisso. A soma paga determina `parcial`, `pago` ou `recebido`; desfazer uma conciliação zera a baixa correspondente sem apagar um lançamento bancário importado. A inadimplência é derivada quando existe saldo e o vencimento já passou, e os resumos usam sempre o saldo restante, não o valor original.
 
+`financialOutlook` deriva a agenda e as projeções de 7, 30 e 90 dias sem gravar totais redundantes. O saldo inicial é a soma dos lançamentos realizados; em cada horizonte entram todos os recebimentos abertos e saem todos os pagamentos abertos com vencimento até a data-limite. Vencidos entram nos três cenários e compromissos liquidados nunca entram novamente.
+
 ## Navegação e relatório geral
 
 A página autenticada abre em `home`, que representa a Visão geral. O `workspace` é uma área separada para documentos e modelos. A ordem operacional do menu é intencional: clientes e tarefas → pedidos → logística e estoque → movimentações → financiamentos → análises → formação de preço.

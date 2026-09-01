@@ -19,6 +19,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Recuperação visual de falhas inesperadas, logs estruturados com remoção de dados sensíveis e CI no GitHub executando testes e build em `test` e `main`.
 - E-mail de acesso normalizado e protegido por índice único no banco; tentativas repetidas recebem orientação para entrar ou recuperar a senha.
 - Central privada com endereço não publicado, administrador principal em `ADMIN_EMAILS` e equipe interna com permissões independentes para monitoramento, suporte e cobrança.
+- Diagnóstico privado de prontidão comercial para banco, autenticação, MFA, Pix, Blob, e-mail, administrador, cron, domínio, suporte e integrações, retornando somente estados e orientações — nunca valores de ambiente.
 - Página 404 própria, responsiva e acessível, com entrada animada da marca e movimento reduzido respeitado automaticamente.
 - Aba Suporte com e-mail, telefone, WhatsApp, abertura de chamados e acompanhamento das respostas dentro do ERP.
 - Até 10 documentos manuais por conta; salvar novamente atualiza o documento aberto e somente “Novo documento” inicia outro.

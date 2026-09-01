@@ -37,10 +37,12 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - telas de recuperação para falhas inesperadas locais e globais, sem expor detalhes técnicos ao cliente;
 - logs de erro das APIs em formato estruturado, com remoção de credenciais, e-mails e documentos; mensagens livres não são registradas em produção;
 - CI no GitHub para as branches `test` e `main`, bloqueando vulnerabilidades altas/críticas e exigindo testes e build válidos.
+- central privada mostra a prontidão comercial da configuração de Production sem devolver chaves, tokens, conexões ou e-mails administrativos; bloqueios essenciais ficam separados de avisos e integrações opcionais.
 
 ## Antes de um teste privado pequeno
 
 - revisar o diff e versionar somente os arquivos pretendidos;
+- abrir **Central privada → Visão do sistema → Prontidão para começar a vender** e não iniciar cobrança enquanto existir bloqueio;
 - configurar `OAUTH_STATE_SECRET` diferente de `JWT_SECRET` na Vercel;
 - verificar o domínio remetente no Resend, configurar `RESEND_API_KEY`, `TEAM_INVITE_FROM` e `PUBLIC_APP_URL`, e confirmar a chegada de convite, verificação de cadastro e recuperação de senha reais;
 - confirmar novamente que Production e Preview usam bancos separados;

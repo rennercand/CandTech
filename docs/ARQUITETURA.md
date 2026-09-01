@@ -262,3 +262,5 @@ flowchart TD
 - `BILLING_ENFORCEMENT_ENABLED` permite validar a integração antes de tornar a assinatura obrigatória para acessar o ERP.
 
 Preview recebe sua própria `DATABASE_URL` sensível e não recebe as credenciais da branch de Production. A branch `preview-test` foi criada com schema somente, sem copiar usuários, históricos ou dados financeiros reais. Development não possui credenciais PostgreSQL na Vercel e usa o fallback SQLite, salvo quando o desenvolvedor configura conscientemente uma URL local separada.
+
+`lib/commercial-readiness.js` transforma a presença e a consistência mínima das configurações de Production em estados `pass`, `warning`, `optional` ou `fail`. A função roda somente no servidor e entrega à central privada nomes de controles e orientações fixas; valores de variáveis, conexões, chaves, tokens e identidades administrativas não fazem parte do retorno.

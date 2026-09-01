@@ -6,6 +6,7 @@ import { reportServerError } from "@/lib/server-observability";
 import { getAdministratorAccess, getMonitoringAccessPath } from "@/lib/admin-access";
 import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
 import { getRuntimeDatabaseSecurity } from "@/lib/database-security";
+import { getCommercialReadiness } from "@/lib/commercial-readiness";
 
 export const runtime = "nodejs";
 
@@ -37,12 +38,13 @@ export async function GET(request) {
       getAdminOverview(),
       getRuntimeDatabaseSecurity(),
     ]);
+    const commercialReadiness = getCommercialReadiness();
     const trafficLevel = metrics.peak_per_identity >= 100 ? "critical" : metrics.peak_per_identity >= 60 ? "attention" : "normal";
     return NextResponse.json({
       metrics,
       monitoringPath: getMonitoringAccessPath(),
       permissions: access,
-      health: { database: "online", server: "online", trafficLevel, databaseSecurity, checkedAt: new Date().toISOString() },
+      health: { database: "online", server: "online", trafficLevel, databaseSecurity, commercialReadiness, checkedAt: new Date().toISOString() },
       privacy: "Somente métricas agregadas; nenhum dado financeiro de usuários é consultado.",
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

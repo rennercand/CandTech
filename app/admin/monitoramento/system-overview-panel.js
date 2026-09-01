@@ -31,6 +31,7 @@ export default function SystemOverviewPanel({ permissions, onNavigate }) {
 
   const { metrics, health } = overview;
   const databaseSecurity = health.databaseSecurity;
+  const commercialReadiness = health.commercialReadiness;
   const dangerousDatabasePrivileges = databaseSecurity?.checks
     ? Object.entries(databaseSecurity.checks).filter(([, enabled]) => enabled).map(([name]) => name)
     : [];
@@ -52,6 +53,12 @@ export default function SystemOverviewPanel({ permissions, onNavigate }) {
     </div>
 
     <div className="monitor-ticket-list">
+      <article className="monitor-ticket commercial-readiness">
+        <header><div><span className={`ticket-status ${commercialReadiness?.ready ? "approved" : "rejected"}`}>{commercialReadiness?.ready ? "Pronto" : "Bloqueado"}</span><h3>Prontidão para começar a vender</h3></div><strong>{commercialReadiness?.blockers || 0} bloqueio(s) · {commercialReadiness?.warnings || 0} aviso(s)</strong></header>
+        <p>Verificação privada da configuração essencial. Somente estados e orientações são retornados; chaves, tokens, e-mails administrativos e conexões nunca saem do servidor.</p>
+        <div className="readiness-checks">{commercialReadiness?.checks?.map((check) => <div key={check.id} className={check.status}><span aria-hidden="true">{check.status === "pass" ? "✓" : check.status === "fail" ? "!" : check.status === "warning" ? "△" : "·"}</span><div><strong>{check.label}</strong><small>{check.detail}</small></div></div>)}</div>
+      </article>
+
       <article className="monitor-ticket">
         <header><div><span className="ticket-status approved">Saúde</span><h3>Infraestrutura</h3></div></header>
         <p>Servidor: <strong>{health.server === "online" ? "Online" : "Indisponível"}</strong> · Banco de dados: <strong>{health.database === "online" ? "Online" : "Indisponível"}</strong> · Tráfego: <strong>{health.trafficLevel === "normal" ? "Normal" : health.trafficLevel === "attention" ? "Atenção" : "Crítico"}</strong>.</p>

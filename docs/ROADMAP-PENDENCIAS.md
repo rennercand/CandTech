@@ -31,6 +31,8 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 - [ ] concluir o plano de resposta a incidentes e realizar um exercício documentado; **runbook criado em 29/08/2026; faltam responsáveis nominais privados e o exercício em ambiente isolado**;
 - [ ] concluir dados do controlador, contratos com operadores, prazos de retenção e revisão jurídica dos textos LGPD antes da venda ampla.
 
+**Controle operacional entregue em 31/08/2026:** a central privada agora verifica, sem revelar valores, a configuração indispensável de banco, sessão, MFA, Pix, Blob, e-mail, administrador, expiração de cobranças, domínio e suporte. Isso reduz erro de configuração, mas não substitui os testes reais, decisões jurídicas, backup/restauração ou pentest listados acima.
+
 ## P1 — núcleo financeiro vendável
 
 - [x] criar contas financeiras e lançamentos relacionais por organização, com previsto, realizado, origem e vínculo auditável; **`financial_accounts`, `financial_commitments` e `financial_ledger_entries` foram criadas com backfill, vínculo compromisso/lançamento, deduplicação e teste negativo entre organizações; Preview e Production foram verificados em 31/08/2026**;

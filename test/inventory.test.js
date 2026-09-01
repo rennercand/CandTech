@@ -48,10 +48,30 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
 
     const order = await createInventoryOrder({
       tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "PED-1", partner: "Cliente",
+      idempotencyKeyHash: "order-key-1",
       lines: productA.variants.map((variant) => ({ variantId: variant.id, quantity: 2, delta: 2, unitCost: 0, unitPrice: variant.salePrice, lotCode: "", expiresOn: "" })),
     });
     assert.equal(order.total, 102);
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [8, 8]);
+    const replayedOrder = await createInventoryOrder({
+      tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "PED-1", partner: "Cliente",
+      idempotencyKeyHash: "order-key-1",
+      lines: productA.variants.map((variant) => ({ variantId: variant.id, quantity: 2, delta: 2, unitCost: 0, unitPrice: variant.salePrice, lotCode: "", expiresOn: "" })),
+    });
+    assert.equal(replayedOrder.id, order.id);
+    assert.equal(replayedOrder.replayed, true);
+    assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [8, 8]);
+    const backendAfterOrder = await getDatabaseBackend();
+    assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM inventory_orders WHERE tenant_id = ?").get(tenantA).count, 1);
+    assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_id = ?").get(order.id).count, 1);
+    await assert.rejects(() => createInventoryOrder({
+      tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "PED-SEM-SALDO", partner: "Cliente",
+      idempotencyKeyHash: "order-key-insufficient",
+      lines: [{ variantId: productA.variants[0].id, quantity: 999, unitCost: 0, unitPrice: 25, lotCode: "", expiresOn: "" }],
+    }));
+    assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [8, 8]);
+    assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM inventory_orders WHERE tenant_id = ?").get(tenantA).count, 1);
+    assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_type = 'inventory_order'").get().count, 1);
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: order.batchId });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [10, 10]);
 

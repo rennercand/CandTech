@@ -255,7 +255,7 @@ Se nenhuma linha for atualizada, retornar estoque insuficiente e não confirmar 
 
 Adicionar chave de idempotência em operações que podem chegar repetidas por internet instável, clique duplo ou webhook.
 
-**Progresso em 30/08/2026:** a infraestrutura persistente foi criada e aplicada em Preview e Production. O salvamento de histórico já exige chave, detecta conteúdo conflitante, devolve a resposta concluída em repetição e possui testes de concorrência lógica e retomada. Ainda falta aplicar o contrato às operações críticas listadas abaixo.
+**Progresso em 31/08/2026:** a infraestrutura persistente foi criada e aplicada em Preview e Production. Histórico e mutações do estoque exigem chave, detectam conteúdo conflitante e devolvem a resposta concluída em repetição. Pedidos possuem deduplicação persistida por organização; repetir a mesma venda não baixa o estoque novamente. Ainda falta aplicar o contrato às operações críticas fora desses módulos.
 
 Prioridade:
 
@@ -399,7 +399,7 @@ Não usar fila distribuída complexa enquanto o volume não exigir. Começar com
 
 Quando webhooks, e-mails, contador, marketplace ou integrações externas crescerem, implementar padrão transactional outbox.
 
-**Progresso em 30/08/2026:** tabela, deduplicação e função de criação de eventos foram implementadas e aplicadas no Neon; o histórico já publica o primeiro evento interno. Antes de webhooks externos, a gravação do domínio e do evento ainda deve entrar na mesma transação e o worker precisa ser criado.
+**Progresso em 31/08/2026:** tabela, deduplicação e worker protegido foram implementados. Venda/compra, movimentos, pedido, itens e evento usam uma única transação serializável; o worker faz claim exclusivo, limita tentativas, aplica backoff e não descarta tipos desconhecidos. Antes de webhooks externos, cada novo consumidor deverá ganhar assinatura, política de reprocessamento e teste de entrega.
 
 Transação salva:
 

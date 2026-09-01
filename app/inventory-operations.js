@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { INVENTORY_TEMPLATE, matchInventoryEntry, parseInventoryFile, parseInventoryText } from "@/lib/inventory-import";
 import FileNameDialog, { useFileNameDialog } from "./file-name-dialog";
 
@@ -129,6 +129,7 @@ export default function InventoryOperations({ initialSection = "overview", onSna
   const [inventory, setInventory] = useState({ products: [], batches: [], orders: [], lots: [] });
   const [section, setSection] = useState(initialSection); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(""); const [error, setError] = useState(false); const [duplicate, setDuplicate] = useState(null);
+  const pendingIdempotency = useRef(new Map());
   const [driveFile, setDriveFile] = useState(null);
   const [productQuery, setProductQuery] = useState("");
   const variants = useMemo(() => variantRows(inventory), [inventory]);
@@ -181,7 +182,7 @@ export default function InventoryOperations({ initialSection = "overview", onSna
     sessionStorage.removeItem("candtech_pending_inventory_drive");
     sendInventoryToDrive(pendingFilename);
   }, [loading, canUseDrive]);
-  async function post(payload, success) { setBusy(true); setMessage(""); try { const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); const body = await response.json(); if (!response.ok) throw new Error(body.error); setInventory(body.inventory); setError(false); setMessage(success); return true; } catch (cause) { setError(true); setMessage(cause.message || "Não foi possível concluir."); return false; } finally { setBusy(false); } }
+  async function post(payload, success) { setBusy(true); setMessage(""); const serialized = JSON.stringify(payload); const idempotencyKey = pendingIdempotency.current.get(serialized) || globalThis.crypto?.randomUUID?.() || `inventory-${Date.now()}-${Math.random().toString(36).slice(2)}`; pendingIdempotency.current.set(serialized, idempotencyKey); try { const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey }, body: serialized }); const body = await response.json(); if (!response.ok) throw new Error(body.error); pendingIdempotency.current.delete(serialized); setInventory(body.inventory); setError(false); setMessage(success); return true; } catch (cause) { setError(true); setMessage(cause.message || "Não foi possível concluir."); return false; } finally { setBusy(false); } }
   async function downloadInventory(format) {
     const filename = await requestFileName({ suggestedName: `estoque-candtech-${new Date().toISOString().slice(0, 10)}`, extension: format, description: "Escolha o nome do relatório de estoque." });
     if (!filename) return;

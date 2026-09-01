@@ -42,7 +42,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 - [x] implementar contas recorrentes e parceladas, pagamento parcial, juros, multa, desconto e inadimplência; **séries finitas semanais, mensais ou anuais preservam vencimentos de fim de mês; baixas parciais criam lançamentos vinculados, o saldo considera ajustes sem alterar o valor-base e vencidos exibem quantidade e valor em aberto. Migration e backfill foram verificados em Preview e Production em 31/08/2026**;
 - [x] adicionar alertas e calendário financeiro, além de previsão de caixa para 7, 30 e 90 dias; **a agenda ordena vencidos e próximos compromissos, destaca hoje e os próximos sete dias, e projeta o saldo realizado somando recebíveis e subtraindo pagamentos ainda abertos em cada horizonte; regra determinística coberta por teste em 31/08/2026**;
 - [x] criar regras determinísticas de categorização, versionadas, explicáveis e revisáveis pela empresa; **regras por termo e tipo são persistidas por organização, mostram a justificativa antes da aplicação humana e gravam identificador/versão no lançamento classificado**;
-- [ ] implementar idempotência persistida para mutações críticas e uma outbox antes de ampliar integrações e jobs; **tabelas, migration, hashing canônico, replay/conflito e deduplicação foram aplicados no Neon em 30/08/2026; o histórico usa o contrato e cria evento interno, mas faltam as operações críticas, transação domínio+outbox e worker**;
+- [ ] implementar idempotência persistida para mutações críticas e uma outbox antes de ampliar integrações e jobs; **histórico e todas as mutações da API de estoque exigem chave persistida, com replay e conflito. Venda/compra, baixa/entrada de estoque, pedido, itens e outbox agora usam uma única transação serializável; pedidos repetidos não movimentam saldo novamente e o worker protegido por `CRON_SECRET` possui claim exclusivo, tentativas e backoff. Ainda faltam aplicar o mesmo contrato transacional à conclusão de serviços, moderação de pagamentos e demais mutações críticas**;
 - [ ] paginar listas de crescimento contínuo e medir latência, conexões, tamanho das tabelas e custo do Neon; **histórico ganhou paginação por cursor no banco, API e interface em 30/08/2026, com limite máximo, ordenação determinística e teste multiempresa; faltam as demais listas e as métricas operacionais**.
 
 ## P1 — operação de comércio e serviços
@@ -52,7 +52,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 - [ ] criar ordem de serviço, orçamento, agenda, recorrência e cobrança de serviços;
 - [ ] consolidar venda rápida/PDV com recebimento, caixa, estoque e desfazimento transacional;
 - [ ] criar uma tela “Hoje” orientada a ações pendentes, atrasos e exceções;
-- [ ] validar concorrência de estoque em cenários paralelos e reforçar idempotência de pedidos e movimentos.
+- [ ] validar concorrência de estoque em cenários paralelos e reforçar idempotência de pedidos e movimentos; **pedido e movimentos já são atômicos, serializáveis e deduplicados por organização; testes cobrem replay, saldo insuficiente sem efeito parcial e outbox única. Ainda falta um teste de concorrência real contra Postgres com requisições paralelas**.
 
 ## P2/P3 — diferenciação e integrações
 

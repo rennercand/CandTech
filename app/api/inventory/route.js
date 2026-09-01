@@ -14,6 +14,8 @@ import {
   undoInventoryBatch,
 } from "@/lib/inventory-db";
 import { reportServerError } from "@/lib/server-observability";
+import { claimIdempotency, completeIdempotency, failIdempotency } from "@/lib/idempotency-db";
+import { hashIdempotencyRequest, hashIdempotencyValue, normalizeIdempotencyKey } from "@/lib/idempotency";
 
 export const runtime = "nodejs";
 
@@ -84,6 +86,7 @@ export async function POST(request) {
   if (limited) return limited;
   const auth = await authorized(request, ["inventory", "commerce"]);
   if (auth.response) return auth.response;
+  let idempotencyContext = null;
   try {
     const body = await readLimitedJson(request, { maxBytes: 750_000, maxDepth: 8, maxNodes: 10_000, maxStringLength: 5_000 });
     const action = text(body.action, 40);
@@ -91,10 +94,29 @@ export async function POST(request) {
     if (!hasPermission(auth.access, requiredPermission)) {
       return NextResponse.json({ error: "Sem permissão para esta operação." }, { status: 403 });
     }
+    const idempotencyKey = normalizeIdempotencyKey(request.headers.get("idempotency-key"));
+    if (!idempotencyKey) return NextResponse.json({ error: "Idempotency-Key obrigatório ou inválido." }, { status: 400 });
+    const keyHash = hashIdempotencyValue(idempotencyKey);
+    idempotencyContext = {
+      userId: auth.user.id,
+      operation: `inventory.${action}`,
+      keyHash,
+      requestHash: hashIdempotencyRequest(body),
+    };
+    const claim = await claimIdempotency({ ...idempotencyContext, organizationId: auth.access.organizationId });
+    if (claim.state === "conflict") return NextResponse.json({ error: "A mesma chave de idempotência foi usada com outro conteúdo." }, { status: 409 });
+    if (claim.state === "pending") return NextResponse.json({ error: "Esta operação ainda está em processamento." }, { status: 409, headers: { "Retry-After": "2" } });
+    if (claim.state === "replay") return NextResponse.json(claim.body, { status: claim.status, headers: { "Idempotent-Replayed": "true" } });
+
+    const complete = async (responseBody, status = 200) => {
+      const completed = await completeIdempotency({ ...idempotencyContext, status, body: responseBody });
+      if (!completed) throw new Error("IDEMPOTENCY_COMPLETION_FAILED");
+      return NextResponse.json(responseBody, { status });
+    };
 
     if (action === "create-products" || action === "import-products") {
       const checked = validateProducts(body.products, { maxProducts: action === "import-products" ? 500 : 30 });
-      if (checked.error) return NextResponse.json({ error: checked.error }, { status: 400 });
+      if (checked.error) return complete({ error: checked.error }, 400);
       const created = await createInventoryProducts({ tenantId: auth.tenantId, products: checked.products });
       const initialLines = created.flatMap((product) => product.variants
         .filter((variant) => variant.quantity > 0)
@@ -107,39 +129,40 @@ export async function POST(request) {
         reference: text(body.reference || (action === "import-products" ? "Importação de produtos" : "Cadastro inicial"), 120),
         note: "Saldo inicial informado no cadastro", lines: initialLines,
       });
-      return NextResponse.json({ created: created.length, batch, inventory: await listInventory(auth.tenantId) }, { status: 201 });
+      return complete({ created: created.length, batch, inventory: await listInventory(auth.tenantId) }, 201);
     }
 
     if (action === "entry") {
       const lines = normalizeMovementLines(body.lines, { direction: 1 });
-      if (!lines) return NextResponse.json({ error: "Informe ao menos um item com quantidade válida." }, { status: 400 });
+      if (!lines) return complete({ error: "Informe ao menos um item com quantidade válida." }, 400);
       const batch = await applyInventoryBatch({
         tenantId: auth.tenantId, userId: auth.user.id, kind: "entry",
         reference: text(body.reference, 120), supplier: text(body.supplier, 120), note: text(body.note, 300), lines,
       });
-      return NextResponse.json({ batch, inventory: await listInventory(auth.tenantId) }, { status: 201 });
+      return complete({ batch, inventory: await listInventory(auth.tenantId) }, 201);
     }
 
     if (action === "order") {
       const type = body.type === "purchase" ? "purchase" : "sale";
       const lines = normalizeMovementLines(body.lines, { direction: 1, maxLines: 100 });
-      if (!lines) return NextResponse.json({ error: "Adicione produtos e quantidades válidas ao pedido." }, { status: 400 });
+      if (!lines) return complete({ error: "Adicione produtos e quantidades válidas ao pedido." }, 400);
       const order = await createInventoryOrder({
         tenantId: auth.tenantId, userId: auth.user.id, type,
-        reference: text(body.reference, 120), partner: text(body.partner, 120), lines,
+        reference: text(body.reference, 120), partner: text(body.partner, 120), lines, idempotencyKeyHash: keyHash,
       });
-      return NextResponse.json({ order, inventory: await listInventory(auth.tenantId) }, { status: 201 });
+      return complete({ order, inventory: await listInventory(auth.tenantId) }, 201);
     }
 
     if (action === "undo-batch") {
-      if (!uuid(body.batchId)) return NextResponse.json({ error: "Operação inválida." }, { status: 400 });
+      if (!uuid(body.batchId)) return complete({ error: "Operação inválida." }, 400);
       const reversal = await undoInventoryBatch({ tenantId: auth.tenantId, userId: auth.user.id, batchPublicId: body.batchId });
-      if (!reversal) return NextResponse.json({ error: "Operação não encontrada ou já desfeita." }, { status: 404 });
-      return NextResponse.json({ reversal, inventory: await listInventory(auth.tenantId) });
+      if (!reversal) return complete({ error: "Operação não encontrada ou já desfeita." }, 404);
+      return complete({ reversal, inventory: await listInventory(auth.tenantId) });
     }
 
-    return NextResponse.json({ error: "Ação de estoque desconhecida." }, { status: 400 });
+    return complete({ error: "Ação de estoque desconhecida." }, 400);
   } catch (error) {
+    if (idempotencyContext) await failIdempotency(idempotencyContext).catch(() => {});
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
     const message = String(error?.message || "");

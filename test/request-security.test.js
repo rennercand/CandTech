@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readLimitedJson, RequestBodyError } from "../lib/request-security.js";
 import { ANALYTICS_CONSENT_KEY, trackMarketingEvent } from "../lib/analytics.js";
@@ -44,7 +44,7 @@ test("leitor JSON limita profundidade e chaves perigosas", async () => {
 });
 
 test("toda API privada exige sessão JWT no servidor", () => {
-  const cronRoute = join("app", "api", "cron", "pix-expiration", "route.js");
+  const cronPrefix = join("app", "api", "cron") + sep;
   const publicRoutes = new Set([
     join("app", "api", "auth", "login", "route.js"),
     join("app", "api", "auth", "register", "route.js"),
@@ -57,13 +57,14 @@ test("toda API privada exige sessão JWT no servidor", () => {
     // A prévia usa um token aleatório, limita requisições e nunca retorna o
     // e-mail completo, IDs ou dados da empresa.
     join("app", "api", "team", "invitation", "preview", "route.js"),
-    // A tarefa agendada não possui sessão do usuário; usa segredo exclusivo.
-    cronRoute,
   ]);
   for (const file of routeFiles(join(projectRoot, "app", "api"))) {
     const route = relative(projectRoot, file);
     const source = readFileSync(file, "utf8");
-    if (route === cronRoute) assert.match(source, /CRON_SECRET/, "cron precisa exigir segredo próprio");
+    if (route.startsWith(cronPrefix)) {
+      assert.match(source, /CRON_SECRET/, "cron precisa exigir segredo próprio");
+      continue;
+    }
     if (publicRoutes.has(route)) continue;
     assert.match(source, /getSession\s*\(/, `${route} precisa validar a sessão JWT`);
   }

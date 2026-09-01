@@ -250,7 +250,9 @@ flowchart TD
 - a migration `migrations/20260826_pix_payment_receipts.sql` cria os metadados dos comprovantes e o estado `payment_review`;
 - a migration `migrations/20260826_staff_access.sql` cria o controle de privilégio mínimo da equipe interna;
 - a migration `migrations/20260828_billing_setup_paid.sql` registra `setup_paid_at`; após a aprovação do Pix inicial de R$ 180, novas solicitações cobram somente R$ 60;
-- a migration `migrations/20260830_idempotency_outbox.sql` cria chaves de idempotência persistidas e a fila outbox; o salvamento do histórico já rejeita reutilização conflitante, repete respostas concluídas e cria evento deduplicado;
+- a migration `migrations/20260830_idempotency_outbox.sql` cria chaves de idempotência persistidas e a fila outbox; histórico e mutações do estoque rejeitam reutilização conflitante e repetem respostas concluídas;
+- a migration `migrations/20260831_inventory_order_idempotency.sql` deduplica pedidos por organização; venda/compra, movimentos, pedido, itens e evento outbox são confirmados na mesma transação serializável;
+- `/api/cron/outbox` usa `CRON_SECRET` e processa eventos internos com claim exclusivo, limite de tentativas e backoff; eventos desconhecidos permanecem retentáveis em vez de serem descartados;
 - a migration `migrations/20260831_workspace_history_tenants.sql` adiciona e preenche `organization_id` em workspace e histórico; todas as rotas combinam organização e proprietário resolvidos no servidor, com teste de acesso cruzado;
 - a migration `migrations/20260831_relational_clients_tasks.sql` cria clientes e tarefas relacionais, preserva os registros do payload legado, vincula tarefas a clientes, marca o workspace migrado e foi verificada em Preview e Production;
 - a migration `migrations/20260831_relational_deliveries.sql` cria entregas relacionais, preserva registros legados, prepara os vínculos com cliente/pedido e foi verificada em Preview e Production;

@@ -25,6 +25,7 @@ import SupportCenter from "./support-center";
 import { trackMarketingEvent } from "../lib/analytics";
 import FileNameDialog, { useFileNameDialog } from "./file-name-dialog";
 import { markFinancialDuplicates, parseFinancialFile } from "../lib/financial-import";
+import { normalizeCategoryRules, suggestCategory } from "../lib/financial-category-rules";
 
 async function hydrateAuthenticatedUser() {
   const response = await fetch("/api/auth/me", { cache: "no-store" });
@@ -162,6 +163,7 @@ function normalizeWorkspacePayload(payload = {}) {
     cashEntries: [blankCashRow()],
     cashFilters: { month: "", type: "todos", category: "todos" },
     financialCategories: DEFAULT_FINANCIAL_CATEGORIES,
+    financialCategoryRules: [],
     organizationName: "Minha organização",
     saveTitle: "Simulação financeira",
     financeState: emptyFinanceState(),
@@ -191,6 +193,7 @@ function normalizeWorkspacePayload(payload = {}) {
         : defaults.cashEntries,
     cashFilters: { ...defaults.cashFilters, ...(payload.cashFilters || {}) },
     financialCategories: normalizeFinancialCategories(payload),
+    financialCategoryRules: normalizeCategoryRules(payload.financialCategoryRules),
     financeState: {
       ...defaults.financeState,
       ...(payload.financeState || {}),
@@ -797,6 +800,7 @@ export default function CandTechApp({ publicFallback = null }) {
     category: "todos",
   });
   const [financialCategories, setFinancialCategories] = useState(DEFAULT_FINANCIAL_CATEGORIES);
+  const [financialCategoryRules, setFinancialCategoryRules] = useState([]);
   const [organizationName, setOrganizationName] = useState("Minha organização");
   const [history, setHistory] = useState([]);
   const [historyNextCursor, setHistoryNextCursor] = useState(null);
@@ -846,6 +850,7 @@ export default function CandTechApp({ publicFallback = null }) {
       cashEntries,
       cashFilters,
       financialCategories,
+      financialCategoryRules,
       organizationName,
       saveTitle,
       financeState,
@@ -865,6 +870,7 @@ export default function CandTechApp({ publicFallback = null }) {
       cashEntries,
       cashFilters,
       financialCategories,
+      financialCategoryRules,
       organizationName,
       saveTitle,
       financeState,
@@ -1122,6 +1128,7 @@ export default function CandTechApp({ publicFallback = null }) {
         financialCategories: [...current, ...(payload.financialCategories || [])],
       })
       : payload.financialCategories);
+    setFinancialCategoryRules(payload.financialCategoryRules);
     setOrganizationName(payload.organizationName);
     setSaveTitle(payload.saveTitle);
     setFinanceState(payload.financeState);
@@ -2315,6 +2322,7 @@ export default function CandTechApp({ publicFallback = null }) {
             <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}
               entries={cashEntries} filteredEntries={filteredCashEntries} filters={cashFilters}
               setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals} categories={financialCategories}
+              categoryRules={financialCategoryRules} setCategoryRules={setFinancialCategoryRules}
               financialAccounts={financialAccounts} commerceOrders={commerceOrders}
               onReconcile={reconcileFinancialSuggestion} onUndoReconciliation={undoFinancialReconciliation}
               onSave={saveCashFlow} />
@@ -2782,6 +2790,8 @@ function CashFlow({
   setEntries,
   totals,
   categories,
+  categoryRules,
+  setCategoryRules,
   financialAccounts,
   commerceOrders,
   onReconcile,
@@ -2790,6 +2800,7 @@ function CashFlow({
 }) {
   const [pdfState, setPdfState] = useState({ loading: false, message: "" });
   const [fileImport, setFileImport] = useState({ loading: false, message: "", preview: null, filename: "" });
+  const [ruleDraft, setRuleDraft] = useState({ term: "", category: categories?.[0] || "Geral", type: "todos" });
   const markedPreview = useMemo(
     () => fileImport.preview ? markFinancialDuplicates(fileImport.preview.rows, entries) : null,
     [fileImport.preview, entries],
@@ -2809,6 +2820,8 @@ function CashFlow({
     () => suggestFinancialReconciliations(entries, financialAccounts, commerceOrders),
     [entries, financialAccounts, commerceOrders],
   );
+  const categorySuggestions = useMemo(() => entries.map((entry, index) => ({ index, suggestion: suggestCategory(entry, categoryRules) }))
+    .filter(({ suggestion, index }) => suggestion && suggestion.category !== entries[index]?.category), [entries, categoryRules]);
   const availableCategories = [...new Set([
     ...(categories || []),
     ...entries.map((entry) => entry.category),
@@ -2907,6 +2920,22 @@ function CashFlow({
           "Não foi possível ler o extrato. O PDF pode estar protegido por senha, corrompido ou ser apenas uma imagem.",
       });
     }
+  }
+  function addCategoryRule(event) {
+    event.preventDefault();
+    const term = ruleDraft.term.trim();
+    if (!term || !ruleDraft.category) return;
+    setCategoryRules((current) => [...current, {
+      id: newWorkspaceEntityId("category-rule"), version: 1, term,
+      category: ruleDraft.category, type: ruleDraft.type, active: true,
+    }]);
+    setRuleDraft((current) => ({ ...current, term: "" }));
+  }
+  function applyCategorySuggestion(index, suggestion) {
+    edit(index, "category", suggestion.category);
+    setEntries((current) => current.map((entry, position) => position === index ? {
+      ...entry, categoryRuleId: suggestion.ruleId, categoryRuleVersion: suggestion.ruleVersion,
+    } : entry));
   }
   async function previewFinancialImport(event) {
     const file = event.target.files?.[0];
@@ -3081,6 +3110,25 @@ function CashFlow({
         {fileImport.message ? (
           <p className={fileImport.message.includes("importado") || fileImport.message.includes("removidos") ? "import-status success" : "import-status"}>{fileImport.message}</p>
         ) : null}
+        <section className="category-rules-panel" aria-label="Regras de categorização">
+          <div>
+            <span className="eyebrow">CATEGORIZAÇÃO EXPLICÁVEL</span>
+            <h3>Regras da empresa</h3>
+            <p>Crie uma regra por palavra da descrição. A sugestão só altera o lançamento depois da sua revisão.</p>
+          </div>
+          <form className="category-rule-form" onSubmit={addCategoryRule}>
+            <label>Descrição contém<input value={ruleDraft.term} maxLength={80} placeholder="Ex.: energia" onChange={(event) => setRuleDraft({ ...ruleDraft, term: event.target.value })} /></label>
+            <label>Tipo<select value={ruleDraft.type} onChange={(event) => setRuleDraft({ ...ruleDraft, type: event.target.value })}><option value="todos">Qualquer</option><option value="entrada">Entrada</option><option value="saida">Saída</option></select></label>
+            <label>Categoria<select value={ruleDraft.category} onChange={(event) => setRuleDraft({ ...ruleDraft, category: event.target.value })}>{availableCategories.map((category) => <option key={category}>{category}</option>)}</select></label>
+            <button className="secondary-button" type="submit">Criar regra</button>
+          </form>
+          {(categoryRules || []).length ? <div className="category-rule-list">{categoryRules.map((rule, index) => (
+            <article key={rule.id}><div><strong>{rule.term}</strong><small>v{rule.version} · {rule.type === "todos" ? "qualquer tipo" : rule.type} → {rule.category}</small></div><button className="danger-button" type="button" onClick={() => setCategoryRules((current) => current.filter((_, position) => position !== index))}>Excluir</button></article>
+          ))}</div> : <small>Nenhuma regra criada ainda.</small>}
+          {categorySuggestions.length ? <div className="category-rule-list suggestions"><strong>{categorySuggestions.length} sugestão(ões) para revisar</strong>{categorySuggestions.slice(0, 8).map(({ index, suggestion }) => (
+            <article key={`${suggestion.ruleId}-${index}`}><div><strong>{entries[index].description || "Sem descrição"} → {suggestion.category}</strong><small>{suggestion.explanation} Regra v{suggestion.ruleVersion}.</small></div><button className="primary-button compact" type="button" onClick={() => applyCategorySuggestion(index, suggestion)}>Aplicar</button></article>
+          ))}</div> : null}
+        </section>
         {reconciliationSuggestions.length ? (
           <section className="reconciliation-panel" aria-label="Sugestões de conciliação">
             <div>

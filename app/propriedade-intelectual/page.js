@@ -46,6 +46,7 @@ export default function IntellectualPropertyPage() {
     <p>Dados, logotipos, fotografias, catálogos e outros conteúdos inseridos pelo cliente permanecem sob responsabilidade e titularidade do cliente ou de seus licenciantes, conforme os Termos de Uso. O cliente deve possuir autorização para usar esse conteúdo e concede à CandTech somente a licença operacional necessária para prestar o serviço.</p>
 
     <h2>7. Direitos autorais e marca</h2>
+    <p>O software CandTech é proprietário e de código fechado. O cliente recebe somente o direito limitado de acessar o serviço hospedado nos termos contratados; não recebe licença para copiar, modificar, distribuir, sublicenciar, revender ou explorar o código-fonte. Componentes de terceiros continuam sujeitos às respectivas licenças.</p>
     <p>A proteção autoral de obras próprias independe de registro, nos termos da legislação brasileira. Já a propriedade e o uso exclusivo de uma marca em todo o território nacional decorrem do registro validamente concedido pelo INPI. A presença dos símbolos © ou ™ informa uma reivindicação de direitos ou uso como sinal distintivo, mas não equivale ao símbolo ® nem declara registro concedido.</p>
     <p>Nada nesta política limita citações, pequenos trechos, usos privados e demais hipóteses legalmente permitidas. Também não impede referências nominativas honestas necessárias para identificar o serviço, desde que não haja confusão, aproveitamento parasitário ou prejuízo à reputação e ao caráter distintivo da marca.</p>
 

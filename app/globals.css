@@ -1868,6 +1868,21 @@ select:focus {
   border: 1px solid #cce8f5;
   border-radius: 12px;
 }
+
+.category-rules-panel {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+.category-rules-panel h3 { margin: .25rem 0; }
+.category-rule-form { display: grid; grid-template-columns: 2fr 1fr 1.4fr auto; gap: .75rem; align-items: end; margin-top: 1rem; }
+.category-rule-form label { display: grid; gap: .35rem; }
+.category-rule-list { display: grid; gap: .5rem; margin-top: 1rem; }
+.category-rule-list article { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .75rem; border-radius: 12px; background: var(--surface); }
+.category-rule-list article div { display: grid; gap: .2rem; }
+@media (max-width: 800px) { .category-rule-form { grid-template-columns: 1fr; } }
 .reconciliation-panel h3 {
   margin: 5px 0 3px;
 }

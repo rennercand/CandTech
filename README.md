@@ -362,4 +362,4 @@ A auditoria de histórico e código de 29/08/2026 está registrada em [AUDITORIA
 
 ## Licença
 
-Distribuído sob a licença ISC definida em `package.json`.
+Software proprietário e de código fechado. Consulte `LICENSE` e `COPYRIGHT.md`. O acesso ao serviço não concede licença sobre o código-fonte; dependências de terceiros mantêm suas próprias licenças.

@@ -93,7 +93,8 @@ Todas as APIs exigem sessão JWT e resolvem a empresa pelo acesso atual do usuá
 
 ## Limites desta entrega
 
-- lotes e validades recebidos possuem consulta própria, mas a baixa automática por lote/FEFO ainda não está implementada;
+- lotes e validades possuem saldo próprio; na venda, o sistema baixa primeiro o lote com validade mais próxima (FEFO) e deixa os lotes sem validade por último;
+- a Visão geral usa o histórico confirmado para mostrar custo médio ponderado, curva ABC por faturamento, itens há 90 dias sem venda e sugestão de reposição até o mínimo cadastrado;
 - não existe integração fiscal oficial nem leitura automática de nota;
 - a entrada em massa atualiza quantidade e custo de SKUs existentes, mas alterações em massa de nome, preço, mínimo e localização ainda exigem um fluxo próprio futuro;
 - o saldo é protegido por transação, mas testes de carga e restauração de backup continuam obrigatórios antes da venda empresarial ampla.

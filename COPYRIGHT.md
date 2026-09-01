@@ -10,3 +10,6 @@ de terceiros permanecem sujeitos às licenças de seus respectivos titulares.
 Este arquivo é um aviso privado de titularidade e licença; não é certificado de
 registro emitido pelo INPI ou por outro órgão público. Registros oficiais, quando
 desejados, precisam ser protocolados separadamente pelo titular.
+
+Consulte também `DECLARACAO-DE-TITULARIDADE.md`, que organiza o escopo declarado,
+as evidências a preservar e o controle das versões eventualmente registradas.

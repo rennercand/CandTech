@@ -13,6 +13,7 @@ import {
   undoInventoryBatch,
 } from "../lib/inventory-db.js";
 import { normalizeMovementLines, validateProducts } from "../lib/inventory.js";
+import { buildInventoryInsights } from "../lib/inventory-insights.js";
 import { matchInventoryEntry, parseInventoryRows, parseInventoryText } from "../lib/inventory-import.js";
 import { canExportInventory, inventoryCsv, inventoryXlsx } from "../lib/inventory-report.js";
 import { strFromU8, unzipSync } from "fflate";
@@ -74,6 +75,7 @@ test("estoque relacional isola empresas, movimenta vários itens e desfaz opera�
     assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_type = 'inventory_order'").get().count, 1);
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: order.batchId });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [10, 10]);
+    assert.equal(backendAfterOrder.db.prepare("SELECT status FROM inventory_orders WHERE public_id = ?").get(order.id).status, "cancelled");
 
     await assert.rejects(() => applyInventoryBatch({
       tenantId: tenantB, userId: ownerB.id, kind: "entry",
@@ -83,6 +85,32 @@ test("estoque relacional isola empresas, movimenta vários itens e desfaz opera�
 
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: entry.id });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [0, 0]);
+
+    const earlyLot = await applyInventoryBatch({ tenantId: tenantA, userId: ownerA.id, kind: "entry", reference: "LOTE-PRIMEIRO",
+      lines: [{ variantId: productA.variants[0].id, quantity: 3, delta: 3, unitCost: 10, lotCode: "L-ANTIGO", expiresOn: "2027-06-30" }] });
+    const lateLot = await applyInventoryBatch({ tenantId: tenantA, userId: ownerA.id, kind: "entry", reference: "LOTE-DEPOIS",
+      lines: [{ variantId: productA.variants[0].id, quantity: 4, delta: 4, unitCost: 20, lotCode: "L-NOVO", expiresOn: "2027-12-31" }] });
+    const fefoOrder = await createInventoryOrder({ tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "FEFO-1", partner: "Cliente",
+      idempotencyKeyHash: "order-key-fefo",
+      lines: [{ variantId: productA.variants[0].id, quantity: 5, unitCost: 0, unitPrice: 25, lotCode: "", expiresOn: "" }] });
+    const fefoMovements = backendAfterOrder.db.prepare(`SELECT m.lot_code, m.quantity_delta FROM inventory_movements m
+      JOIN inventory_batches b ON b.id = m.batch_id WHERE b.public_id = ? ORDER BY m.id`).all(fefoOrder.batchId)
+      .map((movement) => ({ lot_code: movement.lot_code, quantity_delta: movement.quantity_delta }));
+    assert.deepEqual(fefoMovements, [
+      { lot_code: "L-ANTIGO", quantity_delta: -3 },
+      { lot_code: "L-NOVO", quantity_delta: -2 },
+    ]);
+    const fefoInventory = await listInventory(tenantA);
+    assert.equal(fefoInventory.products[0].variants[0].quantity, 2);
+    assert.equal(fefoInventory.lots.length, 1);
+    assert.equal(fefoInventory.lots[0].lot_code, "L-NOVO");
+    assert.equal(fefoInventory.lots[0].available_quantity, 2);
+    assert.ok(Math.abs(fefoInventory.insights.items.find((item) => item.variantId === productA.variants[0].id).averageUnitCost - (110 / 7)) < 0.001);
+    await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: fefoOrder.batchId });
+    assert.equal(backendAfterOrder.db.prepare("SELECT status FROM inventory_orders WHERE public_id = ?").get(fefoOrder.id).status, "cancelled");
+    await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: earlyLot.id });
+    await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: lateLot.id });
+    assert.equal((await listInventory(tenantA)).products[0].variants[0].quantity, 0);
 
     const backend = await getDatabaseBackend();
     const scopes = backend.db.prepare(`
@@ -103,6 +131,24 @@ test("estoque relacional isola empresas, movimenta vários itens e desfaz opera�
     if (previousPath === undefined) delete process.env.SQLITE_DATABASE_PATH; else process.env.SQLITE_DATABASE_PATH = previousPath;
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("indicadores classificam curva ABC, itens parados e reposição pelo mínimo", () => {
+  const products = [{ name: "Catálogo", unit: "un", variants: [
+    { id: "a", name: "A", sku: "A", quantity: 2, minimumQuantity: 5, unitCost: 10 },
+    { id: "b", name: "B", sku: "B", quantity: 4, minimumQuantity: 2, unitCost: 20 },
+    { id: "c", name: "C", sku: "C", quantity: 1, minimumQuantity: 1, unitCost: 5 },
+  ] }];
+  const insights = buildInventoryInsights(products, [
+    { variant_id: "a", average_unit_cost: 12, sale_revenue: 800, last_sale_at: "2026-08-25T00:00:00Z", created_at: "2026-01-01T00:00:00Z" },
+    { variant_id: "b", average_unit_cost: 18, sale_revenue: 150, last_sale_at: "2026-01-01T00:00:00Z", created_at: "2026-01-01T00:00:00Z" },
+    { variant_id: "c", average_unit_cost: 5, sale_revenue: 50, last_sale_at: "2026-01-01T00:00:00Z", created_at: "2026-01-01T00:00:00Z" },
+  ], new Date("2026-09-01T00:00:00Z"));
+  assert.deepEqual(insights.items.map((item) => item.abcClass), ["A", "B", "C"]);
+  assert.equal(insights.items.find((item) => item.variantId === "a").reorderQuantity, 3);
+  assert.equal(insights.summary.reorderUnits, 3);
+  assert.equal(insights.summary.idleItems, 2);
+  assert.equal(insights.summary.idleStockValue, 77);
 });
 
 test("importação rejeita SKU repetido e linhas sem quantidade", () => {

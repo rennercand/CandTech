@@ -3258,6 +3258,17 @@ body {
 .stock-alert-list > div, .batch-list > div { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; }
 .stock-alert-list > div > *, .batch-list > div > span:first-child { display: grid; gap: 3px; }
 .stock-alert-list span, .batch-list small { color: var(--muted); }
+.inventory-performance-table { display: grid; gap: 0; overflow-x: auto; }
+.inventory-performance-head, .inventory-performance-row { display: grid; grid-template-columns: minmax(220px, 1.5fr) 56px minmax(110px, .7fr) minmax(110px, .7fr) minmax(150px, 1fr); gap: 12px; align-items: center; min-width: 760px; padding: 11px 8px; }
+.inventory-performance-head { color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.inventory-performance-row { border-bottom: 1px solid var(--line); }
+.inventory-performance-row:last-child { border-bottom: 0; }
+.inventory-performance-row > span:first-child { display: grid; gap: 3px; }
+.inventory-performance-row small { color: var(--muted); }
+.abc-badge { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: #fff; }
+.abc-a { background: #16784a; }
+.abc-b { background: #a96800; }
+.abc-c { background: #6b6880; }
 .inventory-form-stack { display: grid; gap: 18px; }
 .inventory-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
 .product-basics { grid-template-columns: 2fr 1fr .7fr; }

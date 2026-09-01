@@ -49,6 +49,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
+- Baixa de vendas por FEFO (vence primeiro, sai primeiro), saldo atual por lote, custo médio histórico ponderado, curva ABC por faturamento, alerta de itens sem venda há 90 dias e sugestão de compra até o estoque mínimo.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.
@@ -362,4 +363,4 @@ A auditoria de histórico e código de 29/08/2026 está registrada em [AUDITORIA
 
 ## Licença
 
-Software proprietário e de código fechado. Consulte `LICENSE` e `COPYRIGHT.md`. O acesso ao serviço não concede licença sobre o código-fonte; dependências de terceiros mantêm suas próprias licenças.
+Software proprietário. Consulte `LICENSE`, `COPYRIGHT.md` e `DECLARACAO-DE-TITULARIDADE.md`. O acesso ao serviço ou a eventual visualização do repositório não concede licença para copiar, modificar, distribuir ou revender o código-fonte; dependências de terceiros mantêm suas próprias licenças. Para operar como código fechado, a visibilidade do repositório no GitHub também deve permanecer privada.

@@ -11,7 +11,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | Autenticação por e-mail, recuperação, MFA e sessão revogável | Entregue para proprietários e equipe administrativa | `app/api/auth/`, `auth_sessions`, `user_mfa`, testes de autenticação |
 | Organizações, cargos, permissões e convites | Entregue para o fluxo atual | `organization_*`, `app/api/team/`, testes de equipe |
 | Workspace e histórico privado | Entregue; clientes, tarefas, entregas e financeiro usam projeções relacionais | `app/api/workspace/`, `customers`, `operational_tasks`, `operational_deliveries`, `financial_*` |
-| Estoque, variações, pedidos e movimentos | Entregue parcialmente | tabelas `inventory_*`, importação e relatórios; faltam FEFO, custo médio e curva ABC |
+| Estoque, variações, pedidos e movimentos | Entregue para o escopo operacional atual | transação serializável, idempotência, FEFO, custo médio histórico, curva ABC, itens parados e reposição |
 | Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 180 inicial, R$ 60 renovação, comprovante privado e moderação |
 | Monitoramento, suporte e administração | Entregue para operação inicial | `monitoring_events`, `support_tickets`, `staff_access` |
 | Google Drive e e-mails transacionais | Entregue e endurecido | OAuth `drive.file` com PKCE, nonce persistido de uso único, tokens cifrados e Resend |
@@ -47,7 +47,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 ## P1 — operação de comércio e serviços
 
-- [ ] completar baixa por lote/FEFO, custo médio histórico, curva ABC, itens parados e sugestão de reposição;
+- [x] completar baixa por lote/FEFO, custo médio histórico, curva ABC, itens parados e sugestão de reposição; **vendas agora distribuem a baixa pelos saldos de lote na ordem de validade, desfazimentos restauram os lotes e cancelam o pedido, o custo médio pondera entradas ativas e a visão geral exibe ABC por faturamento, 90 dias sem venda e quantidade para recompor o mínimo; cenários integrados e regras determinísticas possuem testes**;
 - [ ] transformar entregas do workspace em entidades relacionais ligadas a pedido, estoque e cliente, com eventos e comprovante; **a entidade relacional, os vínculos opcionais com cliente/pedido, o rastreio e a conclusão foram criados em 31/08/2026; faltam a interface operacional, vínculo automático ao pedido, eventos de domínio e comprovante privado**;
 - [ ] criar ordem de serviço, orçamento, agenda, recorrência e cobrança de serviços;
 - [ ] consolidar venda rápida/PDV com recebimento, caixa, estoque e desfazimento transacional;

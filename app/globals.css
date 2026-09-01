@@ -3662,6 +3662,9 @@ body {
 .service-order-meta { color: var(--muted); }
 .service-order-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: .76rem; }
 .service-order-meta span { padding: 6px 9px; border-radius: 9px; background: white; }
+.pos-scan { display: grid; grid-template-columns: minmax(260px, 1fr) auto; gap: 10px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+.pos-scan label { display: grid; gap: 7px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.pos-scan small { grid-column: 1 / -1; color: var(--muted); }
 
 @media (max-width: 1050px) {
   .client-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3686,6 +3689,8 @@ body {
   .service-total { align-items: stretch; flex-direction: column; }
   .service-order-list article > header { flex-direction: column; }
   .service-order-list article > header > div:last-child { text-align: left; }
+  .pos-scan { grid-template-columns: 1fr; }
+  .pos-scan small { grid-column: auto; }
   .client-form .client-notes { grid-column: auto; }
   .client-card { grid-template-columns: 44px 1fr; }
   .client-card > select,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getWorkspace } from "@/lib/db";
+import { appendAuditEvent, getWorkspace } from "@/lib/db";
 import { getOrganizationAccess } from "@/lib/organization-access";
 import { hasPermission } from "@/lib/team-permissions";
 import { guardMutation, readLimitedJson, requestBodyErrorResponse } from "@/lib/request-security";
@@ -21,6 +21,21 @@ export const runtime = "nodejs";
 
 const text = (value, max = 120) => String(value ?? "").trim().slice(0, max);
 const uuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+const date = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : null;
+const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+function auditInventory(auth, { action, subjectType, subjectId, newState }) {
+  return appendAuditEvent({
+    userId: auth.access.ownerUserId,
+    actorUserId: auth.user.id,
+    organizationId: auth.access.organizationId,
+    action,
+    origin: "api/inventory",
+    subjectType,
+    subjectId,
+    newState,
+  }).catch(() => null);
+}
 
 async function authorized(request, permissions = ["inventory"]) {
   const user = await getSession(request);
@@ -129,6 +144,12 @@ export async function POST(request) {
         reference: text(body.reference || (action === "import-products" ? "Importação de produtos" : "Cadastro inicial"), 120),
         note: "Saldo inicial informado no cadastro", lines: initialLines,
       });
+      await auditInventory(auth, {
+        action: action === "import-products" ? "inventory.products.imported" : "inventory.products.created",
+        subjectType: "inventory_batch",
+        subjectId: batch?.id || auth.access.organizationId,
+        newState: { productCount: created.length, initialBalance: Boolean(batch) },
+      });
       return complete({ created: created.length, batch, inventory: await listInventory(auth.tenantId) }, 201);
     }
 
@@ -139,6 +160,8 @@ export async function POST(request) {
         tenantId: auth.tenantId, userId: auth.user.id, kind: "entry",
         reference: text(body.reference, 120), supplier: text(body.supplier, 120), note: text(body.note, 300), lines,
       });
+      await auditInventory(auth, { action: "inventory.entry.created", subjectType: "inventory_batch", subjectId: batch.id,
+        newState: { reference: text(body.reference, 120), lineCount: lines.length } });
       return complete({ batch, inventory: await listInventory(auth.tenantId) }, 201);
     }
 
@@ -146,10 +169,20 @@ export async function POST(request) {
       const type = body.type === "purchase" ? "purchase" : "sale";
       const lines = normalizeMovementLines(body.lines, { direction: 1, maxLines: 100 });
       if (!lines) return complete({ error: "Adicione produtos e quantidades válidas ao pedido." }, 400);
+      const subtotal = money(lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0));
+      const discountAmount = money(Math.max(0, Number(body.discountAmount) || 0));
+      if (discountAmount > subtotal) return complete({ error: "O desconto não pode superar o subtotal." }, 400);
+      if (discountAmount > 0 && !hasPermission(auth.access, "discounts")) return complete({ error: "Seu cargo não permite conceder descontos." }, 403);
+      const paymentMethod = ["cash","pix","debit","credit","transfer","other"].includes(body.paymentMethod) ? body.paymentMethod : "pending";
+      const dueOn = date(body.dueOn);
+      if (paymentMethod === "pending" && !dueOn) return complete({ error: "Informe o vencimento da operação a prazo." }, 400);
       const order = await createInventoryOrder({
         tenantId: auth.tenantId, userId: auth.user.id, type,
-        reference: text(body.reference, 120), partner: text(body.partner, 120), lines, idempotencyKeyHash: keyHash,
+        reference: text(body.reference, 120), partner: text(body.partner, 120), customerId: uuid(body.customerId) ? body.customerId : "",
+        lines, discountAmount, paymentMethod, dueOn, idempotencyKeyHash: keyHash,
       });
+      await auditInventory(auth, { action: `inventory.order.${type}.created`, subjectType: "inventory_order", subjectId: order.id,
+        newState: { total: order.total, paymentMethod: order.paymentMethod, paymentStatus: order.paymentStatus, lineCount: lines.length } });
       return complete({ order, inventory: await listInventory(auth.tenantId) }, 201);
     }
 
@@ -157,6 +190,8 @@ export async function POST(request) {
       if (!uuid(body.batchId)) return complete({ error: "Operação inválida." }, 400);
       const reversal = await undoInventoryBatch({ tenantId: auth.tenantId, userId: auth.user.id, batchPublicId: body.batchId });
       if (!reversal) return complete({ error: "Operação não encontrada ou já desfeita." }, 404);
+      await auditInventory(auth, { action: "inventory.batch.reversed", subjectType: "inventory_batch", subjectId: body.batchId,
+        newState: { reversalId: reversal.id } });
       return complete({ reversal, inventory: await listInventory(auth.tenantId) });
     }
 

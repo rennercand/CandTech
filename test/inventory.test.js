@@ -51,7 +51,7 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
 
     const order = await createInventoryOrder({
       tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "PED-1", partner: "Cliente",
-      idempotencyKeyHash: "order-key-1",
+      paymentMethod: "pending", dueOn: "2026-09-10", idempotencyKeyHash: "order-key-1",
       lines: productA.variants.map((variant) => ({ variantId: variant.id, quantity: 2, delta: 2, unitCost: 0, unitPrice: variant.salePrice, lotCode: "", expiresOn: "" })),
     });
     assert.equal(order.total, 102);
@@ -66,6 +66,7 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [8, 8]);
     const backendAfterOrder = await getDatabaseBackend();
     assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM inventory_orders WHERE tenant_id = ?").get(tenantA).count, 1);
+    assert.deepEqual({...backendAfterOrder.db.prepare("SELECT kind,status,expected_amount,due_on FROM financial_commitments WHERE origin_type='order' AND origin_public_id=?").get(order.id)},{kind:"receivable",status:"pending",expected_amount:102,due_on:"2026-09-10"});
     assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_id = ?").get(order.id).count, 1);
     const automaticDelivery = backendAfterOrder.db.prepare("SELECT public_id, order_public_id, status FROM operational_deliveries WHERE order_public_id = ?").get(order.id);
     assert.equal(automaticDelivery.order_public_id, order.id);
@@ -85,6 +86,7 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: order.batchId });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [10, 10]);
     assert.equal(backendAfterOrder.db.prepare("SELECT status FROM inventory_orders WHERE public_id = ?").get(order.id).status, "cancelled");
+    assert.equal(backendAfterOrder.db.prepare("SELECT status FROM financial_commitments WHERE origin_type='order' AND origin_public_id=?").get(order.id).status,"cancelled");
     assert.equal(backendAfterOrder.db.prepare("SELECT status FROM operational_deliveries WHERE public_id = ?").get(automaticDelivery.public_id).status, "cancelada");
 
     await assert.rejects(() => applyInventoryBatch({
@@ -101,8 +103,10 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
     const lateLot = await applyInventoryBatch({ tenantId: tenantA, userId: ownerA.id, kind: "entry", reference: "LOTE-DEPOIS",
       lines: [{ variantId: productA.variants[0].id, quantity: 4, delta: 4, unitCost: 20, lotCode: "L-NOVO", expiresOn: "2027-12-31" }] });
     const fefoOrder = await createInventoryOrder({ tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "FEFO-1", partner: "Cliente",
-      idempotencyKeyHash: "order-key-fefo",
+      paymentMethod: "pix", discountAmount: 5, idempotencyKeyHash: "order-key-fefo",
       lines: [{ variantId: productA.variants[0].id, quantity: 5, unitCost: 0, unitPrice: 25, lotCode: "", expiresOn: "" }] });
+    assert.equal(fefoOrder.total,120);
+    assert.deepEqual({...backendAfterOrder.db.prepare("SELECT direction,realized_amount FROM financial_ledger_entries WHERE origin_type='order' AND origin_public_id=?").get(fefoOrder.id)},{direction:"income",realized_amount:120});
     const fefoMovements = backendAfterOrder.db.prepare(`SELECT m.lot_code, m.quantity_delta FROM inventory_movements m
       JOIN inventory_batches b ON b.id = m.batch_id WHERE b.public_id = ? ORDER BY m.id`).all(fefoOrder.batchId)
       .map((movement) => ({ lot_code: movement.lot_code, quantity_delta: movement.quantity_delta }));
@@ -117,7 +121,8 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
     assert.equal(fefoInventory.lots[0].available_quantity, 2);
     assert.ok(Math.abs(fefoInventory.insights.items.find((item) => item.variantId === productA.variants[0].id).averageUnitCost - (110 / 7)) < 0.001);
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: fefoOrder.batchId });
-    assert.equal(backendAfterOrder.db.prepare("SELECT status FROM inventory_orders WHERE public_id = ?").get(fefoOrder.id).status, "cancelled");
+    assert.deepEqual({...backendAfterOrder.db.prepare("SELECT status,payment_status FROM inventory_orders WHERE public_id = ?").get(fefoOrder.id)},{status:"cancelled",payment_status:"refunded"});
+    assert.deepEqual({...backendAfterOrder.db.prepare("SELECT direction,realized_amount FROM financial_ledger_entries WHERE origin_type='order_reversal' AND origin_public_id=?").get(fefoOrder.id)},{direction:"expense",realized_amount:120});
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: earlyLot.id });
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: lateLot.id });
     assert.equal((await listInventory(tenantA)).products[0].variants[0].quantity, 0);

@@ -2332,8 +2332,8 @@ export default function CandTechApp({ publicFallback = null }) {
               onSave={saveCashFlow} />
           </div>
         )}
-        {view === "inventory" && <InventoryOperations clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
-        {view === "commerce" && <InventoryOperations initialSection="orders" clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "inventory" && <InventoryOperations clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} canDiscount={canAccess("discounts")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "commerce" && <InventoryOperations initialSection="orders" clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} canDiscount={canAccess("discounts")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
         {view === "services" && <ServiceOperations clients={clients} />}
         {view === "clients" && <ClientManager clients={clients} setClients={setClients} orders={[...commerceOrders, ...(inventoryState.orders || [])]} />}
         {view === "tasks" && <TaskKanban tasks={tasks} setTasks={setTasks} clients={clients} />}

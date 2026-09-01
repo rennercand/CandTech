@@ -13,6 +13,7 @@ import { hasMeaningfulWorkspaceContent } from "../lib/workspace-content.js";
 import {
   filterHistoryForAccess,
   filterWorkspaceForAccess,
+  hasPermission,
   mergeWorkspaceForAccess,
   normalizePermissions,
 } from "../lib/team-permissions.js";
@@ -267,6 +268,12 @@ test("histórico e permissões desconhecidas são negados por padrão", () => {
   assert.deepEqual(access.permissions, ["inventory"]);
   assert.equal(filterHistoryForAccess({ calculation_type: "tabela-financeira", payload: {} }, access), null);
   assert.equal(filterHistoryForAccess({ calculation_type: "tipo-inventado", payload: {} }, access), null);
+});
+
+test("desconto no PDV exige permissão separada de vender", () => {
+  assert.equal(hasPermission({ role: "attendant", permissions: ["commerce"] }, "discounts"), false);
+  assert.equal(hasPermission({ role: "attendant", permissions: ["commerce", "discounts"] }, "discounts"), true);
+  assert.equal(hasPermission({ role: "owner", permissions: [] }, "discounts"), true);
 });
 
 test("IDs de outra conta não permitem ler, sobrescrever ou administrar recursos", async () => {

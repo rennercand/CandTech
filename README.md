@@ -55,6 +55,8 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Conclusão transacional de serviço: exige execução iniciada, baixa materiais por FEFO, consolida custo e margem, cria a conta a receber, publica o evento e agenda o próximo ciclo sem efeitos parciais ou duplicados.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
+- PDV rápido com leitor de SKU/EAN, cliente opcional, desconto autorizado por permissão e recebimento em dinheiro, Pix, cartão, transferência ou a prazo.
+- Venda confirmada liga estoque, entrega e financeiro: recebida entra no caixa, pendente cria conta a receber e o desfazimento gera o efeito inverso sem apagar a auditoria.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.
 
 ## Tecnologias
@@ -90,7 +92,7 @@ flowchart LR
   API --> EMAIL[Resend]
 ```
 
-O fluxo completo, o mapa mental, os ambientes e a cobrança Pix estão em [ARQUITETURA.md](./docs/ARQUITETURA.md). O inventário objetivo do que ainda falta está em [ROADMAP-PENDENCIAS.md](./docs/ROADMAP-PENDENCIAS.md). A rotina de orçamento até cobrança está em [GUIA-OPERACAO-SERVICOS.md](./docs/GUIA-OPERACAO-SERVICOS.md).
+O fluxo completo, o mapa mental, os ambientes e a cobrança Pix estão em [ARQUITETURA.md](./docs/ARQUITETURA.md). O inventário objetivo do que ainda falta está em [ROADMAP-PENDENCIAS.md](./docs/ROADMAP-PENDENCIAS.md). Consulte também [GUIA-OPERACAO-SERVICOS.md](./docs/GUIA-OPERACAO-SERVICOS.md) e [GUIA-OPERACAO-PDV.md](./docs/GUIA-OPERACAO-PDV.md).
 
 ## Como os dados são protegidos
 

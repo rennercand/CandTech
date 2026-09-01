@@ -440,6 +440,8 @@ Não colocar confirmação de venda ou baixa essencial de estoque numa fila que 
 - formas de pagamento;
 - confirmação rápida.
 
+**Entregue em 01/09/2026:** a tela de pedidos funciona como PDV com leitura de SKU/EAN por teclado, cliente opcional, múltiplos itens, forma de recebimento e vencimento. Desconto é uma permissão separada. A confirmação paga grava caixa; a prazo grava conta a receber; o desfazimento produz estoque e financeiro inversos sem apagar a trilha. A migration foi aplicada e verificada em Preview e Production antes do deploy.
+
 ## 19. Estoque automático
 
 Venda confirmada:
@@ -864,9 +866,9 @@ Nunca tentar descobrir vendas externas sem integração ou importação.
 
 ## Próximo — P1 vendável
 
-1. venda/pedido unificado;
-2. baixa de estoque transacional;
-3. financeiro automático da venda;
+1. ~~venda/pedido unificado~~ — PDV com recebimento entregue em 01/09/2026;
+2. ~~baixa de estoque transacional~~ — FEFO, idempotência e estorno entregues;
+3. ~~financeiro automático da venda~~ — caixa ou conta a receber na mesma transação;
 4. compras e fornecedores;
 5. ~~ordem de serviço~~ — implementada em 01/09/2026;
 6. ~~materiais consumidos por serviço~~ — implementado com FEFO e rollback integral em 01/09/2026;

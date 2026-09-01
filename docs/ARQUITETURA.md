@@ -152,6 +152,7 @@ mindmap
 | `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | escrita dupla com `organization_id` e `tenant_id` legado; ambos derivados da sessão |
 | `inventory_batches` / `inventory_movements` | livro de movimentos, saldo por lote, FEFO e reversões | organização herdada e validada no lote + autor autenticado; a baixa usa validade crescente e o desfazimento preserva rastreabilidade |
 | `inventory_orders` / `inventory_order_items` | vendas, compras, curva ABC e histórico de faturamento | organização herdada do lote; pedido desfeito fica cancelado; `tenant_id` mantido só durante a transição |
+| `operational_deliveries` | preparação, previsão, cliente, pedido, rastreio e referência do comprovante privado | venda cria entrega na mesma transação e publica `delivery.created`; mudanças publicam `delivery.status_changed`; cancelamento do pedido cancela a entrega |
 | `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
 | `support_tickets` | mensagens de suporte e respostas | usuário da sessão ou equipe com permissão `can_support` |
 | `staff_access` | módulos internos concedidos a contas verificadas | administrador principal em `ADMIN_EMAILS` |

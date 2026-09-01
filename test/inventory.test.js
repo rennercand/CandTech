@@ -9,7 +9,9 @@ import {
   createInventoryOrder,
   createInventoryProducts,
   listInventory,
+  getDeliveryProof,
   resetInventorySchemaForTests,
+  saveDeliveryProof,
   undoInventoryBatch,
 } from "../lib/inventory-db.js";
 import { normalizeMovementLines, validateProducts } from "../lib/inventory.js";
@@ -65,6 +67,13 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
     const backendAfterOrder = await getDatabaseBackend();
     assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM inventory_orders WHERE tenant_id = ?").get(tenantA).count, 1);
     assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_id = ?").get(order.id).count, 1);
+    const automaticDelivery = backendAfterOrder.db.prepare("SELECT public_id, order_public_id, status FROM operational_deliveries WHERE order_public_id = ?").get(order.id);
+    assert.equal(automaticDelivery.order_public_id, order.id);
+    assert.equal(automaticDelivery.status, "preparando");
+    assert.equal(backendAfterOrder.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_id = ? AND event_type = 'delivery.created'").get(automaticDelivery.public_id).count, 1);
+    assert.ok(await saveDeliveryProof({ tenantId: tenantA, deliveryId: automaticDelivery.public_id, storageKey: "local:delivery-proof:test.pdf" }));
+    assert.equal((await getDeliveryProof({ tenantId: tenantA, deliveryId: automaticDelivery.public_id })).proof_blob_path, "local:delivery-proof:test.pdf");
+    assert.equal(await getDeliveryProof({ tenantId: tenantB, deliveryId: automaticDelivery.public_id }), null);
     await assert.rejects(() => createInventoryOrder({
       tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "PED-SEM-SALDO", partner: "Cliente",
       idempotencyKeyHash: "order-key-insufficient",
@@ -76,6 +85,7 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
     await undoInventoryBatch({ tenantId: tenantA, userId: ownerA.id, batchPublicId: order.batchId });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [10, 10]);
     assert.equal(backendAfterOrder.db.prepare("SELECT status FROM inventory_orders WHERE public_id = ?").get(order.id).status, "cancelled");
+    assert.equal(backendAfterOrder.db.prepare("SELECT status FROM operational_deliveries WHERE public_id = ?").get(automaticDelivery.public_id).status, "cancelada");
 
     await assert.rejects(() => applyInventoryBatch({
       tenantId: tenantB, userId: ownerB.id, kind: "entry",

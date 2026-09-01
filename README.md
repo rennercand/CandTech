@@ -50,6 +50,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
 - Baixa de vendas por FEFO (vence primeiro, sai primeiro), saldo atual por lote, custo médio histórico ponderado, curva ABC por faturamento, alerta de itens sem venda há 90 dias e sugestão de compra até o estoque mínimo.
+- Logística operacional: toda venda cria uma entrega ligada ao pedido, e a equipe acompanha cliente, previsão, status e rastreio na mesma área do estoque, com comprovante PDF/imagem guardado em armazenamento privado.
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.

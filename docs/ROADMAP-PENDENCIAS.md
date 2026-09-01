@@ -48,7 +48,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 ## P1 — operação de comércio e serviços
 
 - [x] completar baixa por lote/FEFO, custo médio histórico, curva ABC, itens parados e sugestão de reposição; **vendas agora distribuem a baixa pelos saldos de lote na ordem de validade, desfazimentos restauram os lotes e cancelam o pedido, o custo médio pondera entradas ativas e a visão geral exibe ABC por faturamento, 90 dias sem venda e quantidade para recompor o mínimo; cenários integrados e regras determinísticas possuem testes**;
-- [ ] transformar entregas do workspace em entidades relacionais ligadas a pedido, estoque e cliente, com eventos e comprovante; **a entidade relacional, os vínculos opcionais com cliente/pedido, o rastreio e a conclusão foram criados em 31/08/2026; faltam a interface operacional, vínculo automático ao pedido, eventos de domínio e comprovante privado**;
+- [x] transformar entregas do workspace em entidades relacionais ligadas a pedido, estoque e cliente, com eventos e comprovante; **a entidade relacional, a interface operacional, os vínculos com cliente e pedido, o rastreio, a conclusão e o comprovante privado estão ativos; cada nova venda cria atomicamente uma entrega e o evento `delivery.created`, o cancelamento da venda cancela a entrega e cada transição posterior publica `delivery.status_changed` pela outbox**;
 - [ ] criar ordem de serviço, orçamento, agenda, recorrência e cobrança de serviços;
 - [ ] consolidar venda rápida/PDV com recebimento, caixa, estoque e desfazimento transacional;
 - [ ] criar uma tela “Hoje” orientada a ações pendentes, atrasos e exceções;

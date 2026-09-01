@@ -15,8 +15,9 @@ test("worker publica eventos conhecidos uma vez e retenta tipo desconhecido", as
   try {
     await createUser({ name: "Outbox", email: "outbox@test.local", passwordHash: "hash" });
     await enqueueOutboxEvent({ aggregateType: "history", aggregateId: "h-1", eventType: "history.created", dedupeKey: "known-1" });
+    await enqueueOutboxEvent({ aggregateType: "operational_delivery", aggregateId: "d-1", eventType: "delivery.created", dedupeKey: "delivery-1" });
     await enqueueOutboxEvent({ aggregateType: "future", aggregateId: "f-1", eventType: "future.unknown", dedupeKey: "unknown-1" });
-    assert.deepEqual(await processOutboxBatch(), { claimed: 2, published: 1, failed: 1 });
+    assert.deepEqual(await processOutboxBatch(), { claimed: 3, published: 2, failed: 1 });
     const backend = await getDatabaseBackend();
     const known = backend.db.prepare("SELECT status, attempts FROM outbox_events WHERE dedupe_key = 'known-1'").get();
     const unknown = backend.db.prepare("SELECT status, attempts, last_error_code FROM outbox_events WHERE dedupe_key = 'unknown-1'").get();

@@ -3269,6 +3269,13 @@ body {
 .abc-a { background: #16784a; }
 .abc-b { background: #a96800; }
 .abc-c { background: #6b6880; }
+.delivery-operations { display: grid; gap: 14px; }
+.delivery-operation-card { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.delivery-operation-card > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.delivery-operation-card > header > div { display: grid; gap: 3px; }
+.delivery-operation-card > header small { color: var(--muted); }
+.delivery-operation-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.delivery-proof-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .inventory-form-stack { display: grid; gap: 18px; }
 .inventory-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
 .product-basics { grid-template-columns: 2fr 1fr .7fr; }
@@ -3327,7 +3334,7 @@ body {
 
 @media (max-width: 900px) {
   .summary-grid, .inventory-shortcuts, .product-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .inventory-form-grid, .product-basics, .import-options, .inventory-insights-grid { grid-template-columns: 1fr; }
+  .inventory-form-grid, .product-basics, .import-options, .inventory-insights-grid, .delivery-operation-fields { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {

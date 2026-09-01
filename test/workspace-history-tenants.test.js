@@ -11,6 +11,7 @@ import {
   createUser,
   ensureOwnedOrganization,
   findHistoryById,
+  getDatabaseBackend,
   getWorkspace,
   listCustomers,
   listFinancialCommitments,
@@ -58,6 +59,13 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
     assert.deepEqual((await listCustomers(ownerA.id, organizationA.organizationId)).map((client) => client.id), ["client-a"]);
     assert.deepEqual((await listOperationalTasks(ownerA.id, organizationA.organizationId)).map((task) => task.id), ["task-a"]);
     assert.deepEqual((await listOperationalDeliveries(ownerA.id, organizationA.organizationId)).map((delivery) => delivery.id), ["delivery-a"]);
+    const backend = await getDatabaseBackend();
+    assert.equal(backend.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_id = 'delivery-a' AND event_type = 'delivery.created'").get().count, 1);
+    await saveWorkspace({ userId: ownerA.id, organizationId: organizationA.organizationId, payload: {
+      ...workspacePayload, inventoryState: { deliveries: [{ ...workspacePayload.inventoryState.deliveries[0], status: "entregue" }] },
+    } });
+    assert.equal((await listOperationalDeliveries(ownerA.id, organizationA.organizationId))[0].status, "entregue");
+    assert.equal(backend.db.prepare("SELECT COUNT(*) AS count FROM outbox_events WHERE aggregate_id = 'delivery-a' AND event_type = 'delivery.status_changed'").get().count, 1);
     assert.deepEqual((await listFinancialCommitments(ownerA.id, organizationA.organizationId)).map((item) => item.id), ["commitment-a"]);
     assert.deepEqual((await listFinancialLedgerEntries(ownerA.id, organizationA.organizationId)).map((item) => item.id), ["entry-a"]);
     assert.deepEqual(await listCustomers(ownerB.id, organizationA.organizationId), []);

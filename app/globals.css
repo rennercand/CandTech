@@ -1872,9 +1872,9 @@ select:focus {
 .category-rules-panel {
   margin: 1rem 0;
   padding: 1rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--surface-soft);
+  background: var(--soft);
 }
 .category-rules-panel h3 { margin: .25rem 0; }
 .category-rule-form { display: grid; grid-template-columns: 2fr 1fr 1.4fr auto; gap: .75rem; align-items: end; margin-top: 1rem; }

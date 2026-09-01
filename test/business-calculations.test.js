@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   ordersFromCashEntries,
   suggestFinancialReconciliations,
+  commitmentAmounts,
+  expandCommitmentSeries,
   summarizeAccounts,
   summarizeInventory,
   summarizeOrders,
@@ -14,16 +16,36 @@ test("contas separam compromissos pendentes e identificam vencimentos", () => {
     { type: "receber", amount: 900, dueDate: "2026-12-01", status: "pendente" },
     { type: "pagar", amount: 200, dueDate: "2026-01-01", status: "pago" },
   ], "2026-08-01");
-  assert.deepEqual(result, { payable: 500, receivable: 900, overdue: 1 });
+  assert.deepEqual(result, { payable: 500, receivable: 900, overdue: 1, overdueAmount: 500, partial: 0 });
+});
+
+test("ajustes e pagamento parcial preservam valor original e calculam saldo", () => {
+  assert.deepEqual(commitmentAmounts({ amount: 100, interestAmount: 5, penaltyAmount: 2, discountAmount: 10, paidAmount: 40 }), {
+    base: 100, interest: 5, penalty: 2, discount: 10, total: 97, paid: 40, balance: 57,
+  });
+  const summary = summarizeAccounts([{ type: "receber", amount: 100, paidAmount: 40, dueDate: "2026-01-01", status: "parcial" }], "2026-08-01");
+  assert.equal(summary.receivable, 60);
+  assert.equal(summary.partial, 1);
+  assert.equal(summary.overdueAmount, 60);
+});
+
+test("série mensal mantém fim do mês e identifica todas as parcelas", () => {
+  let sequence = 0;
+  const rows = expandCommitmentSeries({ id: "first", dueDate: "2026-01-31", amount: 50 }, {
+    count: 3, frequency: "monthly", idFactory: (suffix) => `generated-${suffix}-${sequence++}`,
+  });
+  assert.deepEqual(rows.map((row) => row.dueDate), ["2026-01-31", "2026-02-28", "2026-03-31"]);
+  assert.deepEqual(rows.map((row) => row.installmentNumber), [1, 2, 3]);
+  assert.equal(new Set(rows.map((row) => row.seriesId)).size, 1);
 });
 
 test("conciliação sugere vínculos exatos sem alterar contas e exige revisão", () => {
   const entries = [
-    { id: "entry-1", date: "2026-08-31", type: "entrada", amount: 180, description: "PIX Cliente Aurora" },
+    { id: "entry-1", date: "2026-08-31", type: "entrada", amount: 147, description: "PIX Cliente Aurora" },
     { id: "entry-2", date: "2026-08-30", type: "saida", amount: 60, description: "Pagamento Fornecedor Sul" },
   ];
   const accounts = [
-    { id: "account-1", type: "receber", amount: 180, party: "Cliente Aurora", dueDate: "2026-08-31", status: "pendente" },
+    { id: "account-1", type: "receber", amount: 180, interestAmount: 5, penaltyAmount: 2, paidAmount: 40, party: "Cliente Aurora", dueDate: "2026-08-31", status: "parcial" },
     { id: "account-2", type: "pagar", amount: 60, party: "Fornecedor Sul", dueDate: "2026-09-01", status: "pendente" },
   ];
   const original = structuredClone(accounts);

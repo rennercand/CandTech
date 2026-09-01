@@ -37,8 +37,8 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
       clients: [{ id: "client-a", name: "Cliente A", email: "cliente-a@test.local", phone: "11999999999", status: "active", notes: "Somente A", createdAt: "2026-08-31T10:00:00.000Z" }],
       tasks: [{ id: "task-a", clientId: "client-a", title: "Atender cliente A", dueDate: "2026-09-01", priority: "high", status: "doing", createdAt: "2026-08-31T10:05:00.000Z", completedAt: "" }],
       inventoryState: { deliveries: [{ id: "delivery-a", clientId: "client-a", description: "Enviar pedido A", partner: "Cliente A", direction: "saida", date: "2026-09-02", status: "em-transito", tracking: "RASTREIO-A" }] },
-      financialAccounts: [{ id: "commitment-a", type: "receber", description: "Projeto A", party: "Cliente A", category: "Serviços", dueDate: "2026-09-05", amount: "250", status: "recebido", postedAt: "2026-08-31T12:00:00.000Z" }],
-      cashEntries: [{ id: "entry-a", sourceCommitmentId: "commitment-a", date: "2026-08-31", category: "Serviços", description: "Recebimento Projeto A", type: "entrada", amount: "250", importBatchId: "batch-a", fingerprint: "a".repeat(64), importedAt: "2026-08-31T12:30:00.000Z" }],
+      financialAccounts: [{ id: "commitment-a", type: "receber", description: "Projeto A", party: "Cliente A", category: "Serviços", dueDate: "2026-09-05", amount: "250", interestAmount: 5, penaltyAmount: 2, discountAmount: 7, paidAmount: 100, recurrence: "monthly", installmentNumber: 2, installmentCount: 3, seriesId: "series-a", status: "parcial", postedAt: "" }],
+      cashEntries: [{ id: "entry-a", sourceCommitmentId: "commitment-a", date: "2026-08-31", category: "Serviços", description: "Recebimento Projeto A", type: "entrada", amount: "100", importBatchId: "batch-a", fingerprint: "a".repeat(64), importedAt: "2026-08-31T12:30:00.000Z" }],
     };
     await saveWorkspace({ userId: ownerA.id, organizationId: organizationA.organizationId, payload: workspacePayload });
     const restoredWorkspace = await getWorkspace(ownerA.id, organizationA.organizationId);
@@ -46,7 +46,11 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
     assert.equal(restoredWorkspace.payload.clients[0].name, "Cliente A");
     assert.equal(restoredWorkspace.payload.tasks[0].clientId, "client-a");
     assert.equal(restoredWorkspace.payload.inventoryState.deliveries[0].clientId, "client-a");
-    assert.equal(restoredWorkspace.payload.financialAccounts[0].status, "recebido");
+    assert.equal(restoredWorkspace.payload.financialAccounts[0].status, "parcial");
+    assert.equal(restoredWorkspace.payload.financialAccounts[0].paidAmount, 100);
+    assert.equal(restoredWorkspace.payload.financialAccounts[0].interestAmount, 5);
+    assert.equal(restoredWorkspace.payload.financialAccounts[0].seriesId, "series-a");
+    assert.equal(restoredWorkspace.payload.financialAccounts[0].installmentNumber, 2);
     assert.equal(restoredWorkspace.payload.cashEntries[0].sourceCommitmentId, "commitment-a");
     assert.equal(restoredWorkspace.payload.cashEntries[0].importBatchId, "batch-a");
     assert.equal(restoredWorkspace.payload.cashEntries[0].fingerprint, "a".repeat(64));

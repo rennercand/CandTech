@@ -9,7 +9,7 @@ import {
 } from "./advanced-tools";
 import { calculateAmortization, calculateProductPrice } from "../lib/finance-calculations";
 import { calculateInvestment } from "../lib/investment-calculations";
-import { ordersFromCashEntries, suggestFinancialReconciliations } from "../lib/business-calculations";
+import { commitmentAmounts, ordersFromCashEntries, suggestFinancialReconciliations } from "../lib/business-calculations";
 import {
   FinancialCommitments,
   AdminOverview,
@@ -1221,41 +1221,49 @@ export default function CandTechApp({ publicFallback = null }) {
     if (!account) return;
     const settled = nextStatus === "pago" || nextStatus === "recebido";
     if (!settled) {
-      setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: nextStatus } : item));
+      if (commitmentAmounts(account).paid > 0 && !confirm("Reabrir esta conta? As baixas criadas pela conta serão removidas; lançamentos importados serão apenas desvinculados.")) return;
+      setCashEntries((current) => current.flatMap((entry) => {
+        if (entry.sourceCommitmentId !== account.id) return [entry];
+        return entry.fingerprint ? [{ ...entry, sourceCommitmentId: undefined }] : [];
+      }));
+      setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index
+        ? { ...item, status: "pendente", paidAmount: 0, postedAt: "" }
+        : item));
       return;
     }
-    if (!(Number(account.amount) > 0)) {
-      setNotice("Informe um valor maior que zero antes de dar baixa na conta.");
+    recordAccountPayment(index, commitmentAmounts(account).balance);
+  }
+
+  function recordAccountPayment(index, paymentValue) {
+    const account = financialAccounts[index];
+    if (!account) return;
+    const values = commitmentAmounts(account);
+    const payment = Number(paymentValue);
+    if (!(payment > 0) || payment - values.balance > 0.009) {
+      setNotice("O pagamento precisa ser maior que zero e não pode ultrapassar o saldo da conta.");
       return;
     }
+    if (!confirm(`Registrar ${money.format(payment)} nesta conta? O lançamento será incluído no caixa.`)) return;
     const cashType = account.type === "pagar" ? "saida" : "entrada";
     const commitmentId = account.id || globalThis.crypto?.randomUUID?.() || `commitment-${Date.now()}-${index}`;
-    const similar = cashEntries.some((entry) =>
-      entry.type === cashType && Math.abs(Number(entry.amount) - Number(account.amount)) < 0.01 &&
-      (!account.dueDate || !entry.date || entry.date === account.dueDate),
-    );
-    const similarAccount = financialAccounts.some((item, itemIndex) =>
-      itemIndex !== index && item.type === account.type &&
-      Math.abs(Number(item.amount) - Number(account.amount)) < 0.01 &&
-      (!account.dueDate || !item.dueDate || item.dueDate === account.dueDate),
-    );
-    if ((similar || similarAccount) && !confirm("Já existe uma conta ou lançamento de tipo, valor e data parecidos. Deseja lançar mesmo assim?")) return;
+    const nextPaid = Math.min(values.total, values.paid + payment);
+    const fullySettled = values.total - nextPaid <= 0.009;
     setCashEntries((current) => [...current, {
       ...blankCashRow(),
       id: newWorkspaceEntityId("entry"),
       sourceCommitmentId: commitmentId,
-      date: account.dueDate || today(),
+      date: today(),
       category: account.category || "Geral",
       description: account.type === "receber"
-        ? account.party || "Recebimento"
-        : account.description || account.party || "Pagamento",
+        ? `${account.party || "Recebimento"}${fullySettled ? "" : " — pagamento parcial"}`
+        : `${account.description || account.party || "Pagamento"}${fullySettled ? "" : " — pagamento parcial"}`,
       type: cashType,
-      amount: account.amount,
+      amount: payment,
     }]);
     setFinancialAccounts((current) => current.map((item, itemIndex) => itemIndex === index
-      ? { ...item, id: commitmentId, status: nextStatus, postedAt: new Date().toISOString() }
+      ? { ...item, id: commitmentId, paidAmount: nextPaid, status: fullySettled ? (item.type === "receber" ? "recebido" : "pago") : "parcial", postedAt: fullySettled ? new Date().toISOString() : "" }
       : item));
-    setNotice(account.type === "pagar" ? "Conta paga e saída lançada no caixa." : "Conta recebida e entrada lançada no caixa.");
+    setNotice(fullySettled ? "Conta quitada e lançamento salvo no caixa." : "Pagamento parcial salvo; o saldo continua pendente.");
   }
 
   function reconcileFinancialSuggestion(suggestion) {
@@ -1273,7 +1281,7 @@ export default function CandTechApp({ publicFallback = null }) {
         ? { ...item, sourceCommitmentId: commitmentId, category: target.category || item.category || "Geral" }
         : item));
       setFinancialAccounts((current) => current.map((item, index) => index === suggestion.targetIndex
-        ? { ...item, id: commitmentId, status: item.type === "receber" ? "recebido" : "pago", postedAt: reconciledAt }
+        ? { ...item, id: commitmentId, paidAmount: commitmentAmounts(item).total, status: item.type === "receber" ? "recebido" : "pago", postedAt: reconciledAt }
         : item));
       setNotice("Lançamento conciliado com a conta após sua confirmação.");
       return;
@@ -1293,9 +1301,16 @@ export default function CandTechApp({ publicFallback = null }) {
     if (!entry || (!entry.sourceCommitmentId && !entry.sourceOrderKey)) return;
     if (!confirm(`Desvincular “${entry.description || "este lançamento"}”? O lançamento bancário será mantido.`)) return;
     if (entry.sourceCommitmentId) {
-      setFinancialAccounts((current) => current.map((item) => item.id === entry.sourceCommitmentId
-        ? { ...item, status: "pendente", postedAt: "" }
-        : item));
+      const remainingPaid = cashEntries.reduce((sum, item, index) => index !== entryIndex && item.sourceCommitmentId === entry.sourceCommitmentId
+        ? sum + Math.abs(Number(item.amount) || 0)
+        : sum, 0);
+      setFinancialAccounts((current) => current.map((item) => {
+        if (item.id !== entry.sourceCommitmentId) return item;
+        const total = commitmentAmounts(item).total;
+        const paidAmount = Math.min(total, remainingPaid);
+        const settled = total > 0 && total - paidAmount <= 0.009;
+        return { ...item, paidAmount, status: settled ? (item.type === "receber" ? "recebido" : "pago") : paidAmount > 0 ? "parcial" : "pendente", postedAt: settled ? item.postedAt || new Date().toISOString() : "" };
+      }));
     }
     if (entry.sourceOrderKey) {
       setCommerceOrders((current) => current.map((item) => (item.postingKey || item.id) === entry.sourceOrderKey
@@ -1466,7 +1481,7 @@ export default function CandTechApp({ publicFallback = null }) {
       financialTableResult.rows.forEach((item) => rows.push({ secao: "Financiamentos", descricao: `Parcela ${item.period}`, data: item.date, valor: -Math.abs(Number(item.payment) || 0), status: financeState.system }));
     }
     if (exportSections.finance) {
-      financialAccounts.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Contas e cobranças", descricao: item.description || item.party, data: item.dueDate, valor: item.type === "pagar" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: item.status }));
+      financialAccounts.filter((item) => item.description || Number(item.amount)).forEach((item) => { const values = commitmentAmounts(item); rows.push({ secao: "Contas e cobranças", descricao: item.description || item.party, data: item.dueDate, valor: item.type === "pagar" ? -values.balance : values.balance, status: item.status }); });
       cashEntries.filter((item) => item.description || Number(item.amount)).forEach((item) => rows.push({ secao: "Fluxo de caixa", descricao: item.description, data: item.date, valor: item.type === "saida" ? -Number(item.amount) : Number(item.amount), status: item.category }));
     }
     if (exportSections.inventory) {
@@ -1849,7 +1864,7 @@ export default function CandTechApp({ publicFallback = null }) {
         filename: "organizacao-financeira.csv",
         title: organizationName,
         rows: [
-          ...financialAccounts.map((item) => ({ registro: "Conta", tipo: item.type, descricao: item.description, parceiro: item.party, data: item.dueDate, valor: item.type === "pagar" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: item.status })),
+          ...financialAccounts.map((item) => { const values = commitmentAmounts(item); return { registro: "Conta", tipo: item.type, descricao: item.description, parceiro: item.party, data: item.dueDate, valor: item.type === "pagar" ? -values.balance : values.balance, status: item.status }; }),
           ...cashEntries.map((item) => ({ registro: "Caixa", tipo: item.type, descricao: item.description, parceiro: item.category, data: item.date, valor: item.type === "saida" ? -Math.abs(Number(item.amount) || 0) : Math.abs(Number(item.amount) || 0), status: "realizado" })),
         ],
         totalSpent: -cashEntries.reduce(
@@ -2295,7 +2310,7 @@ export default function CandTechApp({ publicFallback = null }) {
           <div className="business-stack">
             <FinancialCommitments accounts={financialAccounts} setAccounts={setFinancialAccounts}
               categories={financialCategories} onCreateCategory={createFinancialCategory}
-              onStatusChange={changeAccountStatus} onScanRequest={scanBillImage} />
+              onStatusChange={changeAccountStatus} onPayment={recordAccountPayment} onScanRequest={scanBillImage} />
             <CashFlow organizationName={organizationName} setOrganizationName={setOrganizationName}
               entries={cashEntries} filteredEntries={filteredCashEntries} filters={cashFilters}
               setFilters={setCashFilters} setEntries={setCashEntries} totals={cashTotals} categories={financialCategories}
@@ -2500,8 +2515,8 @@ function Dashboard({ cashEntries, financialAccounts, inventoryState, commerceOrd
   const orderRows = allOrders.filter((order) => inPeriod(order.date));
   const cash = financeRows.reduce((total, entry) => total + (entry.type === "entrada" ? 1 : -1) * (Number(entry.amount) || 0), 0);
   const pending = financialAccounts.reduce((total, account) => {
-    if (account.status !== "pendente" || !inPeriod(account.dueDate)) return total;
-    return total + (account.type === "receber" ? 1 : -1) * (Number(account.amount) || 0);
+    if (!["pendente", "parcial"].includes(account.status) || !inPeriod(account.dueDate)) return total;
+    return total + (account.type === "receber" ? 1 : -1) * commitmentAmounts(account).balance;
   }, 0);
   const stockValue = inventoryState.products.reduce((sum, product) => sum + (Number(product.quantity) || 0) * (Number(product.unitCost) || 0), 0);
   const commerce = orderRows.reduce((total, order) => order.status === "cancelado" ? total : total + (order.type === "venda" ? 1 : -1) * (Number(order.amount) || 0), 0);
@@ -2811,6 +2826,10 @@ function CashFlow({
   }
   function removeEntry(index) {
     const entry = entries[index];
+    if (entry?.sourceCommitmentId || entry?.sourceOrderKey) {
+      alert("Desvincule este lançamento da conta ou do pedido antes de excluí-lo.");
+      return;
+    }
     const label = entry?.description || entry?.category || "este lançamento";
     if (!confirm(`Excluir ${label}? Esta ação remove somente esta linha.`)) return;
     // Mantém uma linha vazia quando a última movimentação é excluída.

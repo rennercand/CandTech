@@ -17,6 +17,7 @@
     "migrate:2026-08-31:deliveries": "node scripts/apply-20260831-relational-deliveries.js",
     "migrate:2026-08-31:finance": "node scripts/apply-20260831-relational-finance.js",
     "migrate:2026-08-31:finance-import": "node scripts/apply-20260831-financial-import-metadata.js",
+    "migrate:2026-08-31:finance-terms": "node scripts/apply-20260831-financial-commitment-terms.js",
     "migrate:2026-08-31:inventory-scope": "node scripts/apply-20260831-inventory-organization-scope.js",
     "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",

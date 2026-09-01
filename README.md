@@ -29,6 +29,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Formação de preço unitário a partir de despesas, unidades e margem de lucro.
 - Organização financeira com categorias reutilizáveis criadas pelo usuário, seletores padronizados e gráfico de distribuição de custos.
 - Contas financeiras, compromissos previstos e lançamentos realizados persistidos por organização, com origem estável e vínculo entre pagamento e compromisso.
+- Contas recorrentes ou parceladas em séries finitas, com juros, multa, desconto, pagamento parcial, saldo restante e inadimplência por vencimento; cada baixa cria um lançamento realizado reversível.
 - Importação local de extratos bancários em PDF, CSV, OFX/QFX e XLSX; os formatos tabulares mostram prévia, descartam linhas inválidas, identificam reimportações por SHA-256 e permitem desfazer o último lote inteiro.
 - Conciliação assistida entre lançamentos, contas a pagar/receber e pedidos de venda/compra, com motivo, nível de confiança, confirmação humana e desvinculação reversível.
 - Salvamento automático do workspace vinculado à conta.
@@ -181,7 +182,7 @@ BILLING_ENFORCEMENT_ENABLED=false
 
 Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
 
-As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance`; os metadados de lote e deduplicação usam `npm run migrate:2026-08-31:finance-import`. Ambas foram validadas nos dois branches em 31/08/2026 antes do deploy. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla.
+As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance`; os metadados de lote e deduplicação usam `npm run migrate:2026-08-31:finance-import`; os termos de compromissos, parcelas e baixas parciais usam `npm run migrate:2026-08-31:finance-terms`. As três foram validadas nos dois branches em 31/08/2026 antes do respectivo código consumidor. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -262,7 +263,7 @@ executam DDL durante uma requisição:
 - `customers` / `operational_tasks`: carteira e tarefas relacionais isoladas por organização, incluindo o vínculo opcional da tarefa ao cliente.
 - `operational_deliveries`: entrega relacional isolada por organização, preparada para vínculo com cliente, pedido e comprovante privado.
 - `financial_accounts`: contas de caixa/banco isoladas por organização.
-- `financial_commitments`: contas a pagar e receber previstas, com vencimento, situação e valor.
+- `financial_commitments`: contas a pagar e receber previstas, com valor-base, ajustes, saldo pago, recorrência, série e parcela.
 - `financial_ledger_entries`: entradas e saídas realizadas, vinculáveis a compromisso ou pedido por origem estável.
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
 - `google_drive_connections`: refresh token cifrado e vinculado ao usuário.

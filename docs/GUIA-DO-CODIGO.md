@@ -103,6 +103,12 @@ Antes da confirmação, a interface mostra novos, duplicados e linhas inválidas
 
 `suggestFinancialReconciliations` mantém a conciliação determinística e sem efeitos colaterais: direção e valor precisam coincidir, enquanto proximidade de data e palavras compartilhadas apenas ordenam os candidatos. A interface apresenta motivo e confiança; a confirmação vincula o lançamento a uma conta ou pedido e a ação “Desvincular” reverte o vínculo sem excluir o registro bancário.
 
+## Compromissos recorrentes e pagamentos parciais
+
+`commitmentAmounts` mantém separados valor-base, juros, multa e desconto, e deriva total, valor pago e saldo sem arredondamentos intermediários. `expandCommitmentSeries` gera entre 2 e 60 ocorrências semanais, mensais ou anuais; séries mensais preservam o último dia do mês. A recorrência é finita e só é criada depois de confirmação explícita.
+
+Cada pagamento integral ou parcial cria uma entrada/saída realizada vinculada ao compromisso. A soma paga determina `parcial`, `pago` ou `recebido`; desfazer uma conciliação zera a baixa correspondente sem apagar um lançamento bancário importado. A inadimplência é derivada quando existe saldo e o vencimento já passou, e os resumos usam sempre o saldo restante, não o valor original.
+
 ## Navegação e relatório geral
 
 A página autenticada abre em `home`, que representa a Visão geral. O `workspace` é uma área separada para documentos e modelos. A ordem operacional do menu é intencional: clientes e tarefas → pedidos → logística e estoque → movimentações → financiamentos → análises → formação de preço.

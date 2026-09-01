@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
+  commitmentAmounts,
+  expandCommitmentSeries,
   summarizeAccounts,
   summarizeInventory,
   summarizeOrders,
@@ -13,7 +15,9 @@ const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export const emptyFinancialAccount = () => ({
   id: "", type: "pagar", description: "", party: "", category: "Geral",
-  dueDate: "", amount: "", status: "pendente",
+  dueDate: "", amount: "", status: "pendente", paidAmount: 0,
+  interestAmount: 0, penaltyAmount: 0, discountAmount: 0,
+  recurrence: "none", installmentCount: 1, installmentNumber: 1, seriesId: "",
 });
 export const emptyInventoryState = () => ({
   products: [{ id: "", name: "", sku: "", quantity: "", minimum: "", unitCost: "", location: "" }],
@@ -36,7 +40,7 @@ function Field({ label, children }) {
   return <label className="operation-field"><span>{label}</span>{children}</label>;
 }
 
-export function FinancialCommitments({ accounts, setAccounts, categories = ["Geral"], onCreateCategory, onStatusChange, onScanRequest }) {
+export function FinancialCommitments({ accounts, setAccounts, categories = ["Geral"], onCreateCategory, onStatusChange, onPayment, onScanRequest }) {
   const summary = useMemo(() => summarizeAccounts(accounts), [accounts]);
   const [newCategory, setNewCategory] = useState("");
   const availableCategories = useMemo(() => [...new Set([
@@ -53,12 +57,36 @@ export function FinancialCommitments({ accounts, setAccounts, categories = ["Ger
     if (!value) return;
     if (onCreateCategory?.(value) !== false) setNewCategory("");
   }
+  function generateSeries(index) {
+    const account = accounts[index];
+    const count = Math.trunc(Number(account.installmentCount));
+    if (!account.dueDate || !(Number(account.amount) > 0) || count < 2 || count > 60 || account.recurrence === "none") {
+      alert("Informe vencimento, valor por parcela, frequência e uma quantidade entre 2 e 60.");
+      return;
+    }
+    if (!confirm(`Gerar ${count} parcelas de ${money.format(Number(account.amount))} com recorrência ${account.recurrence === "weekly" ? "semanal" : account.recurrence === "yearly" ? "anual" : "mensal"}?`)) return;
+    const series = expandCommitmentSeries(account, { count, frequency: account.recurrence, idFactory: () => newId() });
+    setAccounts((current) => [...current.slice(0, index), ...series, ...current.slice(index + 1)]);
+  }
+  function requestPayment(index) {
+    const account = accounts[index];
+    const values = commitmentAmounts(account);
+    if (!(values.balance > 0)) return;
+    const response = prompt(`Saldo desta conta: ${money.format(values.balance)}. Quanto deseja registrar agora?`, values.balance.toFixed(2));
+    if (response === null) return;
+    const payment = Number(String(response).replace(",", "."));
+    if (!(payment > 0) || payment - values.balance > 0.009) {
+      alert("Informe um valor maior que zero e não superior ao saldo.");
+      return;
+    }
+    onPayment?.(index, payment);
+  }
   return <section className="panel operations-panel">
     <div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÕES</span><h2>Pagamentos e recebimentos</h2><p>Veja o que entra, o que sai e dê baixa nos vencimentos sem misturar a rotina com os financiamentos.</p></div><div className="module-actions"><label className="secondary-button file-button">Digitalizar conta<input type="file" accept="image/*" capture="environment" onChange={(event) => onScanRequest?.(event.target.files?.[0])} /></label><button className="primary-button" onClick={() => setAccounts((current) => [...current, { ...emptyFinancialAccount(), id: newId() }])}>+ Nova movimentação</button></div></div>
     <Summary items={[
       { label: "A receber", value: signedMoney(summary.receivable, "entrada"), tone: "positive", caption: "Valores ainda pendentes" },
       { label: "A pagar", value: signedMoney(summary.payable, "saida"), tone: "negative", caption: "Obrigações ainda pendentes" },
-      { label: "Vencidas", value: summary.overdue, caption: "Itens que pedem atenção" },
+      { label: "Vencidas", value: summary.overdue, caption: `${money.format(summary.overdueAmount)} em atraso · ${summary.partial} parcial(is)` },
     ]} />
     <div className="financial-category-manager"><div><strong>Categorias financeiras</strong><span>Crie uma vez e selecione nas contas e nos lançamentos.</span></div><label><span>Nova categoria</span><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} placeholder="Ex.: Fornecedores" maxLength="50" /></label><button type="button" className="secondary-button" onClick={createCategory} disabled={!newCategory.trim()}>+ Criar categoria</button></div>
     <div className="operation-list">{accounts.map((account, index) => <article className={`operation-row ${account.type === "receber" ? "receiving-row" : ""}`} key={account.id || `account-${index}`}>
@@ -68,11 +96,27 @@ export function FinancialCommitments({ accounts, setAccounts, categories = ["Ger
       <Field label="Categoria"><select value={account.category || "Geral"} onChange={(e) => update(index, "category", e.target.value)}>{availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select></Field>
       <Field label="Vencimento"><input type="date" value={account.dueDate} onChange={(e) => update(index, "dueDate", e.target.value)} /></Field>
       <Field label="Valor"><div className={`signed-amount-field ${account.type === "receber" ? "income" : "expense"}`}><span>{account.type === "receber" ? "+" : "-"}</span><input type="number" min="0" step="0.01" value={account.amount} onChange={(e) => update(index, "amount", e.target.value)} placeholder="0,00" /></div></Field>
-      <Field label="Status"><select value={account.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="pendente">Pendente</option><option value={account.type === "pagar" ? "pago" : "recebido"}>{account.type === "pagar" ? "Pago" : "Recebido"}</option></select></Field>
+      <Field label="Status"><select value={account.status} onChange={(e) => onStatusChange?.(index, e.target.value)}><option value="pendente">Pendente</option>{account.status === "parcial" && <option value="parcial" disabled>Parcial</option>}<option value={account.type === "pagar" ? "pago" : "recebido"}>{account.type === "pagar" ? "Pago" : "Recebido"}</option></select></Field>
+      <div className="commitment-actions">
+        <button type="button" className="secondary-button compact" onClick={() => requestPayment(index)} disabled={commitmentAmounts(account).balance <= 0}>Registrar pagamento</button>
+        <details className="commitment-details">
+          <summary>Ajustes e parcelas</summary>
+          <div className="commitment-details-grid">
+            <Field label="Juros (R$)"><input type="number" min="0" step="0.01" value={account.interestAmount || ""} onChange={(e) => update(index, "interestAmount", e.target.value)} /></Field>
+            <Field label="Multa (R$)"><input type="number" min="0" step="0.01" value={account.penaltyAmount || ""} onChange={(e) => update(index, "penaltyAmount", e.target.value)} /></Field>
+            <Field label="Desconto (R$)"><input type="number" min="0" step="0.01" value={account.discountAmount || ""} onChange={(e) => update(index, "discountAmount", e.target.value)} /></Field>
+            <Field label="Recorrência"><select value={account.recurrence || "none"} onChange={(e) => update(index, "recurrence", e.target.value)}><option value="none">Não repetir</option><option value="weekly">Semanal</option><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></Field>
+            <Field label="Parcelas"><input type="number" min="2" max="60" value={account.installmentCount > 1 ? account.installmentCount : ""} onChange={(e) => update(index, "installmentCount", e.target.value)} /></Field>
+          </div>
+          <div className="commitment-balance"><span>Total ajustado: <strong>{money.format(commitmentAmounts(account).total)}</strong></span><span>Pago: {money.format(commitmentAmounts(account).paid)}</span><span>Saldo: {money.format(commitmentAmounts(account).balance)}</span></div>
+          {account.installmentCount > 1 && account.seriesId ? <small>Parcela {account.installmentNumber} de {account.installmentCount}</small> : null}
+          {!account.seriesId ? <button type="button" className="secondary-button compact" onClick={() => generateSeries(index)}>Gerar série</button> : null}
+        </details>
+      </div>
       <button className="remove-row" onClick={() => remove(index)} aria-label="Excluir conta">×</button>
     </article>)}</div>
     {!accounts.length && <p className="empty-state">Nenhuma conta cadastrada. Use “Nova conta” para começar.</p>}
-    <p className="responsibility-note">Ao marcar como paga ou recebida, o movimento é lançado no caixa. Se houver um registro parecido, o sistema avisa e só continua com sua confirmação.</p>
+    <p className="responsibility-note">Baixas integrais ou parciais só entram no caixa após confirmação. Juros, multa e desconto permanecem separados do valor contratado; séries são finitas e cada parcela pode ser revisada individualmente.</p>
   </section>;
 }
 

@@ -13,3 +13,5 @@ desejados, precisam ser protocolados separadamente pelo titular.
 
 Consulte também `DECLARACAO-DE-TITULARIDADE.md`, que organiza o escopo declarado,
 as evidências a preservar e o controle das versões eventualmente registradas.
+Os componentes externos utilizados pelo produto estão identificados em
+`THIRD_PARTY_NOTICES.md` e continuam sujeitos às licenças dos respectivos titulares.

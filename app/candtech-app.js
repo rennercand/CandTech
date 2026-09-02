@@ -22,6 +22,7 @@ import InventoryOperations from "./inventory-operations";
 import ClientManager from "./client-manager";
 import TaskKanban from "./task-kanban";
 import ServiceOperations from "./service-operations";
+import TodayOperations from "./today-operations";
 import SupportCenter from "./support-center";
 import { trackMarketingEvent } from "../lib/analytics";
 import FileNameDialog, { useFileNameDialog } from "./file-name-dialog";
@@ -2115,7 +2116,7 @@ export default function CandTechApp({ publicFallback = null }) {
         <div className="workspace">{user.access?.organizationName || (user.accountType === "company" ? "Gestão empresarial" : "Gestão pessoal")}</div>
         <nav ref={sidebarNavRef} aria-label="Navegação principal">
           {[
-            ["home", "Visão geral", "⌂"],
+            ["home", "Hoje", "⌂"],
             ["workspace", "Workspace", "□"],
             ...(canAccess("clients") ? [["clients", "Clientes", "♧"]] : []),
             ...(canAccess("tasks") ? [["tasks", "Tarefas", "✓"]] : []),
@@ -2168,11 +2169,11 @@ export default function CandTechApp({ publicFallback = null }) {
         <header>
           <div>
             <p className="eyebrow">
-              {view === "home" ? "RELATÓRIO GERAL DA CONTA" : view === "workspace" ? "ESPAÇO DE TRABALHO" : "GESTÃO DA EMPRESA"}
+              {view === "home" ? "PRIORIDADES DA OPERAÇÃO" : view === "workspace" ? "ESPAÇO DE TRABALHO" : "GESTÃO DA EMPRESA"}
             </p>
             <h1>
               {view === "home"
-                ? "Visão geral"
+                ? "Hoje"
                 : view === "workspace"
                   ? "Workspace"
                 : view === "calculator"
@@ -2254,8 +2255,9 @@ export default function CandTechApp({ publicFallback = null }) {
           </section>
         )}
         <div className="view-stage" key={view}>
-        {view === "home" && (
-          canAccess("dashboard") ? <Dashboard
+        {view === "home" && <>
+          <TodayOperations onOpen={(target) => setView(target)} />
+          {canAccess("dashboard") ? <Dashboard
             cashEntries={cashEntries}
             financialAccounts={financialAccounts}
             inventoryState={inventoryState}
@@ -2265,8 +2267,8 @@ export default function CandTechApp({ publicFallback = null }) {
             access={{ finance: canAccess("cashflow"), inventory: canAccess("inventory"), commerce: canAccess("commerce"), clients: canAccess("clients"), tasks: canAccess("tasks") }}
             onOpen={(target) => setView(target)}
             onReset={resetOperationalSections}
-          /> : <section className="panel"><h2>Bem-vindo à CandTech</h2><p>Seu cargo ainda não possui acesso ao relatório geral. Escolha uma área liberada no menu.</p></section>
-        )}
+          /> : null}
+        </>}
         {view === "workspace" && (
           <DocumentHome
             user={user}

@@ -27,6 +27,7 @@ flowchart TB
   subgraph Vercel[Backend Next.js na Vercel]
     API --> SEC[Origem, tipo, tamanho e rate limit]
     SEC --> AUTH[JWT revogável e identidade atual]
+    SEC --> TODAY[Hoje: prioridades por permissão]
     SEC --> WORKSPACE[Workspace e histórico]
     SEC --> INVENTORY[Estoque, pedidos, entregas e movimentos]
     SEC --> SERVICES[Orçamentos, agenda e ordens de serviço]
@@ -38,6 +39,7 @@ flowchart TB
   end
 
   AUTH --> DB[(PostgreSQL Neon)]
+  TODAY --> DB
   WORKSPACE --> DB
   INVENTORY --> DB
   SERVICES --> DB
@@ -72,7 +74,11 @@ mindmap
       Organização e cargos
       Convites de uso único
     ERP
-      Visão geral
+      Hoje e visão geral
+        Vendas e margem
+        Vencimentos e inadimplência
+        Reposição e validade
+        Serviços e atrasos
       Clientes e tarefas
       Workspace e histórico
       Financiamentos e análises
@@ -143,6 +149,7 @@ mindmap
 | `operational_tasks` | tarefas, prazo, prioridade, situação e cliente opcional | proprietário + `organization_id`; FK interna opcional para `customers` |
 | `operational_deliveries` | entradas/saídas, prazo, rastreio e conclusão; cliente/pedido opcionais | proprietário + `organization_id`; IDs externos nunca autorizam sozinhos |
 | `financial_accounts` | contas de caixa/banco e moeda operacional | proprietário + `organization_id`; nome único dentro do escopo |
+| `cash_counts` | conferências do saldo esperado versus contado, diferença, observação e autor | proprietário + organização derivados da sessão; histórico somente por inserção |
 | `financial_commitments` | contas a pagar/receber, valor-base, juros, multa, desconto, valor pago, série e parcela | proprietário + `organization_id`; ID público estável e restrições de domínio |
 | `financial_ledger_entries` | entradas/saídas realizadas, origem, lote de importação, fingerprint e vínculo opcional com compromisso | proprietário + `organization_id`; conta e compromisso validados no mesmo escopo; fingerprint importado único no escopo |
 | `rate_limits` | contadores temporários de requisição | chave derivada do escopo/origem |

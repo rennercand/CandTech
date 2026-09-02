@@ -25,3 +25,15 @@ Este documento não é certificado público, protocolo nem registro oficial. No 
 | Declaração inicial | 01/09/2026 | Preencher ao separar a versão candidata ao registro | Não protocolado |
 
 Assinatura e certificado digital, quando necessários, devem ser aplicados pelo titular fora do repositório e conforme o procedimento oficial escolhido.
+
+Na consulta oficial realizada em 02/09/2026, o INPI exige certificado digital qualificado emitido por autoridade da ICP-Brasil para assinar a Declaração de Veracidade; assinatura avançada da conta Gov.br não é aceita nesse fluxo. Confirme novamente o [Guia Básico do INPI](https://www.gov.br/inpi/pt-br/servicos/programas-de-computador/guia-basico) no momento do protocolo, pois requisitos e valores podem mudar.
+
+## Resumo criptográfico reproduzível
+
+Depois de confirmar a versão candidata em um commit, execute:
+
+```bash
+npm run legal:source-hash -- <commit-ou-tag>
+```
+
+O comando cria em memória um arquivo TAR determinístico daquela revisão Git e informa seu SHA-256, commit e tamanho. Ele não inclui arquivos ignorados, `.env`, credenciais locais nem alterações ainda não commitadas. Preserve o resultado junto com a cópia da revisão e os documentos do protocolo. O comando não envia o código e não substitui o registro, a assinatura digital nem o certificado emitido pelo órgão competente.

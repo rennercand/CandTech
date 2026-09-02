@@ -557,6 +557,8 @@ Cada alerta deve oferecer uma ação concreta.
 
 Evitar dashboard com muitos gráficos sem decisão associada.
 
+**Entregue em 02/09/2026:** a home virou a fila “Hoje” e consulta apenas as áreas liberadas ao cargo. Ela mostra vendas e margem do dia calculadas sobre pedidos relacionais, contas vencidas ou com vencimento hoje, inadimplência, itens abaixo do mínimo, lotes vencidos/a vencer, serviços de hoje/atrasados e conclusões sem cobrança. A conferência diária grava o saldo esperado, o valor contado, a diferença, a observação e o autor em histórico relacional; divergências reais aparecem como exceção. Cada grupo abre diretamente o módulo de resolução. A migration foi aplicada e retornou tabela e índice válidos em Preview e Production.
+
 ---
 
 # P1 — Financeiro e conciliação
@@ -872,12 +874,12 @@ Nunca tentar descobrir vendas externas sem integração ou importação.
 4. compras e fornecedores;
 5. ~~ordem de serviço~~ — implementada em 01/09/2026;
 6. ~~materiais consumidos por serviço~~ — implementado com FEFO e rollback integral em 01/09/2026;
-7. Tela Hoje;
-8. contas a pagar/receber integradas;
-9. reposição inteligente;
-10. OFX/CSV + conciliação;
-11. fechamento diário;
-12. curva ABC e estoque parado.
+7. ~~Tela Hoje~~ — prioridades e conferência de caixa entregues em 02/09/2026;
+8. ~~contas a pagar/receber integradas~~ — ligadas a vendas e serviços;
+9. ~~reposição inteligente~~ — mínimo, validade e sugestão de compra;
+10. ~~OFX/CSV + conciliação~~ — prévia, deduplicação e confirmação humana;
+11. ~~fechamento diário~~ — saldo esperado versus contado com histórico e auditoria;
+12. ~~curva ABC e estoque parado~~ — entregues com testes determinísticos.
 
 ## Depois — P2 diferenciação
 

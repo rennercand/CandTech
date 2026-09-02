@@ -8,6 +8,7 @@ import {
   applyInventoryBatch,
   createInventoryOrder,
   createInventoryProducts,
+  getInventoryDailySummary,
   listInventory,
   getDeliveryProof,
   resetInventorySchemaForTests,
@@ -55,6 +56,9 @@ test("estoque relacional isola empresas, movimenta vÃ¡rios itens e desfaz operaÃ
       lines: productA.variants.map((variant) => ({ variantId: variant.id, quantity: 2, delta: 2, unitCost: 0, unitPrice: variant.salePrice, lotCode: "", expiresOn: "" })),
     });
     assert.equal(order.total, 102);
+    assert.deepEqual(await getInventoryDailySummary(tenantA, new Date().toISOString().slice(0, 10)), {
+      count: 1, gross: 102, discounts: 0, total: 102, cost: 42, margin: 60, pending: 1,
+    });
     assert.deepEqual((await listInventory(tenantA)).products[0].variants.map((variant) => variant.quantity), [8, 8]);
     const replayedOrder = await createInventoryOrder({
       tenantId: tenantA, userId: ownerA.id, type: "sale", reference: "PED-1", partner: "Cliente",

@@ -10,7 +10,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 - Cadastro e login com sessão individual.
 - Convites de equipe abrem uma jornada própria: mostram empresa, cargo, e-mail mascarado e áreas permitidas; após cadastro ou login, o colaborador entra diretamente no workspace empresarial.
-- Início com relatório geral da conta: vendas do mês, receita recebida, caixa, lucro operacional, estoque, contas pendentes, clientes e tarefas.
+- Início orientado ao dia: vendas e margem de hoje, vencimentos e inadimplência, reposição/validade do estoque e serviços agendados ou atrasados, sempre com atalho para agir; o relatório geral permanece abaixo para cargos autorizados.
 - Workspace separado para documentos recentes e modelos, evitando misturar arquivos com a rotina diária do comércio.
 - Menu ordenado pelo fluxo da operação: clientes e tarefas, pedidos, logística, movimentações, financiamentos, análises e formação de preço.
 - Carteira de clientes com status e atalhos diretos para WhatsApp e e-mail.
@@ -57,6 +57,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - PDV rápido com leitor de SKU/EAN, cliente opcional, desconto autorizado por permissão e recebimento em dinheiro, Pix, cartão, transferência ou a prazo.
 - Venda confirmada liga estoque, entrega e financeiro: recebida entra no caixa, pendente cria conta a receber e o desfazimento gera o efeito inverso sem apagar a auditoria.
+- Conferência diária do Caixa principal compara o saldo esperado do livro com o valor contado, preserva cada conferência e destaca diferenças na tela Hoje.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.
 
 ## Tecnologias
@@ -92,7 +93,7 @@ flowchart LR
   API --> EMAIL[Resend]
 ```
 
-O fluxo completo, o mapa mental, os ambientes e a cobrança Pix estão em [ARQUITETURA.md](./docs/ARQUITETURA.md). O inventário objetivo do que ainda falta está em [ROADMAP-PENDENCIAS.md](./docs/ROADMAP-PENDENCIAS.md). Consulte também [GUIA-OPERACAO-SERVICOS.md](./docs/GUIA-OPERACAO-SERVICOS.md) e [GUIA-OPERACAO-PDV.md](./docs/GUIA-OPERACAO-PDV.md).
+O fluxo completo, o mapa mental, os ambientes e a cobrança Pix estão em [ARQUITETURA.md](./docs/ARQUITETURA.md). O inventário objetivo do que ainda falta está em [ROADMAP-PENDENCIAS.md](./docs/ROADMAP-PENDENCIAS.md). Consulte também [GUIA-OPERACAO-SERVICOS.md](./docs/GUIA-OPERACAO-SERVICOS.md), [GUIA-OPERACAO-PDV.md](./docs/GUIA-OPERACAO-PDV.md) e [GUIA-OPERACAO-HOJE.md](./docs/GUIA-OPERACAO-HOJE.md).
 
 ## Como os dados são protegidos
 

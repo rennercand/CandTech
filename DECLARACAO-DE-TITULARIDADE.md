@@ -22,7 +22,7 @@ Este documento não é certificado público, protocolo nem registro oficial. No 
 
 | Versão | Data | Commit ou hash do material | Protocolo/registro externo |
 | --- | --- | --- | --- |
-| Declaração inicial | 01/09/2026 | Preencher ao separar a versão candidata ao registro | Não protocolado |
+| CandTech — PDV, serviços e tela Hoje | 02/09/2026 | commit `492917fd935053dc5515e628e325b273ec794146`; TAR SHA-256 `d1b7e030f51223367aa77dc9a6e35780fec7198efec692684984ccb2b8102b98` | Não protocolado |
 
 Assinatura e certificado digital, quando necessários, devem ser aplicados pelo titular fora do repositório e conforme o procedimento oficial escolhido.
 

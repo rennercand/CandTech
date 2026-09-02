@@ -47,7 +47,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Pix Copia e Cola individual, comprovante privado e confirmação exclusiva do administrador.
 - Identificação de cobrança reduzida ao nome e e-mail já existentes na conta, sem duplicar tipo de pessoa, telefone, CPF/CNPJ, cartão, senha ou conta bancária.
 - Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
-- Estoque relacional por empresa com produtos, variações, pedidos, entradas auditáveis e desfazimento.
+- Estoque relacional por empresa com produtos, variações, fornecedores, pedidos, entradas auditáveis e desfazimento.
 - Cadastro ou recebimento em lote por CSV/TSV/TXT/XLSX, com detecção de cabeçalho após títulos, CSV UTF-8/Windows-1252, valores monetários brasileiros, prévia e conferência por SKU; catálogos sem quantidade entram com saldo zero apenas no cadastro.
 - Baixa de vendas por FEFO (vence primeiro, sai primeiro), saldo atual por lote, custo médio histórico ponderado, curva ABC por faturamento, alerta de itens sem venda há 90 dias e sugestão de compra até o estoque mínimo.
 - Logística operacional: toda venda cria uma entrega ligada ao pedido, e a equipe acompanha cliente, previsão, status e rastreio na mesma área do estoque, com comprovante PDF/imagem guardado em armazenamento privado.
@@ -56,6 +56,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - PDV rápido com leitor de SKU/EAN, cliente opcional, desconto autorizado por permissão e recebimento em dinheiro, Pix, cartão, transferência ou a prazo.
+- Compras ligadas a fornecedores relacionais, com contato, prazo médio de entrega, quantidade de compras e total comprado.
 - Venda confirmada liga estoque, entrega e financeiro: recebida entra no caixa, pendente cria conta a receber e o desfazimento gera o efeito inverso sem apagar a auditoria.
 - Conferência diária do Caixa principal compara o saldo esperado do livro com o valor contado, preserva cada conferência e destaca diferenças na tela Hoje.
 - Cargos personalizados por empresa, com permissões reutilizáveis, convite individual por e-mail e aceite autenticado pelo destinatário.
@@ -191,7 +192,7 @@ BILLING_ENFORCEMENT_ENABLED=false
 
 Para a atualização de 26/08, carregue a `DATABASE_URL` do ambiente desejado e execute `npm run migrate:2026-08-26`. O executor aceita somente as migrations versionadas de comprovantes e equipe, usa transações e confirma as duas tabelas antes de concluir.
 
-As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance`; os metadados de lote e deduplicação usam `npm run migrate:2026-08-31:finance-import`; os termos de compromissos, parcelas e baixas parciais usam `npm run migrate:2026-08-31:finance-terms`. As três foram validadas nos dois branches em 31/08/2026 antes do respectivo código consumidor. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla.
+As atualizações de segurança de 29/08 possuem executores independentes: `npm run migrate:2026-08-29:audit`, `npm run migrate:2026-08-29:oauth` e `npm run migrate:2026-08-29:mfa`. A migration MFA deve ser aplicada antes de publicar o código que consulta `mfa_verified_at`. A base de idempotência e outbox usa `npm run migrate:2026-08-30:idempotency`; ela foi aplicada e verificada nas branches `preview-test` e `main` do Neon em 30/08/2026. A fundação financeira relacional usa `npm run migrate:2026-08-31:finance`; os metadados de lote e deduplicação usam `npm run migrate:2026-08-31:finance-import`; os termos de compromissos, parcelas e baixas parciais usam `npm run migrate:2026-08-31:finance-terms`. As três foram validadas nos dois branches em 31/08/2026 antes do respectivo código consumidor. A primeira etapa não destrutiva da migração do estoque usa `npm run migrate:2026-08-31:inventory-scope`: adiciona e preenche `organization_id`, mantém `tenant_id` durante a transição, valida os vínculos internos e foi aplicada nos dois branches antes de ativar a escrita dupla. Fornecedores e vínculos com compras/entradas usam `npm run migrate:2026-09-02:suppliers`; tabela, índice e as duas colunas de vínculo foram aplicados e verificados em `preview-test` e `main` em 02/09/2026 antes do deploy.
 
 `DATABASE_URL` é opcional no desenvolvimento local. Para gerar um segredo seguro, use um gerador criptográfico, como `openssl rand -base64 48`.
 
@@ -279,6 +280,7 @@ executam DDL durante uma requisição:
 - `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa; durante a transição, novas escritas guardam `organization_id` e o `tenant_id` legado.
 - `inventory_batches` e `inventory_movements`: livro auditável de entradas, vendas, compras e reversões, com o mesmo escopo organizacional duplo.
 - `inventory_orders` e `inventory_order_items`: pedidos com vários produtos; o pedido herda a organização do lote operacional.
+- `suppliers`: fornecedores por organização, contato e prazo médio; `supplier_id` liga o cadastro a compras e entradas sem perder o nome histórico da operação.
 - `monitoring_events`: resumos técnicos sem segredos, agrupados por tipo de falha;
 - `support_tickets`: mensagens do suporte vinculadas ao usuário e respostas administrativas.
 - `staff_access`: módulos administrativos concedidos a contas verificadas, sem guardar ou criar senhas;

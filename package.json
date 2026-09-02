@@ -23,6 +23,7 @@
     "migrate:2026-09-01:services": "node scripts/apply-20260901-service-orders.js",
     "migrate:2026-09-01:pos": "node scripts/apply-20260901-pos-financial.js",
     "migrate:2026-09-01:cash-counts": "node scripts/apply-20260901-cash-counts.js",
+    "migrate:2026-09-02:suppliers": "node scripts/apply-20260902-suppliers.js",
     "legal:source-hash": "node scripts/source-registration-hash.js",
     "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",

@@ -9,6 +9,8 @@ import { listPaymentsForPrivateCentral } from "@/lib/admin-payment-list";
 import { reviewPixPaymentManually } from "@/lib/manual-payment-review";
 import { processPixExpirations } from "@/lib/pix-expiration";
 import { hasVerifiedMfa, mfaRequiredResponse } from "@/lib/mfa-access";
+import { claimIdempotency, completeIdempotency, failIdempotency } from "@/lib/idempotency-db";
+import { hashIdempotencyRequest, hashIdempotencyValue, normalizeIdempotencyKey } from "@/lib/idempotency";
 
 export const runtime = "nodejs";
 
@@ -60,6 +62,7 @@ export async function PATCH(request) {
   if (limited) return limited;
   const auth = await authorize(request);
   if (auth.response) return auth.response;
+  let idempotencyContext = null;
   try {
     const body = await readLimitedJson(request, { maxBytes: 8_192, maxStringLength: 4_000 });
     if (body.type === "event") {
@@ -96,8 +99,30 @@ export async function PATCH(request) {
     if (body.type === "payment") {
       if (!auth.access.canBilling) return NextResponse.json({ error: "Sem permissão para pagamentos." }, { status: 403 });
       if (!["approve", "reject"].includes(body.action)) return NextResponse.json({ error: "Ação de pagamento inválida." }, { status: 400 });
-      const payment = await reviewPixPaymentManually({ id: String(body.id || ""), approved: body.action === "approve", administratorId: auth.user.id });
-      if (!payment) return NextResponse.json({ error: "Pagamento pendente não encontrado." }, { status: 404 });
+      const paymentId = String(body.id || "");
+      const key = normalizeIdempotencyKey(request.headers.get("idempotency-key"));
+      if (!key) return NextResponse.json({ error: "Idempotency-Key obrigatório ou inválido." }, { status: 400 });
+      idempotencyContext = {
+        userId: auth.user.id,
+        operation: "admin.pix-payment.review",
+        keyHash: hashIdempotencyValue(key),
+        requestHash: hashIdempotencyRequest({ id: paymentId, action: body.action }),
+      };
+      const claim = await claimIdempotency(idempotencyContext);
+      if (claim.state === "replay") return NextResponse.json(claim.body, {
+        status: claim.status,
+        headers: { "Idempotent-Replayed": "true", "Cache-Control": "private, no-store" },
+      });
+      if (claim.state === "conflict") return NextResponse.json({ error: "Esta chave já foi usada para outra revisão." }, { status: 409 });
+      if (claim.state !== "claimed") return NextResponse.json({ error: "Esta revisão ainda está sendo processada." }, { status: 409 });
+      const payment = await reviewPixPaymentManually({ id: paymentId, approved: body.action === "approve", administratorId: auth.user.id });
+      if (!payment) {
+        const responseBody = { error: "Pagamento pendente não encontrado." };
+        await completeIdempotency({ ...idempotencyContext, status: 404, body: responseBody });
+        return NextResponse.json(responseBody, { status: 404 });
+      }
+      const responseBody = { payment };
+      await completeIdempotency({ ...idempotencyContext, status: 200, body: responseBody });
       await appendAuditEvent({
         userId: payment.userId,
         actorUserId: auth.user.id,
@@ -115,12 +140,13 @@ export async function PATCH(request) {
           receiptRequired: false,
           receiptPresent: Boolean(payment.receipt),
         },
-      });
-      if (body.action === "reject") await processPixExpirations();
-      return NextResponse.json({ payment });
+      }).catch(() => null);
+      if (body.action === "reject") await processPixExpirations().catch(() => null);
+      return NextResponse.json(responseBody, { headers: { "Cache-Control": "private, no-store" } });
     }
     return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
   } catch (error) {
+    if (idempotencyContext) await failIdempotency(idempotencyContext).catch(() => null);
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
     reportServerError(error, { request, route: "/api/admin/monitoring", operation: "update" });

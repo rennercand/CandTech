@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StaffAccessPanel from "./staff-access-panel";
 import SystemOverviewPanel from "./system-overview-panel";
 
@@ -43,6 +43,7 @@ export default function MonitoringPortal({ administratorName, permissions }) {
   const [replies, setReplies] = useState({});
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [receiptPreview, setReceiptPreview] = useState(null);
+  const mutationKeys = useRef(new Map());
 
   const load = useCallback(async () => {
     try {
@@ -64,10 +65,14 @@ export default function MonitoringPortal({ administratorName, permissions }) {
 
   async function update(payload, key) {
     setState((current) => ({ ...current, updating: key, error: "" }));
+    const serialized = JSON.stringify(payload);
+    const idempotencyKey = mutationKeys.current.get(serialized) || globalThis.crypto?.randomUUID?.() || `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    mutationKeys.current.set(serialized, idempotencyKey);
     try {
-      const response = await fetch("/api/admin/monitoring", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await fetch("/api/admin/monitoring", { method: "PATCH", headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey }, body: serialized });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Não foi possível atualizar.");
+      mutationKeys.current.delete(serialized);
       await load();
       setState((current) => ({ ...current, updating: "" }));
     } catch (error) {

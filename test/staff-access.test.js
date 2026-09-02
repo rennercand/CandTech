@@ -66,6 +66,8 @@ test("APIs administrativas aplicam privilégio mínimo no servidor", () => {
   assert.match(monitoring, /auth\.access\.canMonitor/);
   assert.match(monitoring, /auth\.access\.canSupport/);
   assert.match(monitoring, /auth\.access\.canBilling/);
+  assert.match(monitoring, /claimIdempotency\(idempotencyContext\)/);
+  assert.match(monitoring, /Idempotency-Key obrigatório ou inválido/);
   assert.match(staff, /access\.canManageStaff/);
   assert.match(staff, /guardMutation\(request\)/);
   assert.match(receipt, /access\.canBilling/);

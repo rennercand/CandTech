@@ -16,6 +16,7 @@ import {
 import { reportServerError } from "@/lib/server-observability";
 import { claimIdempotency, completeIdempotency, failIdempotency } from "@/lib/idempotency-db";
 import { hashIdempotencyRequest, hashIdempotencyValue, normalizeIdempotencyKey } from "@/lib/idempotency";
+import { listSuppliers, saveSupplier } from "@/lib/supplier-db";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,12 @@ const text = (value, max = 120) => String(value ?? "").trim().slice(0, max);
 const uuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 const date = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : null;
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+async function inventorySnapshot(tenantId) {
+  const inventory = await listInventory(tenantId);
+  const suppliers = await listSuppliers(tenantId);
+  return { ...inventory, suppliers };
+}
 
 function auditInventory(auth, { action, subjectType, subjectId, newState }) {
   return appendAuditEvent({
@@ -87,7 +94,7 @@ export async function GET(request) {
   if (auth.response) return auth.response;
   try {
     const inventory = await migrateLegacyInventory({ access: auth.access, tenantId: auth.tenantId, userId: auth.user.id });
-    return NextResponse.json({ inventory });
+    return NextResponse.json({ inventory: { ...inventory, suppliers: await listSuppliers(auth.tenantId) } });
   } catch (error) {
     reportServerError(error, { request, route: "/api/inventory", operation: "read" });
     return NextResponse.json({ error: "Não foi possível carregar o estoque." }, { status: 500 });
@@ -105,7 +112,7 @@ export async function POST(request) {
   try {
     const body = await readLimitedJson(request, { maxBytes: 750_000, maxDepth: 8, maxNodes: 10_000, maxStringLength: 5_000 });
     const action = text(body.action, 40);
-    const requiredPermission = action === "order" ? "commerce" : "inventory";
+    const requiredPermission = ["order", "create-supplier"].includes(action) ? "commerce" : "inventory";
     if (!hasPermission(auth.access, requiredPermission)) {
       return NextResponse.json({ error: "Sem permissão para esta operação." }, { status: 403 });
     }
@@ -129,6 +136,20 @@ export async function POST(request) {
       return NextResponse.json(responseBody, { status });
     };
 
+    if (action === "create-supplier") {
+      const name = text(body.supplier?.name, 160);
+      const email = text(body.supplier?.email, 254).toLowerCase();
+      if (!name) return complete({ error: "Informe o nome do fornecedor." }, 400);
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return complete({ error: "Informe um e-mail válido." }, 400);
+      const supplier = await saveSupplier({ tenantId: auth.tenantId, data: {
+        name, email, document: text(body.supplier?.document, 24), contactName: text(body.supplier?.contactName, 120),
+        phone: text(body.supplier?.phone, 32), leadTimeDays: Math.min(365, Math.max(0, Math.trunc(Number(body.supplier?.leadTimeDays) || 0))),
+      } });
+      await auditInventory(auth, { action: "supplier.created", subjectType: "supplier", subjectId: supplier.id,
+        newState: { name: supplier.name, hasDocument: Boolean(supplier.document), hasContact: Boolean(supplier.email || supplier.phone), leadTimeDays: supplier.leadTimeDays } });
+      return complete({ supplier, inventory: await inventorySnapshot(auth.tenantId) }, 201);
+    }
+
     if (action === "create-products" || action === "import-products") {
       const checked = validateProducts(body.products, { maxProducts: action === "import-products" ? 500 : 30 });
       if (checked.error) return complete({ error: checked.error }, 400);
@@ -150,7 +171,7 @@ export async function POST(request) {
         subjectId: batch?.id || auth.access.organizationId,
         newState: { productCount: created.length, initialBalance: Boolean(batch) },
       });
-      return complete({ created: created.length, batch, inventory: await listInventory(auth.tenantId) }, 201);
+      return complete({ created: created.length, batch, inventory: await inventorySnapshot(auth.tenantId) }, 201);
     }
 
     if (action === "entry") {
@@ -158,11 +179,11 @@ export async function POST(request) {
       if (!lines) return complete({ error: "Informe ao menos um item com quantidade válida." }, 400);
       const batch = await applyInventoryBatch({
         tenantId: auth.tenantId, userId: auth.user.id, kind: "entry",
-        reference: text(body.reference, 120), supplier: text(body.supplier, 120), note: text(body.note, 300), lines,
+        reference: text(body.reference, 120), supplier: text(body.supplier, 120), supplierId: uuid(body.supplierId) ? body.supplierId : "", note: text(body.note, 300), lines,
       });
       await auditInventory(auth, { action: "inventory.entry.created", subjectType: "inventory_batch", subjectId: batch.id,
         newState: { reference: text(body.reference, 120), lineCount: lines.length } });
-      return complete({ batch, inventory: await listInventory(auth.tenantId) }, 201);
+      return complete({ batch, inventory: await inventorySnapshot(auth.tenantId) }, 201);
     }
 
     if (action === "order") {
@@ -179,11 +200,12 @@ export async function POST(request) {
       const order = await createInventoryOrder({
         tenantId: auth.tenantId, userId: auth.user.id, type,
         reference: text(body.reference, 120), partner: text(body.partner, 120), customerId: uuid(body.customerId) ? body.customerId : "",
+        supplierId: uuid(body.supplierId) ? body.supplierId : "",
         lines, discountAmount, paymentMethod, dueOn, idempotencyKeyHash: keyHash,
       });
       await auditInventory(auth, { action: `inventory.order.${type}.created`, subjectType: "inventory_order", subjectId: order.id,
         newState: { total: order.total, paymentMethod: order.paymentMethod, paymentStatus: order.paymentStatus, lineCount: lines.length } });
-      return complete({ order, inventory: await listInventory(auth.tenantId) }, 201);
+      return complete({ order, inventory: await inventorySnapshot(auth.tenantId) }, 201);
     }
 
     if (action === "undo-batch") {
@@ -192,7 +214,7 @@ export async function POST(request) {
       if (!reversal) return complete({ error: "Operação não encontrada ou já desfeita." }, 404);
       await auditInventory(auth, { action: "inventory.batch.reversed", subjectType: "inventory_batch", subjectId: body.batchId,
         newState: { reversalId: reversal.id } });
-      return complete({ reversal, inventory: await listInventory(auth.tenantId) });
+      return complete({ reversal, inventory: await inventorySnapshot(auth.tenantId) });
     }
 
     return complete({ error: "Ação de estoque desconhecida." }, 400);
@@ -201,8 +223,14 @@ export async function POST(request) {
     const bodyError = requestBodyErrorResponse(error);
     if (bodyError) return bodyError;
     const message = String(error?.message || "");
+    if (/idx_suppliers_organization_name|suppliers\.organization_id, suppliers\.name|UNIQUE constraint failed: suppliers/i.test(message)) {
+      return NextResponse.json({ error: "Este fornecedor já está cadastrado nesta empresa." }, { status: 409 });
+    }
     if (/unique|inventory_variants_tenant_id_sku/i.test(message)) {
       return NextResponse.json({ error: "Um dos SKUs já está cadastrado nesta empresa." }, { status: 409 });
+    }
+    if (/INVALID_SUPPLIER/i.test(message)) {
+      return NextResponse.json({ error: "O fornecedor não pertence a esta empresa ou está inativo." }, { status: 409 });
     }
     if (/INSUFFICIENT|UNDO_WOULD|division by zero|22012/i.test(message)) {
       return NextResponse.json({ error: "A operação deixaria o estoque negativo ou contém um produto inválido." }, { status: 409 });

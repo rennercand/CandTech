@@ -68,8 +68,12 @@ test("moderação manual guarda a implantação na conta mesmo sem comprovante",
     const first = await createOrGetPixPaymentRequest(user.id);
     assert.equal(first.payment.amountCents, 18000);
 
-    await reviewPixPaymentManually({ id: first.payment.id, approved: true, administratorId: user.id });
+    const approved = await reviewPixPaymentManually({ id: first.payment.id, approved: true, administratorId: user.id });
+    const firstPeriodEnd = (await getBillingProviderState(user.id)).currentPeriodEnd;
     assert.ok((await getBillingProviderState(user.id)).setupPaidAt);
+    const replayed = await reviewPixPaymentManually({ id: first.payment.id, approved: true, administratorId: user.id });
+    assert.equal(replayed.id, approved.id, "repetição da mesma decisão deve ser segura");
+    assert.equal((await getBillingProviderState(user.id)).currentPeriodEnd, firstPeriodEnd, "repetição não pode somar outros 30 dias");
 
     const backend = await getDatabaseBackend();
     backend.db.prepare("DELETE FROM pix_payment_requests WHERE user_id=?").run(user.id);

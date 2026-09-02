@@ -871,7 +871,7 @@ Nunca tentar descobrir vendas externas sem integração ou importação.
 1. ~~venda/pedido unificado~~ — PDV com recebimento entregue em 01/09/2026;
 2. ~~baixa de estoque transacional~~ — FEFO, idempotência e estorno entregues;
 3. ~~financeiro automático da venda~~ — caixa ou conta a receber na mesma transação;
-4. compras e fornecedores;
+4. ~~compras e fornecedores~~ — cadastro relacional, vínculo por organização, prazo e totais entregues em 02/09/2026;
 5. ~~ordem de serviço~~ — implementada em 01/09/2026;
 6. ~~materiais consumidos por serviço~~ — implementado com FEFO e rollback integral em 01/09/2026;
 7. ~~Tela Hoje~~ — prioridades e conferência de caixa entregues em 02/09/2026;

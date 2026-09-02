@@ -29,7 +29,7 @@ flowchart TB
     SEC --> AUTH[JWT revogável e identidade atual]
     SEC --> TODAY[Hoje: prioridades por permissão]
     SEC --> WORKSPACE[Workspace e histórico]
-    SEC --> INVENTORY[Estoque, pedidos, entregas e movimentos]
+    SEC --> INVENTORY[Estoque, fornecedores, pedidos, entregas e movimentos]
     SEC --> SERVICES[Orçamentos, agenda e ordens de serviço]
     SEC --> BILLING[Pix, comprovantes e moderação]
     SEC --> SUPPORT[Suporte e observabilidade]
@@ -165,6 +165,7 @@ mindmap
 | `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | escrita dupla com `organization_id` e `tenant_id` legado; ambos derivados da sessão |
 | `inventory_batches` / `inventory_movements` | livro de movimentos, saldo por lote, FEFO e reversões | organização herdada e validada no lote + autor autenticado; a baixa usa validade crescente e o desfazimento preserva rastreabilidade |
 | `inventory_orders` / `inventory_order_items` | vendas, compras, curva ABC e histórico de faturamento | organização herdada do lote; pedido desfeito fica cancelado; `tenant_id` mantido só durante a transição |
+| `suppliers` | fornecedor, contato, prazo médio e agregados de compras | organização obrigatória; compras/entradas aceitam somente vínculo da mesma empresa e preservam o nome no documento operacional |
 | `operational_deliveries` | preparação, previsão, cliente, pedido, rastreio e referência do comprovante privado | venda cria entrega na mesma transação e publica `delivery.created`; mudanças publicam `delivery.status_changed`; cancelamento do pedido cancela a entrega |
 | `service_orders` / `service_order_items` | orçamento, agenda, responsável, recorrência, serviços, materiais, preço, custo e cobrança vinculada | proprietário + organização derivados da sessão; material pertence ao mesmo estoque; conclusão exige execução ativa e idempotência persistida |
 | `monitoring_events` | incidentes técnicos deduplicados e estados de investigação | somente APIs administrativas; sem payload financeiro |
@@ -291,6 +292,8 @@ flowchart TD
 - a migration `migrations/20260828_billing_setup_paid.sql` registra `setup_paid_at`; após a aprovação do Pix inicial de R$ 180, novas solicitações cobram somente R$ 60;
 - a migration `migrations/20260830_idempotency_outbox.sql` cria chaves de idempotência persistidas e a fila outbox; histórico e mutações do estoque rejeitam reutilização conflitante e repetem respostas concluídas;
 - a migration `migrations/20260831_inventory_order_idempotency.sql` deduplica pedidos por organização; venda/compra, movimentos, pedido, itens e evento outbox são confirmados na mesma transação serializável;
+- a migration `migrations/20260902_suppliers.sql` cria fornecedores por organização e adiciona vínculos protegidos por FK a compras e entradas;
+- a moderação Pix exige chave de idempotência persistida; repetir a mesma decisão devolve o resultado anterior e nunca soma outro período à assinatura;
 - `/api/cron/outbox` usa `CRON_SECRET` e processa eventos internos com claim exclusivo, limite de tentativas e backoff; eventos desconhecidos permanecem retentáveis em vez de serem descartados;
 - a migration `migrations/20260831_workspace_history_tenants.sql` adiciona e preenche `organization_id` em workspace e histórico; todas as rotas combinam organização e proprietário resolvidos no servidor, com teste de acesso cruzado;
 - a migration `migrations/20260831_relational_clients_tasks.sql` cria clientes e tarefas relacionais, preserva os registros do payload legado, vincula tarefas a clientes, marca o workspace migrado e foi verificada em Preview e Production;

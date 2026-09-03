@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StaffAccessPanel from "./staff-access-panel";
 import SystemOverviewPanel from "./system-overview-panel";
+import AuditPanel from "./audit-panel";
 
 const ticketStatus = { open: "Novo", answered: "Respondido", closed: "Encerrado" };
 const paymentStatus = { pending: "Aguardando confirmação", payment_review: "Comprovante recebido", approved: "Aprovado", rejected: "Recusado", expired: "Expirado" };
@@ -16,6 +17,7 @@ function Icon({ type }) {
     payment: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></>,
     refresh: <><path d="M20 6v5h-5"/><path d="M19 11a7 7 0 1 0 1 5"/></>,
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
+    audit: <><path d="M5 3h14v18H5Z"/><path d="M9 7h6M9 11h6M9 15h4"/></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
 }
@@ -34,6 +36,7 @@ const viewCopy = {
   tickets: { kicker: "ATENDIMENTO", title: "Suporte", description: "Mensagens dos clientes e respostas da equipe interna." },
   payments: { kicker: "COBRANÇA", title: "Cobrança Pix", description: "Conferência manual, comprovantes opcionais e liberação de assinatura." },
   staff: { kicker: "ACESSO INTERNO", title: "Equipe interna", description: "Permissões operacionais da equipe CandTech." },
+  audit: { kicker: "GOVERNANÇA", title: "Auditoria", description: "Histórico paginado das operações críticas da plataforma." },
 };
 
 export default function MonitoringPortal({ administratorName, permissions }) {
@@ -93,6 +96,7 @@ export default function MonitoringPortal({ administratorName, permissions }) {
         {permissions.canSupport && <button className={view === "tickets" ? "active" : ""} onClick={() => setView("tickets")}><Icon type="inbox"/>Suporte{data.totals.openTickets ? <span className="monitor-count">{data.totals.openTickets}</span> : null}</button>}
         {permissions.canBilling && <button className={view === "payments" ? "active" : ""} onClick={() => setView("payments")}><Icon type="payment"/>Cobrança Pix{data.totals.reviewPayments ? <span className="monitor-count">{data.totals.reviewPayments}</span> : null}</button>}
         {permissions.canManageStaff && <button className={view === "staff" ? "active" : ""} onClick={() => setView("staff")}><Icon type="users"/>Equipe interna</button>}
+        {permissions.isRoot && <button className={view === "audit" ? "active" : ""} onClick={() => setView("audit")}><Icon type="audit"/>Auditoria</button>}
       </nav>
       <div className="monitor-private-note"><strong>Acesso privado</strong><span>Seu login mostra somente os módulos concedidos.</span></div>
       <a className="monitor-back" href="/">Voltar ao ERP</a>
@@ -147,6 +151,7 @@ export default function MonitoringPortal({ administratorName, permissions }) {
       </section>}
 
       {permissions.canManageStaff && view === "staff" && <StaffAccessPanel/>}
+      {permissions.isRoot && view === "audit" && <AuditPanel/>}
 
       {receiptPreview && <div className="monitor-receipt-modal" role="dialog" aria-modal="true" aria-labelledby="receipt-title"><div><header><div><span>COMPROVANTE PIX</span><h2 id="receipt-title">{receiptPreview.receipt.originalFilename}</h2></div><button aria-label="Fechar comprovante" onClick={() => setReceiptPreview(null)}>×</button></header>{receiptPreview.receipt.contentType === "application/pdf" ? <iframe title={`Comprovante ${receiptPreview.txid}`} src={`/api/admin/payments/${receiptPreview.id}/receipt`}/> : <div className="monitor-receipt-image"><img src={`/api/admin/payments/${receiptPreview.id}/receipt`} alt={`Comprovante do pagamento ${receiptPreview.txid}`}/></div>}<footer><small>Confira também o recebimento na conta bancária antes de aprovar.</small><button onClick={() => setReceiptPreview(null)}>Fechar</button></footer></div></div>}
     </section>

@@ -12,6 +12,7 @@ import {
   createInventoryProducts,
   listInventory,
   undoInventoryBatch,
+  updateInventoryAlert,
 } from "@/lib/inventory-db";
 import { reportServerError } from "@/lib/server-observability";
 import { claimIdempotency, completeIdempotency, failIdempotency } from "@/lib/idempotency-db";
@@ -22,7 +23,12 @@ export const runtime = "nodejs";
 
 const text = (value, max = 120) => String(value ?? "").trim().slice(0, max);
 const uuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
-const date = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : null;
+const date = (value) => {
+  const normalized = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+  const parsed = new Date(`${normalized}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === normalized ? normalized : null;
+};
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
 async function inventorySnapshot(tenantId) {
@@ -148,6 +154,31 @@ export async function POST(request) {
       await auditInventory(auth, { action: "supplier.created", subjectType: "supplier", subjectId: supplier.id,
         newState: { name: supplier.name, hasDocument: Boolean(supplier.document), hasContact: Boolean(supplier.email || supplier.phone), leadTimeDays: supplier.leadTimeDays } });
       return complete({ supplier, inventory: await inventorySnapshot(auth.tenantId) }, 201);
+    }
+
+    if (action === "update-alert") {
+      if (!uuid(body.variantId)) return complete({ error: "Produto inválido." }, 400);
+      const minimumQuantity = Number(body.minimumQuantity);
+      if (!Number.isFinite(minimumQuantity) || minimumQuantity < 0 || minimumQuantity > 1_000_000_000) {
+        return complete({ error: "Informe uma quantidade de aviso válida." }, 400);
+      }
+      const reminderText = text(body.restockReminderOn, 10);
+      const restockReminderOn = reminderText ? date(reminderText) : null;
+      if (reminderText && !restockReminderOn) return complete({ error: "Informe uma data válida." }, 400);
+      const variant = await updateInventoryAlert({
+        tenantId: auth.tenantId,
+        variantId: body.variantId,
+        minimumQuantity,
+        restockReminderOn,
+      });
+      if (!variant) return complete({ error: "Produto não encontrado." }, 404);
+      await auditInventory(auth, {
+        action: "inventory.alert.updated",
+        subjectType: "inventory_variant",
+        subjectId: variant.id,
+        newState: { minimumQuantity: variant.minimumQuantity, restockReminderOn: variant.restockReminderOn || null },
+      });
+      return complete({ variant, inventory: await inventorySnapshot(auth.tenantId) });
     }
 
     if (action === "create-products" || action === "import-products") {

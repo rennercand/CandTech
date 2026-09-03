@@ -53,7 +53,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Logística operacional: toda venda cria uma entrega ligada ao pedido, e a equipe acompanha cliente, previsão, status e rastreio na mesma área do estoque, com comprovante PDF/imagem guardado em armazenamento privado.
 - Ordens de serviço com orçamento, cliente, responsável, agenda, local, recorrência finita e itens separados entre mão de obra e materiais.
 - Conclusão transacional de serviço: exige execução iniciada, baixa materiais por FEFO, consolida custo e margem, cria a conta a receber, publica o evento e agenda o próximo ciclo sem efeitos parciais ou duplicados.
-- Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX.
+- Visão do valor do estoque por categoria, alertas de mínimo/validade e relatório CSV/XLSX. Cada SKU aceita uma quantidade de aviso e uma data opcional; enquanto o alerta estiver ativo, o sistema lembra em toda nova entrada e mantém um indicador vermelho acessível no menu.
 - Geração de rascunhos editáveis de vendas e compras a partir dos lançamentos importados do extrato.
 - PDV rápido com leitor de SKU/EAN, cliente opcional, desconto autorizado por permissão e recebimento em dinheiro, Pix, cartão, transferência ou a prazo.
 - Compras ligadas a fornecedores relacionais, com contato, prazo médio de entrega, quantidade de compras e total comprado.
@@ -278,6 +278,7 @@ executam DDL durante uma requisição:
 - `rate_limits`: contadores temporários por hash de origem e grupo de rota.
 - `google_drive_connections`: refresh token cifrado e vinculado ao usuário.
 - `inventory_products` e `inventory_variants`: catálogo e saldo por SKU/empresa; durante a transição, novas escritas guardam `organization_id` e o `tenant_id` legado.
+- `inventory_variants.restock_reminder_on`: data opcional do lembrete de reposição; o alerta também compara o saldo com `minimum_quantity`.
 - `inventory_batches` e `inventory_movements`: livro auditável de entradas, vendas, compras e reversões, com o mesmo escopo organizacional duplo.
 - `inventory_orders` e `inventory_order_items`: pedidos com vários produtos; o pedido herda a organização do lote operacional.
 - `suppliers`: fornecedores por organização, contato e prazo médio; `supplier_id` liga o cadastro a compras e entradas sem perder o nome histórico da operação.
@@ -372,3 +373,5 @@ A auditoria de histórico e código de 29/08/2026 está registrada em [AUDITORIA
 ## Licença
 
 Software proprietário. Consulte `LICENSE`, `COPYRIGHT.md` e `DECLARACAO-DE-TITULARIDADE.md`. O acesso ao serviço ou a eventual visualização do repositório não concede licença para copiar, modificar, distribuir ou revender o código-fonte; dependências de terceiros mantêm suas próprias licenças. Para operar como código fechado, a visibilidade do repositório no GitHub também deve permanecer privada.
+
+Uma apresentação comercial dos controles realmente implementados, com limites declarados, está em [Segurança para clientes](./docs/SEGURANCA-PARA-CLIENTES.md).

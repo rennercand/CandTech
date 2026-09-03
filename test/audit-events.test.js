@@ -9,6 +9,7 @@ import {
   createUser,
   ensureOwnedOrganization,
   getDatabaseBackend,
+  listAuditEventsForRoot,
 } from "../lib/db.js";
 
 async function isolatedDatabase(run) {
@@ -66,4 +67,30 @@ test("auditoria reduz conteúdo excessivo mantendo JSON válido e verificável",
   assert.equal(metadata.truncated, true);
   assert.equal(metadata.originalBytes > 4_000, true);
   assert.match(metadata.sha256, /^[a-f0-9]{64}$/);
+}));
+
+test("consulta raiz pagina eventos e apresenta autor e empresa sem segredos", async () => isolatedDatabase(async () => {
+  const owner = await createUser({ name: "Proprietário", email: "owner@audit.test", passwordHash: "hash" });
+  const organization = await ensureOwnedOrganization({ userId: owner.id, name: "Empresa auditada" });
+  for (let index = 0; index < 3; index += 1) {
+    await appendAuditEvent({
+      userId: owner.id,
+      actorUserId: owner.id,
+      organizationId: organization.organizationId,
+      action: `test.event_${index}`,
+      origin: "test/audit",
+      metadata: { token: "segredo", sequence: index },
+    });
+  }
+
+  const first = await listAuditEventsForRoot({ limit: 2 });
+  assert.equal(first.items.length, 2);
+  assert.equal(first.nextCursor, first.items[1].id);
+  assert.equal(first.items[0].actor.email, owner.email);
+  assert.equal(first.items[0].organization.name, "Empresa auditada");
+  assert.equal(first.items[0].metadata.token, "[redacted]");
+  const second = await listAuditEventsForRoot({ cursor: first.nextCursor, limit: 2 });
+  assert.equal(second.items.length, 1);
+  assert.equal(second.nextCursor, null);
+  assert.equal(Number(second.items[0].id) < Number(first.nextCursor), true);
 }));

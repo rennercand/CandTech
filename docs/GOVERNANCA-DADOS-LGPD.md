@@ -45,6 +45,10 @@ O projeto Neon está em organização gerenciada pela integração da Vercel e a
 
 ## Retenção e eliminação
 
+A trilha de auditoria está em preservação controlada (`legal_hold`), sem exclusão automática. A consulta é paginada, exige conta raiz e MFA, não é concedida a perfis internos de suporte ou cobrança e registra o próprio acesso. Essa é uma medida técnica conservadora, não a definição jurídica final dos prazos.
+
+Antes de criar qualquer rotina de expurgo, o controlador deve aprovar por categoria: finalidade, base legal, prazo, evento inicial da contagem, exceções por litígio, fraude ou incidente, forma de anonimização ou exclusão e evidência da execução. Eventos financeiros, de segurança, de aceite jurídico e operacionais não devem receber um prazo único por conveniência técnica.
+
 - confirmação de e-mail: 24 horas;
 - redefinição de senha: 30 minutos;
 - sessão comum: 8 horas;

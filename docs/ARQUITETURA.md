@@ -162,7 +162,7 @@ mindmap
 | `audit_events` | eventos mínimos de conta, sessão e perfil | `user_id` quando aplicável |
 | `organizations` / `organization_jobs` | empresa e modelos de cargos personalizados | proprietário autenticado + `organization_id` |
 | `organization_members` / `organization_invitations` | colaboradores, permissões e convites de uso único | `organization_id` resolvido pela sessão |
-| `inventory_products` / `inventory_variants` | produto, variação, SKU e saldo | escrita dupla com `organization_id` e `tenant_id` legado; ambos derivados da sessão |
+| `inventory_products` / `inventory_variants` | produto, variação, SKU, saldo, quantidade de aviso e data opcional de reposição | escrita dupla com `organization_id` e `tenant_id` legado; ambos derivados da sessão |
 | `inventory_batches` / `inventory_movements` | livro de movimentos, saldo por lote, FEFO e reversões | organização herdada e validada no lote + autor autenticado; a baixa usa validade crescente e o desfazimento preserva rastreabilidade |
 | `inventory_orders` / `inventory_order_items` | vendas, compras, curva ABC e histórico de faturamento | organização herdada do lote; pedido desfeito fica cancelado; `tenant_id` mantido só durante a transição |
 | `suppliers` | fornecedor, contato, prazo médio e agregados de compras | organização obrigatória; compras/entradas aceitam somente vínculo da mesma empresa e preservam o nome no documento operacional |
@@ -293,6 +293,7 @@ flowchart TD
 - a migration `migrations/20260830_idempotency_outbox.sql` cria chaves de idempotência persistidas e a fila outbox; histórico e mutações do estoque rejeitam reutilização conflitante e repetem respostas concluídas;
 - a migration `migrations/20260831_inventory_order_idempotency.sql` deduplica pedidos por organização; venda/compra, movimentos, pedido, itens e evento outbox são confirmados na mesma transação serializável;
 - a migration `migrations/20260902_suppliers.sql` cria fornecedores por organização e adiciona vínculos protegidos por FK a compras e entradas;
+- a migration `migrations/20260902_inventory_alerts.sql` adiciona a data opcional de reposição por SKU; o mínimo existente e a data alimentam o modal de entrada e o indicador persistente no menu;
 - a moderação Pix exige chave de idempotência persistida; repetir a mesma decisão devolve o resultado anterior e nunca soma outro período à assinatura;
 - `/api/cron/outbox` usa `CRON_SECRET` e processa eventos internos com claim exclusivo, limite de tentativas e backoff; eventos desconhecidos permanecem retentáveis em vez de serem descartados;
 - a migration `migrations/20260831_workspace_history_tenants.sql` adiciona e preenche `organization_id` em workspace e histórico; todas as rotas combinam organização e proprietário resolvidos no servidor, com teste de acesso cruzado;

@@ -14,6 +14,7 @@ import {
   resetInventorySchemaForTests,
   saveDeliveryProof,
   undoInventoryBatch,
+  updateInventoryAlert,
 } from "../lib/inventory-db.js";
 import { normalizeMovementLines, validateProducts } from "../lib/inventory.js";
 import { buildInventoryInsights } from "../lib/inventory-insights.js";
@@ -44,6 +45,18 @@ test("estoque relacional isola empresas, movimenta vários itens e desfaz opera�
     assert.equal(checked.error, undefined);
     const [productA] = await createInventoryProducts({ tenantId: tenantA, products: checked.products });
     await createInventoryProducts({ tenantId: tenantB, products: checked.products });
+
+    const updatedAlert = await updateInventoryAlert({
+      tenantId: tenantA,
+      variantId: productA.variants[0].id,
+      minimumQuantity: 4,
+      restockReminderOn: "2026-09-15",
+    });
+    assert.equal(updatedAlert.minimumQuantity, 4);
+    assert.equal(updatedAlert.restockReminderOn, "2026-09-15");
+    assert.equal((await listInventory(tenantA)).products[0].variants[0].restockReminderOn, "2026-09-15");
+    assert.equal(await updateInventoryAlert({ tenantId: tenantB, variantId: productA.variants[0].id, minimumQuantity: 99 }), null);
+    assert.equal((await listInventory(tenantB)).products[0].variants[0].minimumQuantity, 2);
 
     const entryLines = normalizeMovementLines(productA.variants.map((variant) => ({ variantId: variant.id, quantity: 10, unitCost: variant.unitCost })));
     const entry = await applyInventoryBatch({ tenantId: tenantA, userId: ownerA.id, kind: "entry", reference: "NF 1", lines: entryLines });
@@ -176,6 +189,9 @@ test("importação rejeita SKU repetido e linhas sem quantidade", () => {
     { name: "B", variants: [{ sku: "mesmo" }] },
   ]).error, /repetido/);
   assert.equal(normalizeMovementLines([{ variantId: "abc", quantity: 0 }]), null);
+  assert.equal(validateProducts([{ name: "A", variants: [{ sku: "DATA", restockReminderOn: "2026-09-15" }] }]).products[0].variants[0].restockReminderOn, "2026-09-15");
+  assert.equal(validateProducts([{ name: "A", variants: [{ sku: "SEM-DATA", restockReminderOn: "amanhã" }] }]).products[0].variants[0].restockReminderOn, "");
+  assert.equal(validateProducts([{ name: "A", variants: [{ sku: "DATA-INVALIDA", restockReminderOn: "2026-02-31" }] }]).products[0].variants[0].restockReminderOn, "");
 });
 
 test("prévia CSV agrupa variações e preserva lote e validade", () => {

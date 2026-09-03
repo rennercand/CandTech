@@ -74,6 +74,50 @@ const formatDate = (value) => {
 const today = () => new Date().toISOString().slice(0, 10);
 const newWorkspaceEntityId = (prefix) => globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+function localDateText() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function collectStockAlerts(products = [], currentDate = localDateText()) {
+  return products.flatMap((product) => {
+    const variants = Array.isArray(product.variants) ? product.variants : [product];
+    return variants.map((variant) => {
+      const quantity = Number(variant.quantity) || 0;
+      const minimum = Number(variant.minimumQuantity ?? variant.minimum) || 0;
+      const reminderOn = String(variant.restockReminderOn || "").slice(0, 10);
+      const quantityLow = quantity <= minimum;
+      const dateDue = Boolean(reminderOn && reminderOn <= currentDate);
+      return {
+        id: variant.id || `${product.id || product.name}-${variant.sku}`,
+        name: Array.isArray(product.variants) ? `${product.name}${variant.name === "Padrão" ? "" : ` · ${variant.name}`}` : product.name,
+        sku: variant.sku || "",
+        unit: product.unit || "un",
+        quantity,
+        minimum,
+        reminderOn,
+        quantityLow,
+        dateDue,
+      };
+    }).filter((item) => item.quantityLow || item.dateDue);
+  });
+}
+
+function StockAlertDialog({ items, onClose, onOpenInventory }) {
+  useEffect(() => {
+    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  return <div className="stock-alert-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="stock-alert-dialog" role="dialog" aria-modal="true" aria-labelledby="stock-alert-title" aria-describedby="stock-alert-description">
+      <header><div className="stock-alert-symbol" aria-hidden="true">!</div><div><span className="eyebrow">LEMBRETE DO ESTOQUE</span><h2 id="stock-alert-title">{items.length} {items.length === 1 ? "item precisa" : "itens precisam"} de atenção</h2><p id="stock-alert-description">Este aviso aparece em toda nova entrada no sistema enquanto houver reposição pendente.</p></div><button type="button" aria-label="Fechar aviso de estoque" onClick={onClose}>×</button></header>
+      <div className="stock-alert-dialog-list">{items.slice(0, 8).map((item) => <article key={item.id}><div><strong>{item.name || item.sku || "Produto"}</strong><small>{item.sku ? `SKU ${item.sku}` : "SKU não informado"}</small></div><span>{item.quantityLow ? `${item.quantity} ${item.unit} disponíveis · aviso em ${item.minimum}` : "Saldo acima do limite"}{item.dateDue ? ` · revisar desde ${formatDate(item.reminderOn)}` : ""}</span></article>)}{items.length > 8 && <p>Mais {items.length - 8} item(ns) aguardam conferência.</p>}</div>
+      <footer><button type="button" className="secondary-button" onClick={onClose}>Lembrar depois</button><button type="button" className="primary-button" autoFocus onClick={onOpenInventory}>Abrir estoque</button></footer>
+    </section>
+  </div>;
+}
+
 function projectedDate(index) {
   // Sugere uma data mensal para cada período, mas o usuário pode alterá-la.
   const base = new Date();
@@ -821,6 +865,8 @@ export default function CandTechApp({ publicFallback = null }) {
   const [pricingState, setPricingState] = useState(emptyPricingState);
   const [financialAccounts, setFinancialAccounts] = useState([emptyFinancialAccount()]);
   const [inventoryState, setInventoryState] = useState(emptyInventoryState);
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [showStockAlert, setShowStockAlert] = useState(false);
   const [commerceOrders, setCommerceOrders] = useState([emptyCommerceOrder()]);
   const [activeDocumentId, setActiveDocumentId] = useState(null);
   const [savedFinancings, setSavedFinancings] = useState([]);
@@ -1085,6 +1131,36 @@ export default function CandTechApp({ publicFallback = null }) {
   useEffect(() => {
     if (user && canAccess("history") && (view === "workspace" || view === "history")) loadHistory();
   }, [user, view]);
+
+  useEffect(() => {
+    if (!user || !workspaceReady || !canAccess("inventory")) {
+      setStockAlerts([]);
+      setShowStockAlert(false);
+      return;
+    }
+    let active = true;
+    fetch("/api/inventory", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Não foi possível verificar o estoque.");
+        return body.inventory;
+      })
+      .then((inventory) => {
+        if (!active) return;
+        const alerts = collectStockAlerts(inventory.products);
+        setStockAlerts(alerts);
+        setShowStockAlert(alerts.length > 0);
+      })
+      .catch(() => {
+        if (active) setStockAlerts([]);
+      });
+    return () => { active = false; };
+  }, [user?.id, workspaceReady, user?.access?.permissions?.join(",")]);
+
+  function receiveInventorySnapshot(snapshot) {
+    setInventoryState((current) => ({ ...current, ...snapshot }));
+    setStockAlerts(collectStockAlerts(snapshot.products || []));
+  }
 
   useEffect(() => {
     const permission = {
@@ -2138,9 +2214,11 @@ export default function CandTechApp({ publicFallback = null }) {
               className={view === id ? "nav-link active" : "nav-link"}
               onClick={() => setView(id)}
               aria-current={view === id ? "page" : undefined}
+              aria-label={id === "inventory" && stockAlerts.length ? `${label}: ${stockAlerts.length} aviso(s) pendente(s)` : label}
             >
               <span>{icon}</span>
               {label}
+              {id === "inventory" && stockAlerts.length > 0 && <strong className="nav-stock-alert" title={`${stockAlerts.length} aviso(s) de estoque`}>{stockAlerts.length > 99 ? "99+" : stockAlerts.length}</strong>}
             </button>
           ))}
           <button
@@ -2334,8 +2412,8 @@ export default function CandTechApp({ publicFallback = null }) {
               onSave={saveCashFlow} />
           </div>
         )}
-        {view === "inventory" && <InventoryOperations clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} canDiscount={canAccess("discounts")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
-        {view === "commerce" && <InventoryOperations initialSection="orders" clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} canDiscount={canAccess("discounts")} driveStatus={driveStatus} onSnapshot={(snapshot) => setInventoryState((current) => ({ ...current, ...snapshot }))} />}
+        {view === "inventory" && <InventoryOperations clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} canDiscount={canAccess("discounts")} driveStatus={driveStatus} onSnapshot={receiveInventorySnapshot} />}
+        {view === "commerce" && <InventoryOperations initialSection="orders" clients={clients} onDeliveriesChange={(deliveries) => setInventoryState((current) => ({ ...current, deliveries }))} canExport={canAccess("exports")} canUseDrive={canAccess("exports") && canAccess("drive")} canDiscount={canAccess("discounts")} driveStatus={driveStatus} onSnapshot={receiveInventorySnapshot} />}
         {view === "services" && <ServiceOperations clients={clients} />}
         {view === "clients" && <ClientManager clients={clients} setClients={setClients} orders={[...commerceOrders, ...(inventoryState.orders || [])]} />}
         {view === "tasks" && <TaskKanban tasks={tasks} setTasks={setTasks} clients={clients} />}
@@ -2364,6 +2442,7 @@ export default function CandTechApp({ publicFallback = null }) {
         </div>
       </section>
       {fileNameDialogProps && <FileNameDialog {...fileNameDialogProps} />}
+      {showStockAlert && stockAlerts.length > 0 && <StockAlertDialog items={stockAlerts} onClose={() => setShowStockAlert(false)} onOpenInventory={() => { setShowStockAlert(false); setView("inventory"); }} />}
     </main>
   );
 }

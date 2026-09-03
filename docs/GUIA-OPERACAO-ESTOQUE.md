@@ -29,7 +29,7 @@ O SKU identifica uma variação específica. A quantidade muda somente por entra
 1. Abra **Produtos e variações**.
 2. Informe produto, categoria e unidade.
 3. Crie um SKU único para cada cor, modelo, sabor, tamanho ou armazenamento.
-4. Revise custo, preço, mínimo e localização.
+4. Revise custo, preço, quantidade em que deseja ser avisado, data opcional do lembrete e localização.
 5. Confirme o cadastro. O formulário só é limpo depois de o servidor confirmar.
 
 ### Mercadoria recebida
@@ -84,7 +84,8 @@ Todas as APIs exigem sessão JWT e resolvem a empresa pelo acesso atual do usuá
 
 ## Conferência semanal
 
-- revisar alertas de estoque mínimo;
+- revisar alertas de estoque mínimo e datas de reposição; enquanto houver pendência, o aviso aparece em toda nova entrada no site e uma luz vermelha com a quantidade permanece no menu **Logística e estoque**;
+- para alterar o aviso de um SKU já cadastrado, abra **Produtos e variações**, informe **Avisar quando restarem** e, se desejar, **Lembrar a partir de**, então salve;
 - conferir o gráfico de valor por categoria para identificar dinheiro concentrado ou mercadoria parada;
 - conferir operações desfeitas e referências sem identificação;
 - verificar lotes próximos da validade quando usados;

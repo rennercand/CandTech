@@ -62,6 +62,7 @@ test("APIs administrativas aplicam privilégio mínimo no servidor", () => {
   const monitoring = readFileSync(new URL("../app/api/admin/monitoring/route.js", import.meta.url), "utf8");
   const staff = readFileSync(new URL("../app/api/admin/staff/route.js", import.meta.url), "utf8");
   const receipt = readFileSync(new URL("../app/api/admin/payments/[paymentId]/receipt/route.js", import.meta.url), "utf8");
+  const audit = readFileSync(new URL("../app/api/admin/audit/route.js", import.meta.url), "utf8");
   const application = readFileSync(new URL("../app/candtech-app.js", import.meta.url), "utf8");
   assert.match(monitoring, /auth\.access\.canMonitor/);
   assert.match(monitoring, /auth\.access\.canSupport/);
@@ -71,6 +72,9 @@ test("APIs administrativas aplicam privilégio mínimo no servidor", () => {
   assert.match(staff, /access\.canManageStaff/);
   assert.match(staff, /guardMutation\(request\)/);
   assert.match(receipt, /access\.canBilling/);
+  assert.match(audit, /access\.isRoot/);
+  assert.match(audit, /hasVerifiedMfa\(user\)/);
+  assert.match(audit, /Cache-Control.*private, no-store/);
   assert.match(application, /AdministrativeAccessScreen/);
   assert.match(application, /user\.administrator && user\.monitoringPath/);
 });

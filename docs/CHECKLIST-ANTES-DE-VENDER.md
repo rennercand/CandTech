@@ -38,6 +38,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - logs de erro das APIs em formato estruturado, com remoção de credenciais, e-mails e documentos; mensagens livres não são registradas em produção;
 - CI no GitHub para as branches `test` e `main`, bloqueando vulnerabilidades altas/críticas e exigindo testes e build válidos.
 - central privada mostra a prontidão comercial da configuração de Production sem devolver chaves, tokens, conexões ou e-mails administrativos; bloqueios essenciais ficam separados de avisos e integrações opcionais.
+- trilha de auditoria paginada disponível somente para a conta raiz com MFA; a consulta registra o próprio acesso e não concede leitura às contas internas de suporte ou cobrança.
 
 ## Antes de um teste privado pequeno
 
@@ -90,6 +91,7 @@ Este documento separa o que já pode ser preparado no código do que exige decis
 - migrations versionadas e credencial de runtime sem privilégios DDL;
 - papéis, permissões e isolamento por empresa testados automaticamente;
 - auditoria de alterações financeiras, exportações e permissões;
+- manter a trilha de auditoria sob retenção protegida, sem exclusão automática, até os prazos por categoria serem aprovados na revisão jurídica; documentar e testar a futura rotina antes de ativá-la;
 - backup e restauração realmente testados com RPO/RTO definidos;
 - [x] e-mail verificado, recuperação segura e MFA para áreas administrativas e gestão de equipe;
 - teste de carga com orçamento e limites conhecidos;

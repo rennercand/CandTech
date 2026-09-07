@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Baixar código
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           # Este workflow apenas lê, testa e compila; não precisa manter o
           # GITHUB_TOKEN gravado na configuração local do Git.

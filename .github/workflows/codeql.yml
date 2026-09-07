@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Baixar código sem persistir credenciais
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Inicializar CodeQL

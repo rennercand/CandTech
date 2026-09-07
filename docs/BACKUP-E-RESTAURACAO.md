@@ -37,6 +37,10 @@ Segredos, tokens de sessão, arquivos `.env` e credenciais não entram no pacote
 
 Uma cópia que nunca passou por este procedimento não conta como backup validado. A restauração em Production exige autorização explícita do responsável técnico e do controlador dos dados.
 
+## Portabilidade da conta: correção local
+
+A exportação ZIP percorre as páginas do histórico em vez de limitar o conteúdo aos primeiros 50 documentos. O teste inclui 56 documentos da empresa A e um documento da empresa B, confirmando inclusão completa desse histórico e exclusão dos dados de B. Para o envio por e-mail, há limites explícitos de 10.000 documentos, 32 MiB de JSON não comprimido e 15 MiB de ZIP; excedê-los gera erro, não um arquivo silenciosamente incompleto. Essa exportação não é snapshot transacional entre todos os módulos, não inclui toda a plataforma nem comprova restauração de Neon/Blob.
+
 ## Exclusão e LGPD
 
 Pedidos válidos de exclusão são aplicados primeiro aos sistemas ativos. Cópias imutáveis continuam bloqueadas para uso comum e expiram pelo ciclo técnico definido; uma restauração não pode reativar dados já eliminados, portanto o registro de supressão deve ser reaplicado antes de liberar o ambiente recuperado.

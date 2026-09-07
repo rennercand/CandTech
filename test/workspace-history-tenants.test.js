@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import { strFromU8, unzipSync } from "fflate";
 import { buildAccountBackup } from "../lib/account-backup.js";
 import {
@@ -107,6 +108,20 @@ test("workspace e histórico exigem proprietário e organização na mesma consu
     assert.equal(exported.workspace.financialAccounts[0].id, "commitment-a");
     assert.equal(exported.workspace.cashEntries[0].id, "entry-a");
     assert.deepEqual(exported.documents.map((item) => item.id), [history.id]);
+
+    // Seed automatic history beyond the UI's manual-document limit. Account
+    // exports must paginate, never silently return only the first 50 records.
+    const insertHistory = backend.db.prepare("INSERT INTO histories (public_id, user_id, organization_id, title, calculation_type, payload) VALUES (?, ?, ?, ?, ?, ?)");
+    const additionalIds = Array.from({ length: 55 }, () => randomUUID());
+    for (const id of additionalIds) insertHistory.run(id, ownerA.id, organizationA.organizationId, "Automatic history", "VPL", "{}");
+    const foreignId = randomUUID();
+    insertHistory.run(foreignId, ownerB.id, organizationB.organizationId, "Private B", "VPL", "{}");
+    const paginatedBackup = await buildAccountBackup(ownerA.id);
+    const paginatedFiles = unzipSync(Buffer.from(paginatedBackup.content, "base64"));
+    const paginatedExport = JSON.parse(strFromU8(paginatedFiles["backup-candtech.json"]));
+    assert.equal(paginatedExport.documents.length, 56);
+    assert.deepEqual(new Set(paginatedExport.documents.map(item => item.id)), new Set([history.id, ...additionalIds]));
+    assert.equal(paginatedExport.documents.some(item => item.id === foreignId), false);
 
     await saveWorkspace({
       userId: ownerA.id,

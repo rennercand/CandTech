@@ -8,7 +8,8 @@ if (!connectionString) throw new Error("DATABASE_URL ou POSTGRES_URL não config
 const directory = dirname(fileURLToPath(import.meta.url));
 const sql = neon(connectionString);
 const source = await readFile(join(directory, "..", "migrations", "20260902_inventory_alerts.sql"), "utf8");
-const statements = source.split(";").map((value) => value.trim()).filter(Boolean);
+// This migration contains semicolons in full-line comments, not statements.
+const statements = source.replace(/^\s*--.*$/gm, "").split(";").map((value) => value.trim()).filter(Boolean);
 await sql.transaction((transaction) => statements.map((statement) => transaction.query(statement)));
 const [result] = await sql`SELECT
   EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='inventory_variants' AND column_name='restock_reminder_on') AS reminder_ready,

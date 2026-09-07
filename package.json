@@ -28,6 +28,7 @@
     "legal:source-hash": "node scripts/source-registration-hash.js",
     "security:check-db-role": "node scripts/check-runtime-db-privileges.js",
     "test": "node --test",
+    "test:security:http": "node scripts/security-http-check.js",
     "start": "next start"
   },
   "repository": {

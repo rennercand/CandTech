@@ -37,3 +37,5 @@ jobs:
         run: npm test
       - name: Validar build de produção
         run: npm run build
+      - name: Validar autenticação e isolamento pelo HTTP local
+        run: npm run test:security:http

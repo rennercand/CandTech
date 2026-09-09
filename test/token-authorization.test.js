@@ -23,6 +23,8 @@ const { GET: readWorkspace, PUT: writeWorkspace } = await import("../app/api/wor
 const { GET: readInventory, POST: writeInventory } = await import("../app/api/inventory/route.js");
 const { GET: readServices } = await import("../app/api/services/route.js");
 const { GET: readAdminStaff } = await import("../app/api/admin/staff/route.js");
+const { GET: exportAccount } = await import("../app/api/account/export/route.js");
+const { unzipSync, strFromU8 } = await import("fflate");
 const { createInventoryProducts, listInventory } = await import("../lib/inventory-db.js");
 const { NextRequest } = await import("next/server.js");
 
@@ -70,6 +72,29 @@ test("tokens reais: identidade, adulteração, expiração, revogação e isolam
     });
     const documents = [];
     for (let index = 0; index < 3; index++) documents.push(await db.createHistory({ userId: users[index].id, organizationId: organizations[index].organizationId, title: `Private ${index}`, calculationType: "VPL", payload: {} }));
+
+    await t.test("ZIP exige proprietário e MFA e ignora empresa fornecida pelo navegador", async () => {
+      assert.equal((await exportAccount(apiRequest(null, "/api/account/export"))).status, 401);
+      assert.equal((await exportAccount(apiRequest(tokens[3], "/api/account/export"))).status, 403);
+      assert.equal((await exportAccount(apiRequest(tokens[0], "/api/account/export"))).status, 403);
+      await db.savePendingUserMfa({ userId: users[0].id, encryptedSecret: "synthetic-not-a-real-secret", expiresAt: new Date(Date.now() + 60000) });
+      assert.equal(await db.enableUserMfa({ userId: users[0].id, recoveryCodeHashes: [] }), true);
+      const verified = await createToken(users[0], { mfaVerified: true });
+      const response = await exportAccount(apiRequest(verified, `/api/account/export?userId=${users[1].id}&organizationId=${organizations[1].organizationId}`));
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("content-type"), "application/zip");
+      assert.match(response.headers.get("cache-control"), /no-store/);
+      const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
+      const data = JSON.parse(strFromU8(files["backup-candtech.json"]));
+      assert.equal(data.owner.email, users[0].email);
+      assert.equal(data.organization.id, organizations[0].organizationId);
+      assert.ok(!JSON.stringify(data).includes(users[1].email));
+      assert.ok(!JSON.stringify(data).includes("synthetic-not-a-real-secret"));
+      assert.ok(!JSON.stringify(data).includes(verified));
+      assert.ok(files["LEIA-ME.txt"]);
+      await revokeSession(await getSession(request(verified)));
+      assert.equal((await exportAccount(apiRequest(verified, "/api/account/export"))).status, 401);
+    });
 
     await t.test("seis identidades e 18 combinações de usuário/documento", async () => {
       for (let index = 0; index < 6; index++) {

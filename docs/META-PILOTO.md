@@ -9,9 +9,10 @@ Estoque e alertas, clientes, vendas/serviços, financeiro, equipe com permissõe
 ## Critérios de liberação
 
 - [x] Atualizar Next.js para 16.3.4 e Sharp para 0.35.4; auditoria local sem vulnerabilidades conhecidas em 09/09/2026.
-- [x] Validar build, 139 testes automatizados e 39 verificações HTTP locais de autenticação/isolamento. Os bancos destes testes são SQLite temporários, não o Neon de produção.
+- [x] Validar build, 140 testes automatizados e 42 verificações HTTP locais de autenticação/isolamento, incluindo o download ZIP. Os bancos destes testes são SQLite temporários, não o Neon de produção.
+- [x] Disponibilizar exportação ZIP autenticada para o proprietário com MFA, sem anexar dados financeiros aos e-mails; documentar conteúdo, limite e ausência de importador/restauração completa.
 - [x] Minimizar novos tokens: sem nome/e-mail, identidade e permissões verificadas no servidor; testar sessão revogada e conta suspensa.
-- [ ] Confirmar CI e deploy da correção no domínio oficial.
+- [x] Confirmar CI e deploy da correção de dependências no domínio oficial: commit `60bcf83`, READY em 09/09/2026. Cada entrega posterior exige nova validação.
 - [ ] Conferir na central privada ausência de bloqueios de configuração, incluindo assinatura obrigatória e credencial de banco sem DDL.
 - [ ] Confirmar entrega real de verificação de e-mail, recuperação e convite com contas de teste autorizadas.
 - [ ] Validar o ciclo comercial: primeira cobrança R$ 180, conferência no banco pelo responsável, ativação e próxima cobrança R$ 60; comprovante sozinho não autoriza aprovação. Não gerar pagamento real sem decisão do responsável.
@@ -28,6 +29,8 @@ Começar com entrada acompanhada de clientes, volume compatível com suporte dis
 Adiar fiscal, Open Finance, marketplaces, API pública e novas integrações. Retomar essas roadmaps somente após estabilizar o piloto e medir a demanda.
 
 ## Referências
+
+- [Guia de acesso seguro, ZIP e liberação de clientes](./GUIA-ACESSO-E-BACKUP-PILOTO.md)
 
 - [Checklist comercial](./CHECKLIST-ANTES-DE-VENDER.md)
 - [Pendências técnicas](./ROADMAP-PENDENCIAS.md)

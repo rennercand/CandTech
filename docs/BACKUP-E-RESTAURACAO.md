@@ -1,5 +1,7 @@
 # Backup e restauração — CandTech
 
+**Atualização de 09/09/2026:** a exportação da conta agora tem download autenticado em `/exportar-dados`, exclusivo do proprietário com MFA e limite de resposta de 4 MiB. O e-mail de expiração passa a enviar apenas orientação para esse download, não um ZIP anexado. Referências históricas ao envio de ZIP abaixo descrevem o fluxo anterior. Veja o [guia de configuração e acesso](./GUIA-ACESSO-E-BACKUP-PILOTO.md).
+
 Versão inicial: 29/08/2026. Estado: política e critérios definidos; restauração completa do Neon e do Blob ainda precisa ser executada e cronometrada em ambiente isolado.
 
 ## Metas provisórias do piloto

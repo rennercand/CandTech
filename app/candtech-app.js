@@ -2232,6 +2232,7 @@ export default function CandTechApp({ publicFallback = null }) {
           </button>
         </nav>
         {["owner", "personal"].includes(user.access?.role) && <a className="sidebar-subscribe" href="/assinar"><span>Não é assinante?</span><strong>Assine agora</strong></a>}
+        {["owner", "personal"].includes(user.access?.role) && <a className="sidebar-subscribe" href="/exportar-dados">Exportar meus dados (ZIP)</a>}
         <div className="sidebar-bottom">
           <span className="avatar">{user.name[0]?.toUpperCase()}</span>
           <div>

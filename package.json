@@ -49,10 +49,10 @@
     "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
     "fflate": "^0.8.3",
-    "jose": "^6.2.6",
+    "jose": "^6.2.12",
     "next": "^16.3.4",
-    "pdfjs-dist": "^6.2.108",
-    "pdfkit": "^0.19.1",
+    "pdfjs-dist": "^6.3.289",
+    "pdfkit": "^0.20.2",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

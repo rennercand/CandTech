@@ -1,0 +1,37 @@
+# Meta atual — piloto comercial acompanhado
+
+Definida pelo responsável em 09/09/2026: preparar o essencial para vender a versão piloto, antes de ampliar funcionalidades das roadmaps.
+
+## Escopo
+
+Estoque e alertas, clientes, vendas/serviços, financeiro, equipe com permissões e assinatura Pix manual. Não prometer emissão fiscal, integração bancária automática, disponibilidade garantida ou certificação de segurança. O piloto não dispensa proteção de dados nem recuperação testada.
+
+## Critérios de liberação
+
+- [x] Atualizar Next.js para 16.3.4 e Sharp para 0.35.4; auditoria local sem vulnerabilidades conhecidas em 09/09/2026.
+- [x] Validar build, 139 testes automatizados e 39 verificações HTTP locais de autenticação/isolamento. Os bancos destes testes são SQLite temporários, não o Neon de produção.
+- [x] Minimizar novos tokens: sem nome/e-mail, identidade e permissões verificadas no servidor; testar sessão revogada e conta suspensa.
+- [ ] Confirmar CI e deploy da correção no domínio oficial.
+- [ ] Conferir na central privada ausência de bloqueios de configuração, incluindo assinatura obrigatória e credencial de banco sem DDL.
+- [ ] Confirmar entrega real de verificação de e-mail, recuperação e convite com contas de teste autorizadas.
+- [ ] Validar o ciclo comercial: primeira cobrança R$ 180, conferência no banco pelo responsável, ativação e próxima cobrança R$ 60; comprovante sozinho não autoriza aprovação. Não gerar pagamento real sem decisão do responsável.
+- [ ] Restaurar backup de Neon e arquivos privados em ambiente isolado, registrar integridade e tempo de recuperação. Exportação de conta não substitui esse teste.
+- [ ] Testar concorrência real de estoque no PostgreSQL isolado, sem usar dados de clientes.
+- [ ] Definir responsável pelo suporte/incidentes, contato, condições comerciais, identificação do controlador e revisão dos textos aplicáveis.
+
+Itens abertos exigem evidência antes de serem marcados como concluídos. Não registrar credenciais ou dados de clientes neste documento. Evidências operacionais sensíveis ficam em local privado, com referência anonimizada aqui.
+
+## Operação inicial
+
+Começar com entrada acompanhada de clientes, volume compatível com suporte disponível e conferência diária de erros, cobranças e estoque. Se houver acesso cruzado, cobrança duplicada ou perda de dados, interromper novas entradas/cobranças afetadas e seguir o plano de incidentes. Não ampliar a venda enquanto esses bloqueios persistirem.
+
+Adiar fiscal, Open Finance, marketplaces, API pública e novas integrações. Retomar essas roadmaps somente após estabilizar o piloto e medir a demanda.
+
+## Referências
+
+- [Checklist comercial](./CHECKLIST-ANTES-DE-VENDER.md)
+- [Pendências técnicas](./ROADMAP-PENDENCIAS.md)
+- [Backup e restauração](./BACKUP-E-RESTAURACAO.md)
+- [Validação de tokens e isolamento](./VALIDACAO-TOKEN-E-ISOLAMENTO.md)
+- [Auditoria de exposição](./AUDITORIA-EXPOSICAO-DADOS.md)
+- [Resposta a incidentes](./PLANO-RESPOSTA-INCIDENTES.md)

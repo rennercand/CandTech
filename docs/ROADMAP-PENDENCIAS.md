@@ -1,5 +1,7 @@
 # Pendências verificadas da roadmap — CandTech
 
+**Foco definido em 09/09/2026:** [meta do piloto comercial](./META-PILOTO.md). Priorizar bloqueios de segurança e operação; novas integrações ficam para depois da estabilização do piloto.
+
 Data do recorte: 02/09/2026.
 
 Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes existentes. Ele evita marcar como entregue algo que aparece apenas na interface, em um documento ou como estrutura parcial. As prioridades podem mudar depois de validação comercial, jurídica, contábil ou de segurança.
@@ -19,6 +21,8 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | Motor tributário e emissão fiscal | Pendente | somente pré-nota sem validade fiscal |
 
 ## P0 — faltas antes de ampliar a comercialização
+
+**Atualização de segurança de dependências:** o CI detectou novos advisories no Next.js/Sharp em 08/09/2026. Correção selecionada: Next.js e `@next/third-parties` 16.3.4, Sharp 0.35.4. Fontes: [Next.js em Windows](https://github.com/advisories/GHSA-p293-qw3h-jr36), [otimização de imagens AVIF](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4), [Sharp/libheif](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c). A classificação de vulnerabilidade não demonstra exploração ou vazamento; auditoria, testes, build e deploy devem ser validados novamente a cada atualização.
 
 **Minimização do cookie:** removidos nome/e-mail/tipo de conta dos novos JWTs; identidade e perfil continuam resolvidos no servidor. Cobertura de regressão inclui conta suspensa com token já emitido e compatibilidade de sessões anteriores. Esta melhoria não encerra as demais verificações de isolamento e continuidade.
 

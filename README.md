@@ -1,5 +1,7 @@
 # CandTech
 
+**Prioridade atual:** [preparar o essencial para o piloto comercial acompanhado](./docs/META-PILOTO.md). Os critérios de liberação distinguem testes concluídos de validações operacionais ainda pendentes.
+
 Aplicação web para análise e organização financeira, construída com Next.js. A CandTech reúne calculadoras de investimentos, sistemas de amortização, formação de preço, organização de custos, importação local de extratos bancários em PDF/CSV/OFX/XLSX e histórico privado por conta.
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)

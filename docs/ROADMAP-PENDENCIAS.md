@@ -20,6 +20,8 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 
 ## P0 — faltas antes de ampliar a comercialização
 
+**Minimização do cookie:** removidos nome/e-mail/tipo de conta dos novos JWTs; identidade e perfil continuam resolvidos no servidor. Cobertura de regressão inclui conta suspensa com token já emitido e compatibilidade de sessões anteriores. Esta melhoria não encerra as demais verificações de isolamento e continuidade.
+
 **Avanço local da retomada:** autenticação com claims obrigatórios e idade máxima do JWT; suíte com seis usuários/três organizações, verificações reais de handlers e teste HTTP contra o Next.js compilado com 39 verificações. A exportação de conta agora pagina todo o histórico dentro dos limites de tamanho, sem truncar silenciosamente em 50 documentos (regressão com 56 documentos e isolamento entre empresas). CI inclui o teste HTTP após build. Ver [validação detalhada](./VALIDACAO-TOKEN-E-ISOLAMENTO.md). Não equivale a publicação, pentest ou restauração da plataforma; os itens abaixo continuam abertos no que ainda não foi comprovado.
 
 - [ ] concluir o isolamento relacional por organização para workspace, históricos, clientes, tarefas, entregas e lançamentos que ainda vivem em payloads agregados; **workspace, histórico, clientes, tarefas, entregas e livro financeiro já possuem escopo relacional, backfill e índices verificados em Preview/Production. No estoque, `organization_id`, backfill e índices foram aplicados nos dois branches; leituras e novas escritas conferem os dois identificadores e o teste cobre duas organizações reais. Falta retirar `tenant_id` somente em deploy futuro, depois de observar a transição**;

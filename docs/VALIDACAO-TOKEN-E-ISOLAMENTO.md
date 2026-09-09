@@ -38,6 +38,8 @@ Alterações locais só entram em produção após publicação e verificação 
 
 ## Ampliação: API e HTTP compilado
 
+Minimização adicional: novos JWTs contêm apenas `sub`, `jti`, `iat` e `exp`. Nome, e-mail e tipo de conta continuam disponíveis pela sessão resolvida no servidor, sem duplicação no cookie. Tokens anteriores permanecem compatíveis até expiração/revogação. Testes conferem o conteúdo dos tokens, a compatibilidade e a negativa de conta suspensa, inclusive quando a rota permite regularizar assinatura ou e-mail. Os identificadores restantes continuam sendo dados vinculáveis à conta, não dados anônimos.
+
 A suíte de handlers também verifica workspace com proprietário/organização forjados no corpo, filtragem de campos financeiros de funcionários, acesso anônimo, áreas sem permissão, CSRF, conteúdo inválido, excesso de bytes, JSON malformado, prototype pollution, alteração de alerta de outro tenant e replay/conflito de idempotência.
 
 Depois de `npm run build`, execute `npm run test:security:http` em checkout sem arquivos `.env`. O script cria um SQLite temporário e três usuários, inicia o Next.js compilado somente no loopback, executa 39 verificações HTTP e encerra o processo. Não herda credenciais de serviços externos. Testa 401 para anônimos, `no-store`, `nosniff`, leitura de histórico próprio, exclusão cruzada, CSRF, exigência de MFA e revogação. Este passo foi incluído no CI após o build; execução local aprovada, execução remota ainda depende de publicação.

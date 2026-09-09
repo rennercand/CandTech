@@ -56,6 +56,18 @@ test("tokens reais: identidade, adulteração, expiração, revogação e isolam
     }
     const tokens = await Promise.all(users.map(user => createToken(user)));
     const claims = decodeJwt(tokens[0]);
+    await t.test("cookie contém somente claims de identificação e validade, sem perfil pessoal", async () => {
+      for (let index = 0; index < tokens.length; index++) {
+        const payload = decodeJwt(tokens[index]);
+        assert.deepEqual(Object.keys(payload).sort(), ["exp", "iat", "jti", "sub"]);
+        assert.equal(payload.sub, String(users[index].id));
+        const session = await getSession(request(tokens[index]));
+        assert.equal(session.name, users[index].name);
+        assert.equal(session.email, users[index].email);
+      }
+      // Sessões anteriores à minimização continuam funcionando até expirar.
+      assert.equal((await getSession(request(await sign({ ...claims, name: "Old name", email: "old@test.local", accountType: "person" })))).email, users[0].email);
+    });
     const documents = [];
     for (let index = 0; index < 3; index++) documents.push(await db.createHistory({ userId: users[index].id, organizationId: organizations[index].organizationId, title: `Private ${index}`, calculationType: "VPL", payload: {} }));
 
@@ -170,6 +182,13 @@ test("tokens reais: identidade, adulteração, expiração, revogação e isolam
       assert.equal(await getSession(request(tokens[0])), null);
       assert.ok(await getSession(request(tokens[0]), { allowInactiveSubscription: true }));
       process.env.BILLING_ENFORCEMENT_ENABLED = "false";
+    });
+    await t.test("suspender a conta bloqueia token existente mesmo nas rotas de regularização", async () => {
+      assert.ok(await getSession(request(tokens[4])));
+      backend.db.prepare("UPDATE users SET account_status='suspended' WHERE id=?").run(users[4].id);
+      assert.equal(await getSession(request(tokens[4])), null);
+      assert.equal(await getSession(request(tokens[4]), { allowUnverified: true, allowInactiveSubscription: true }), null);
+      assert.equal((await readWorkspace(apiRequest(tokens[4], "/api/workspace"))).status, 401);
     });
     await t.test("logout revoga token e expiração do banco também bloqueia", async () => {
       await revokeSession(await getSession(request(tokens[0])));

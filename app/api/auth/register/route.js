@@ -20,9 +20,12 @@ export async function POST(request) {
 
   try {
     // Normaliza os campos para salvar dados consistentes e validar limites.
-    const { name, email, password, accountType = "person", legalAccepted = false } = await readLimitedJson(request, {
+    const { name, email, password, legalAccepted = false } = await readLimitedJson(request, {
       maxBytes: 8_192, maxDepth: 3, maxNodes: 20, maxStringLength: 254,
     });
+    // Novos cadastros são empresariais, independentemente do valor enviado pelo cliente.
+    // Contas existentes e permissões de membros continuam sendo tratadas separadamente.
+    const accountType = "company";
     const rawName = String(name || "");
     const cleanName = rawName.trim();
     const cleanEmail = String(email || "").trim().toLowerCase();
@@ -33,8 +36,7 @@ export async function POST(request) {
       cleanEmail.length > 254 ||
       !/^\S+@\S+\.\S+$/.test(cleanEmail) ||
       cleanPassword.length < 8 ||
-      cleanPassword.length > 128 ||
-      !["person", "company"].includes(accountType)
+      cleanPassword.length > 128
     ) {
       return NextResponse.json(
         { error: "Informe nome, e-mail válido e senha entre 8 e 128 caracteres." },

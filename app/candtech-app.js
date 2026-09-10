@@ -565,7 +565,7 @@ function MfaEnrollmentScreen({ user, onCompleted, onLogout }) {
 
 function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, onSwitchAccount }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "person", legalAccepted: false });
+  const [form, setForm] = useState({ name: "", email: "", password: "", accountType: "company", legalAccepted: false });
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -580,7 +580,7 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
     if (new URLSearchParams(window.location.search).get("cadastro") === "1") setMode("register");
     if (!inviteToken) return;
     setMode("register");
-    setForm((current) => ({ ...current, accountType: "person" }));
+    setForm((current) => ({ ...current, accountType: "company" }));
     let active = true;
     fetch("/api/team/invitation/preview", {
       method: "POST",
@@ -728,14 +728,11 @@ function AuthScreen({ onAuthenticated, inviteToken, authenticatedUser = null, on
           {mode === "register" && (
             <>
               {!inviteToken && <div className="account-type-field">
-                <span>Como você vai usar?</span>
-                <div className="account-type-toggle" role="group" aria-label="Tipo de cadastro">
-                  <button type="button" className={form.accountType === "person" ? "active" : ""} onClick={() => setForm({ ...form, accountType: "person" })}>Pessoa física</button>
-                  <button type="button" className={form.accountType === "company" ? "active" : ""} onClick={() => setForm({ ...form, accountType: "company" })}>Empresa</button>
-                </div>
+                <span>Tipo de cadastro</span>
+                <strong>Empresa</strong>
               </div>}
               <label>
-                {form.accountType === "person" ? "Nome completo" : "Responsável pela empresa"}
+                {inviteToken ? "Nome completo" : "Responsável pela empresa"}
                 <input
                   required
                   minLength="2"

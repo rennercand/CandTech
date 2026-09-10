@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import AccountBackupsPanel from "./account-backups-panel";
 
 export default function SystemOverviewPanel({ permissions, onNavigate }) {
   const [overview, setOverview] = useState(null);
@@ -46,12 +47,13 @@ export default function SystemOverviewPanel({ permissions, onNavigate }) {
     </div>
 
     <div className="monitor-metrics">
-      <article><span><small>Contas cadastradas</small><strong>{metrics.users || 0}</strong><small>Somente quantidade</small></span></article>
-      <article><span><small>Espaços ativos</small><strong>{metrics.workspaces || 0}</strong><small>Usuários com workspace</small></span></article>
+      <article><span><small>Contas habilitadas</small><strong>{metrics.users || 0}</strong><small>Cadastro ativo, não presença online</small></span></article>
+      <article><span><small>Espaços cadastrados</small><strong>{metrics.workspaces || 0}</strong><small>Não indica presença online</small></span></article>
       <article><span><small>Requisições em 24 h</small><strong>{metrics.requests_day || 0}</strong><small>{metrics.requests_ten_minutes || 0} nos últimos 10 min</small></span></article>
       <article><span><small>Pico por origem</small><strong>{metrics.peak_per_identity || 0}</strong><small>Por janela de um minuto</small></span></article>
     </div>
 
+    {permissions.isRoot && <AccountBackupsPanel activeOnly />}
     <div className="monitor-ticket-list">
       <article className="monitor-ticket commercial-readiness">
         <header><div><span className={`ticket-status ${commercialReadiness?.ready ? "approved" : "rejected"}`}>{commercialReadiness?.ready ? "Pronto" : "Bloqueado"}</span><h3>Prontidão para começar a vender</h3></div><strong>{commercialReadiness?.blockers || 0} bloqueio(s) · {commercialReadiness?.warnings || 0} aviso(s)</strong></header>

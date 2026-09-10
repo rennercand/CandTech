@@ -24,6 +24,8 @@ const { GET: readInventory, POST: writeInventory } = await import("../app/api/in
 const { GET: readServices } = await import("../app/api/services/route.js");
 const { GET: readAdminStaff } = await import("../app/api/admin/staff/route.js");
 const { GET: exportAccount } = await import("../app/api/account/export/route.js");
+const { GET: listBackupAccounts, POST: sendBackup } = await import("../app/api/admin/account-backups/route.js");
+const { TERMS_VERSION, PRIVACY_VERSION } = await import("../lib/legal.js");
 const { unzipSync, strFromU8 } = await import("fflate");
 const { createInventoryProducts, listInventory } = await import("../lib/inventory-db.js");
 const { NextRequest } = await import("next/server.js");
@@ -94,6 +96,50 @@ test("tokens reais: identidade, adulteração, expiração, revogação e isolam
       assert.ok(files["LEIA-ME.txt"]);
       await revokeSession(await getSession(request(verified)));
       assert.equal((await exportAccount(apiRequest(verified, "/api/account/export"))).status, 401);
+    });
+
+    await t.test("central: somente raiz com MFA envia ZIP ao titular verificado; repetição não reenvia", async () => {
+      const savedAdmin = process.env.ADMIN_EMAILS;
+      const savedKey = process.env.RESEND_API_KEY;
+      const savedFrom = process.env.AUTH_EMAIL_FROM;
+      const savedFetch = global.fetch;
+      try {
+        assert.equal((await listBackupAccounts(apiRequest(null, "/api/admin/account-backups"))).status, 401);
+        assert.equal((await listBackupAccounts(apiRequest(tokens[3], "/api/admin/account-backups"))).status, 403);
+        process.env.ADMIN_EMAILS = users[0].email;
+        process.env.RESEND_API_KEY = "synthetic-test-only";
+        process.env.AUTH_EMAIL_FROM = "test@example.test";
+        backend.db.prepare("UPDATE users SET legal_accepted_at=CURRENT_TIMESTAMP, terms_version=?, privacy_version=? WHERE id=?").run(TERMS_VERSION, PRIVACY_VERSION, users[0].id);
+        const rootToken = await createToken(users[0], { mfaVerified: true });
+        const key = randomUUID();
+        const call = body => apiRequest(rootToken, "/api/admin/account-backups", { method: "POST", headers: { "idempotency-key": key }, body });
+        const page = await listBackupAccounts(apiRequest(rootToken, "/api/admin/account-backups?active=1"));
+        assert.equal(page.status, 200);
+        assert.ok((await page.json()).accounts.some(a => a.company === organizations[1].organizationName || a.id === users[1].id));
+        assert.equal((await sendBackup(call({ userId: users[1].id, confirm: true, email: "outsider@example.test" }))).status, 400);
+        assert.equal((await sendBackup(call({ userId: users[1].id, confirm: true }))).status, 409);
+        backend.db.prepare("UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?").run(users[1].id);
+        let sends = 0;
+        global.fetch = async (_url, options) => {
+          sends++;
+          const body = JSON.parse(options.body);
+          assert.deepEqual(body.to, [users[1].email]);
+          const files = unzipSync(new Uint8Array(Buffer.from(body.attachments[0].content, "base64")));
+          const exported = JSON.parse(strFromU8(files["backup-candtech.json"]));
+          assert.equal(exported.owner.email, users[1].email);
+          return { ok: true };
+        };
+        assert.equal((await sendBackup(call({ userId: users[1].id, confirm: true }))).status, 202);
+        // A rota limita envios; limpa apenas os contadores sintéticos desta fixture para testar replay.
+        backend.db.prepare("DELETE FROM rate_limits").run();
+        assert.equal((await sendBackup(call({ userId: users[1].id, confirm: true }))).status, 202);
+        assert.equal(sends, 1);
+      } finally {
+        global.fetch = savedFetch;
+        for (const [key, value] of [["ADMIN_EMAILS", savedAdmin], ["RESEND_API_KEY", savedKey], ["AUTH_EMAIL_FROM", savedFrom]]) {
+          if (value === undefined) delete process.env[key]; else process.env[key] = value;
+        }
+      }
     });
 
     await t.test("seis identidades e 18 combinações de usuário/documento", async () => {

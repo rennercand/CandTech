@@ -66,7 +66,7 @@ try {
   }
   assert.ok(ready, "Local server readiness timeout");
   const check = (condition, message) => { assert.ok(condition, message); passed++; };
-  for (const path of ["/api/workspace", "/api/inventory", "/api/services", "/api/team", "/api/admin/staff", "/api/account/export"]) {
+  for (const path of ["/api/workspace", "/api/inventory", "/api/services", "/api/team", "/api/admin/staff", "/api/account/export", "/api/admin/account-backups"]) {
     const response = await call(path);
     check(response.status === 401, `${path}: anonymous denied`);
     check(/no-store/.test(response.headers.get("cache-control") || ""), `${path}: private errors not cached`);

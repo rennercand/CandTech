@@ -1,5 +1,17 @@
 # Guia de acesso seguro e backup do piloto
 
+## Envio manual pela conta raiz — atualização
+
+Na central privada, abra **Suporte → Backups das contas de clientes**. Selecione o titular e pressione **Enviar backup por e-mail**, conferindo a empresa na confirmação. Contas administrativas e colaboradores não aparecem como destinatários de backups empresariais. O servidor exige conta raiz, MFA, aceite jurídico e e-mail do titular efetivamente verificado; não aceita endereço digitado nem destinatário alternativo.
+
+O ZIP é gerado na hora e enviado como anexo pelo Resend. Não é cifrado, não pode ser revogado depois do envio e não garante sigilo total. A resposta “aceito pelo provedor” não comprova entrega. Há limite de frequência, chave de operação persistida e auditoria prévia sem conteúdo do ZIP. Em falha incerta, confira o provedor antes de iniciar outro envio. Os limites do pacote existente permanecem: até 15 MiB comprimidos e 32 MiB de JSON; anexos e restauração integral continuam fora do escopo.
+
+O download do próprio titular e o aviso automático de expiração permanecem separados deste envio administrativo, que só ocorre após sua confirmação. A visão do sistema mostra nomes/empresas com sessão válida utilizada nos últimos 15 minutos, paginados em grupos de 50; não é presença em tempo real. O contador de workspaces foi renomeado para evitar confundir cadastro com atividade.
+
+### Pendências operacionais ainda não executadas
+
+Nesta sessão, só existe `.env.example` no workspace; não há conector Neon nem ferramentas PostgreSQL/contêiner disponíveis. Não foram acessados dados de produção para testar concorrência, privilégios ou restauração. É necessário disponibilizar um ambiente PostgreSQL isolado por canal seguro e escolher o destino privado do backup completo. A revisão do painel de incidentes não equivale a configurar alertas externos nem a realizar um exercício de incidente. Não contratar ou alterar privilégios de produção automaticamente.
+
 ## 1. Baixar o ZIP de um cliente
 
 O proprietário entra na CandTech, confirma o MFA e abre **Exportar meus dados (ZIP)** no menu, ou `/exportar-dados`. O navegador salva o arquivo no dispositivo dele. A API não aceita escolher outra empresa pelo endereço. Funcionários não podem baixar o pacote empresarial completo.

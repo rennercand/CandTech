@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StaffAccessPanel from "./staff-access-panel";
 import SystemOverviewPanel from "./system-overview-panel";
 import AuditPanel from "./audit-panel";
+import AccountBackupsPanel from "./account-backups-panel";
 
 const ticketStatus = { open: "Novo", answered: "Respondido", closed: "Encerrado" };
 const paymentStatus = { pending: "Aguardando confirmação", payment_review: "Comprovante recebido", approved: "Aprovado", rejected: "Recusado", expired: "Expirado" };
@@ -125,6 +126,7 @@ export default function MonitoringPortal({ administratorName, permissions }) {
         </article>)}</div>
       </section>}
 
+      {permissions.isRoot && view === "tickets" && <AccountBackupsPanel />}
       {permissions.canSupport && view === "tickets" && <section className="monitor-panel"><div className="monitor-panel-heading"><div><h2>Mensagens recebidas</h2><p>Chamados enviados pela aba Suporte do ERP.</p></div><span>{data.tickets.length} registro(s)</span></div>
         <div className="monitor-ticket-list">{!data.tickets.length ? <div className="monitor-empty"><Icon type="inbox"/><strong>Nenhuma mensagem recebida</strong></div> : data.tickets.map((ticket) => <article className="monitor-ticket" key={ticket.id}>
           <header><div><span className={`ticket-status ${ticket.status}`}>{ticketStatus[ticket.status]}</span><h3>{ticket.subject}</h3><small>{ticket.requester.name} · {ticket.requester.email}{ticket.requester.phone ? ` · ${ticket.requester.phone}` : ""} · {new Date(ticket.createdAt).toLocaleString("pt-BR")}</small></div><span className="monitor-channel">Preferência: {ticket.preferredChannel === "site" ? "site" : ticket.preferredChannel === "email" ? "e-mail" : "telefone"}</span></header>

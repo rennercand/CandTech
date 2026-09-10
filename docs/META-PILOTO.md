@@ -8,6 +8,8 @@ Estoque e alertas, clientes, vendas/serviços, financeiro, equipe com permissõe
 
 ## Critérios de liberação
 
+- [x] Central raiz com MFA: envio manual de ZIP ao e-mail verificado do titular, confirmação, limite de frequência, auditoria e proteção persistida contra repetição; testado com provedor simulado, sem envio real. Lista privada de atividade de sessões nos últimos 15 minutos com nome/empresa e paginação. Validação desta entrega: 141 testes, build e 45 verificações HTTP locais aprovados; consultar o CI para auditoria/deploy atuais.
+
 - [x] Atualizar Next.js para 16.3.4 e Sharp para 0.35.4; auditoria local sem vulnerabilidades conhecidas em 09/09/2026.
 - [x] Validar build, 140 testes automatizados e 42 verificações HTTP locais de autenticação/isolamento, incluindo o download ZIP. Os bancos destes testes são SQLite temporários, não o Neon de produção.
 - [x] Disponibilizar exportação ZIP autenticada para o proprietário com MFA, sem anexar dados financeiros aos e-mails; documentar conteúdo, limite e ausência de importador/restauração completa.

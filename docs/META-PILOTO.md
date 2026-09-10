@@ -8,6 +8,8 @@ Estoque e alertas, clientes, vendas/serviços, financeiro, equipe com permissõe
 
 ## Critérios de liberação
 
+- [x] Reforço de 10/09/2026: a mesma operação de envio de ZIP não é retomada após timeout ou falha incerta, mesmo com bloqueio expirado. Resultados concluídos continuam reutilizados sem reenvio. Operação nova exige conferência humana; nenhuma migração de banco necessária. Teste com banco sintético e relógio de bloqueio expirado; não comprova entrega real de e-mail.
+
 - [x] Central raiz com MFA: envio manual de ZIP ao e-mail verificado do titular, confirmação, limite de frequência, auditoria e proteção persistida contra repetição; testado com provedor simulado, sem envio real. Lista privada de atividade de sessões nos últimos 15 minutos com nome/empresa e paginação. Validação desta entrega: 141 testes, build e 45 verificações HTTP locais aprovados; consultar o CI para auditoria/deploy atuais.
 
 - [x] Atualizar Next.js para 16.3.4 e Sharp para 0.35.4; auditoria local sem vulnerabilidades conhecidas em 09/09/2026.

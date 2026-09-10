@@ -55,7 +55,7 @@ export async function POST(request) {
   if ((await getAdministratorAccess(target)).isStaff || (organization && organization.role !== "owner"))
     return reply({ error: "Selecione o titular cliente, não colaborador ou conta administrativa." }, 403);
   const context = { userId: auth.user.id, operation: "admin.account-backup.email", keyHash: hashIdempotencyValue(key), requestHash: hashIdempotencyRequest({ userId: target.id }) };
-  const claim = await claimIdempotency(context);
+  const claim = await claimIdempotency({ ...context, allowReclaim: false });
   if (claim.state === "replay") return reply(claim.body, claim.status);
   if (claim.state !== "claimed") return reply({ error: "Operação já iniciada ou chave em conflito. Consulte o suporte antes de repetir." }, 409);
   try {

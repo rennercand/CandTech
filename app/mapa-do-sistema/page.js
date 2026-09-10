@@ -10,7 +10,7 @@ export const metadata = {
 
 const publicAreas = [
   { title: "Página inicial", text: "Apresentação do ERP, recursos e público atendido.", href: "/" },
-  { title: "Planos e assinatura", text: "Preço, implantação e gerenciamento da assinatura.", href: "/assinar" },
+  { title: "Planos e assinatura", text: "Preço e gerenciamento da assinatura.", href: "/assinar" },
   { title: "Central jurídica", text: "Termos, privacidade, cookies, segurança, cobrança e marca.", href: "/juridico" },
 ];
 

@@ -14,7 +14,7 @@ Este arquivo compara as roadmaps com as rotas, bibliotecas, migrations e testes 
 | Organizações, cargos, permissões e convites | Entregue para o fluxo atual | `organization_*`, `app/api/team/`, testes de equipe |
 | Workspace e histórico privado | Entregue; clientes, tarefas, entregas e financeiro usam projeções relacionais | `app/api/workspace/`, `customers`, `operational_tasks`, `operational_deliveries`, `financial_*` |
 | Estoque, variações, fornecedores, pedidos, serviços e movimentos | Entregue para o escopo operacional atual | transação serializável, idempotência, FEFO, custo médio histórico, curva ABC, compras ligadas a fornecedores, entregas e conclusão de serviços com cobrança |
-| Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 180 inicial, R$ 60 renovação, comprovante privado e moderação |
+| Cobrança da CandTech por Pix | Entregue no modelo manual | BR Code/QR, R$ 120 inicial, R$ 80 renovação, comprovante privado e moderação |
 | Monitoramento, suporte e administração | Entregue para operação inicial | `monitoring_events`, `support_tickets`, `staff_access` |
 | Google Drive e e-mails transacionais | Entregue e endurecido | OAuth `drive.file` com PKCE, nonce persistido de uso único, tokens cifrados e Resend |
 | Conciliação financeira vendável | Entregue para o fluxo interno atual | CSV/OFX/XLSX possuem prévia, lote e deduplicação; contas e pedidos recebem sugestões determinísticas com confirmação e desfazimento |

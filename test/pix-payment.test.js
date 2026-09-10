@@ -12,7 +12,7 @@ import { createOrGetPixPaymentRequest, getLatestPixPayment, resetPixSchemaForTes
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-test("Pix inicial inclui implantação, não duplica pendência e só ativa após aprovação", async () => {
+test("Pix inicial cobra o primeiro mês, não duplica pendência e só ativa após aprovação", async () => {
   const directory = mkdtempSync(join(tmpdir(), "candtech-pix-"));
   const previousEnvironment = process.env.NODE_ENV;
   const previousPath = process.env.SQLITE_DATABASE_PATH;
@@ -23,7 +23,7 @@ test("Pix inicial inclui implantação, não duplica pendência e só ativa apó
     const first = await createOrGetPixPaymentRequest(user.id);
     assert.equal(first.created, true);
     assert.equal(first.payment.kind, "initial");
-    assert.equal(first.payment.amountCents, 18000);
+    assert.equal(first.payment.amountCents, 12000);
     const repeated = await createOrGetPixPaymentRequest(user.id);
     assert.equal(repeated.created, false);
     assert.equal(repeated.payment.id, first.payment.id);
@@ -48,7 +48,7 @@ test("Pix inicial inclui implantação, não duplica pendência e só ativa apó
 
     const renewal = await createOrGetPixPaymentRequest(user.id);
     assert.equal(renewal.payment.kind, "renewal");
-    assert.equal(renewal.payment.amountCents, 6000);
+    assert.equal(renewal.payment.amountCents, 8000);
   } finally {
     await closeDatabaseForTests(); resetPixSchemaForTests();
     if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
@@ -57,7 +57,7 @@ test("Pix inicial inclui implantação, não duplica pendência e só ativa apó
   }
 });
 
-test("moderação manual guarda a implantação na conta mesmo sem comprovante", async () => {
+test("moderação manual guarda o primeiro mês pago na conta mesmo sem comprovante", async () => {
   const directory = mkdtempSync(join(tmpdir(), "candtech-pix-setup-"));
   const previousEnvironment = process.env.NODE_ENV;
   const previousPath = process.env.SQLITE_DATABASE_PATH;
@@ -66,7 +66,7 @@ test("moderação manual guarda a implantação na conta mesmo sem comprovante",
   try {
     const user = await createUser({ name: "Conta Implantada", email: "implantada@teste.local", passwordHash: "hash" });
     const first = await createOrGetPixPaymentRequest(user.id);
-    assert.equal(first.payment.amountCents, 18000);
+    assert.equal(first.payment.amountCents, 12000);
 
     const approved = await reviewPixPaymentManually({ id: first.payment.id, approved: true, administratorId: user.id });
     const firstPeriodEnd = (await getBillingProviderState(user.id)).currentPeriodEnd;
@@ -81,7 +81,7 @@ test("moderação manual guarda a implantação na conta mesmo sem comprovante",
 
     const renewal = await createOrGetPixPaymentRequest(user.id);
     assert.equal(renewal.payment.kind, "renewal");
-    assert.equal(renewal.payment.amountCents, 6000);
+    assert.equal(renewal.payment.amountCents, 8000);
   } finally {
     await closeDatabaseForTests(); resetPixSchemaForTests();
     if (previousEnvironment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnvironment;
@@ -91,37 +91,37 @@ test("moderação manual guarda a implantação na conta mesmo sem comprovante",
 });
 
 test("Pix Copia e Cola decodifica a chave DICT no campo EMV 26.01", () => {
-  const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 18000, txid: "CT123456" });
+  const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 12000, txid: "CT123456" });
   const decoded = decodePixPayload(payload);
   assert.match(payload, /^00020126/);
-  assert.match(payload, /5406180\.00/);
+  assert.match(payload, /5406120\.00/);
   assert.match(payload, /CT123456/);
   assert.match(payload, /6304[A-F0-9]{4}$/);
   assert.equal(decoded.merchantAccount.gui, "BR.GOV.BCB.PIX");
   assert.equal(decoded.merchantAccount.dictKey, "financeiro@example.com");
-  assert.equal(decoded.fields["54"], "180.00");
+  assert.equal(decoded.fields["54"], "120.00");
   assert.equal(decoded.fields["62"], "0508CT123456");
   assert.equal(decoded.validCrc, true);
 });
 
 test("campo DICT continua válido quando a chave ocupa o limite do BR Code", () => {
   const key = "a".repeat(77);
-  const payload = buildPixPayload({ key, receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-LIMITE", description: "DESCRICAO OPCIONAL" });
+  const payload = buildPixPayload({ key, receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 8000, txid: "CT-LIMITE", description: "DESCRICAO OPCIONAL" });
   const decoded = decodePixPayload(payload);
 
   assert.equal(decoded.merchantAccount.dictKey, key);
   assert.equal(decoded.merchantAccount.description, "", "a descrição opcional deve ceder espaço ao DICT obrigatório");
   assert.equal(decoded.validCrc, true);
   assert.throws(
-    () => buildPixPayload({ key: `${key}x`, receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-INVALIDO" }),
+    () => buildPixPayload({ key: `${key}x`, receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 8000, txid: "CT-INVALIDO" }),
     /PIX_KEY_INVALID/,
   );
 });
 
 test("chave DICT copiada da configuração é normalizada sem alterar o destinatário", () => {
-  const emailPayload = buildPixPayload({ key: ' "Financeiro@Example.com\u200B" ', receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-EMAIL" });
-  const phonePayload = buildPixPayload({ key: "(11) 99999-9999", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-PHONE" });
-  const documentPayload = buildPixPayload({ key: "12.345.678/0001-90", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 6000, txid: "CT-CNPJ" });
+  const emailPayload = buildPixPayload({ key: ' "Financeiro@Example.com\u200B" ', receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 8000, txid: "CT-EMAIL" });
+  const phonePayload = buildPixPayload({ key: "(11) 99999-9999", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 8000, txid: "CT-PHONE" });
+  const documentPayload = buildPixPayload({ key: "12.345.678/0001-90", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 8000, txid: "CT-CNPJ" });
 
   assert.equal(decodePixPayload(emailPayload).merchantAccount.dictKey, "financeiro@example.com");
   assert.equal(decodePixPayload(phonePayload).merchantAccount.dictKey, "+5511999999999");
@@ -149,7 +149,7 @@ test("configuração Pix informa a causa sem revelar o conteúdo da chave", () =
 });
 
 test("QR Code Pix é gerado localmente a partir do mesmo Copia e Cola", async () => {
-  const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 18000, txid: "CT123456" });
+  const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 12000, txid: "CT123456" });
   const dataUrl = await QRCode.toDataURL(payload, { width: 280 });
   const page = readFileSync(join(projectRoot, "app", "assinar", "page.js"), "utf8");
 

@@ -2,10 +2,12 @@
 
 ## Regra comercial
 
-- primeira cobrança: R$ 180, sendo R$ 120 de implantação e R$ 60 do primeiro mês;
-- ao aprovar essa primeira cobrança, `billing_profiles.setup_paid_at` registra permanentemente a implantação na conta;
-- cobranças seguintes são de R$ 60, inclusive após vencimento, suspensão ou arquivamento do histórico de pagamentos;
-- renovação: R$ 60 por 30 dias;
+Preço vigente definido em `lib/subscription-pricing.js`, compartilhado pela página e pelo Pix. As antigas variáveis `PIX_MONTHLY_AMOUNT_CENTS` e `PIX_SETUP_AMOUNT_CENTS` não alteram mais a cobrança. Solicitações já emitidas (pendentes ou em conferência) e pagamentos aprovados mantêm o valor original; a nova tabela vale para novas solicitações. Não reemitir cobranças já pagas sem conferir o recebimento.
+
+- primeira cobrança: R$ 120 pelo primeiro mês, sem taxa adicional;
+- ao aprovar essa primeira cobrança, `billing_profiles.setup_paid_at` registra permanentemente o primeiro mês pago na conta;
+- cobranças seguintes são de R$ 80, inclusive após vencimento, suspensão ou arquivamento do histórico de pagamentos;
+- renovação: R$ 80 por 30 dias;
 - prazo padrão do Pix: 72 horas;
 - gerar o código, enviar o comprovante ou falar no WhatsApp não ativa a assinatura;
 - somente um administrador autorizado, após conferir o recebimento na conta, pode aprovar;
@@ -71,7 +73,7 @@ Antes de montar o TLV, o servidor remove aspas externas, espaços invisíveis e 
 - a chave privada de armazenamento nunca aparece na resposta entregue ao cliente ou na listagem administrativa;
 - cada pagamento possui no máximo um comprovante ativo;
 - aplique `migrations/20260826_pix_payment_receipts.sql` no Neon antes do deploy;
-- aplique `migrations/20260828_billing_setup_paid.sql` para registrar a implantação já paga e cobrar somente R$ 60 nas renovações;
+- aplique `migrations/20260828_billing_setup_paid.sql` para registrar o primeiro mês já pago e cobrar somente R$ 80 nas renovações;
 - Production e Preview devem usar stores e bancos separados.
 
 ## Variáveis obrigatórias
@@ -80,8 +82,8 @@ Antes de montar o TLV, o servidor remove aspas externas, espaços invisíveis e 
 PIX_KEY=
 PIX_RECEIVER_NAME=
 PIX_RECEIVER_CITY=MAIRINQUE
-PIX_MONTHLY_AMOUNT_CENTS=6000
-PIX_SETUP_AMOUNT_CENTS=12000
+# Preços em lib/subscription-pricing.js: primeiro mês 12000; renovações 8000.
+# Não há taxa adicional de implantação.
 PIX_PAYMENT_TTL_HOURS=72
 BLOB_READ_WRITE_TOKEN=
 CRON_SECRET=

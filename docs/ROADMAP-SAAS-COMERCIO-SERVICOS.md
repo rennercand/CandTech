@@ -604,9 +604,9 @@ Priorizar:
 Exemplo:
 
 ```text
-PIX recebido R$ 180
+PIX recebido R$ 120
 ↕
-Cobrança CandTech / venda / conta a receber de R$ 180
+Cobrança CandTech / venda / conta a receber de R$ 120
 ```
 
 A primeira versão apenas sugere. Usuário confirma casos ambíguos.

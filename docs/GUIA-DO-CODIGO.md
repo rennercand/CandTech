@@ -76,7 +76,7 @@ Rejeição/expiração → ZIP sem credenciais → Resend → e-mail verificado 
 ```
 
 - `PIX_KEY` existe somente no servidor e é retornada dentro do código Pix apenas ao proprietário autenticado.
-- `PIX_MONTHLY_AMOUNT_CENTS` representa R$ 60 mensais e `PIX_SETUP_AMOUNT_CENTS` os R$ 120 iniciais.
+- `lib/subscription-pricing.js` define R$ 120 no primeiro mês e R$ 80 nas renovações. As antigas variáveis de preço Pix não são utilizadas.
 - uma solicitação pendente é reutilizada para impedir cobranças duplicadas por cliques repetidos.
 - o upload não ativa a assinatura; somente `payment_review` pode ser aprovado, e cada cobrança mantém um único comprovante ativo.
 - em produção, o navegador envia direto ao Blob com token curto para suportar o limite funcional de 5 MB; o callback assinado revalida usuário, pagamento e conteúdo antes de gravar os metadados.

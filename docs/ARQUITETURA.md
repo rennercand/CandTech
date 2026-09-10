@@ -90,8 +90,8 @@ mindmap
         Materiais e custos
         Recorrência e cobrança
     Cobrança
-      Primeiro Pix de R$ 180
-      Renovações de R$ 60
+      Primeiro Pix de R$ 120
+      Renovações de R$ 80
       BR Code com DICT em 26.01
       Comprovante privado opcional
       Moderação humana
@@ -251,8 +251,8 @@ flowchart TB
 flowchart TD
   OWNER[Proprietário autenticado] --> REQUEST[POST /api/pix]
   REQUEST --> CHECK{Implantação já aprovada?}
-  CHECK -->|não| INITIAL[Inicial: R$ 180]
-  CHECK -->|sim| RENEWAL[Renovação: R$ 60]
+  CHECK -->|não| INITIAL[Inicial: R$ 120]
+  CHECK -->|sim| RENEWAL[Renovação: R$ 80]
   INITIAL --> EMV[Gerar e autodecodificar BR Code]
   RENEWAL --> EMV
   EMV --> GUI[26.00 = BR.GOV.BCB.PIX]
@@ -271,7 +271,7 @@ flowchart TD
   SETUP --> RENEWAL
 ```
 
-- `/assinar` apresenta o plano de R$ 60/mês e a implantação única de R$ 120;
+- `/assinar` apresenta o primeiro mês de R$ 120 e renovações de R$ 80/mês;
 - `/api/pix` cria ou recupera a solicitação pendente do proprietário autenticado e gera o Pix no servidor;
 - `lib/pix.js` monta o Merchant Account Information no template `26`, grava a GUI em `26.00` e a chave DICT em `26.01`, limita o TLV a 99 bytes, calcula o CRC16 e decodifica o resultado antes de devolvê-lo;
 - `PIX_KEY` permanece em uma variável `Secret` de Produção. A chave necessariamente entra no BR Code entregue ao pagador autenticado, mas não é publicada no bundle, HTML estático ou variável `NEXT_PUBLIC_`;
@@ -289,7 +289,7 @@ flowchart TD
 - a migration `migrations/20260809_history_public_ids.sql` cria, preenche e torna obrigatório o UUID público usado nas URLs de documentos;
 - a migration `migrations/20260826_pix_payment_receipts.sql` cria os metadados dos comprovantes e o estado `payment_review`;
 - a migration `migrations/20260826_staff_access.sql` cria o controle de privilégio mínimo da equipe interna;
-- a migration `migrations/20260828_billing_setup_paid.sql` registra `setup_paid_at`; após a aprovação do Pix inicial de R$ 180, novas solicitações cobram somente R$ 60;
+- a migration `migrations/20260828_billing_setup_paid.sql` registra `setup_paid_at`; após a aprovação do Pix inicial de R$ 120, novas solicitações cobram somente R$ 80;
 - a migration `migrations/20260830_idempotency_outbox.sql` cria chaves de idempotência persistidas e a fila outbox; histórico e mutações do estoque rejeitam reutilização conflitante e repetem respostas concluídas;
 - a migration `migrations/20260831_inventory_order_idempotency.sql` deduplica pedidos por organização; venda/compra, movimentos, pedido, itens e evento outbox são confirmados na mesma transação serializável;
 - a migration `migrations/20260902_suppliers.sql` cria fornecedores por organização e adiciona vínculos protegidos por FK a compras e entradas;

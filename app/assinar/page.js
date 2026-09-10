@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import QRCode from "qrcode";
+import { SUBSCRIPTION_PRICING } from "../../lib/subscription-pricing";
 import styles from "./page.module.css";
 import { trackMarketingEvent } from "../../lib/analytics";
 
@@ -111,7 +112,7 @@ export default function SubscribePage() {
   return <main className={styles.page}>
     <nav className={styles.nav}><a href="/" className={styles.brand}><img className="brand-mark" src="/candtech-mark.svg" alt=""/> CandTech</a><a href="/" className={styles.back}>Voltar ao painel</a></nav>
     <header className={styles.hero}><span>ASSINATURA POR PIX</span><h1>Um preço simples para organizar sua empresa.</h1><p>O Pix é gerado pela CandTech e conferido manualmente. Nenhuma senha bancária, senha da conta, dado de cartão ou credencial financeira é solicitado.</p><div className={styles.statusPill}>{active ? "Assinatura ativa" : payment?.status === "payment_review" ? "Pagamento em conferência" : payment?.status === "pending" ? "Pix aguardando confirmação" : "Pagamento por Pix"}</div></header>
-    <section className={styles.plans} style={{ maxWidth: "460px", gridTemplateColumns: "1fr" }} aria-label="Plano de assinatura"><article className={styles.planCard} style={{ "--delay": "0ms" }}><span>PLANO ÚNICO</span><h2>CandTech Negócio</h2><strong className={styles.planPrice}>R$ 60/mês</strong><small className={styles.setupPrice}>+ R$ 120 de implantação apenas no primeiro Pix</small><p>Preço fixo por empresa, sem cobrança adicional por funcionário convidado.</p><ul>{features.map((feature) => <li key={feature}>{feature}</li>)}</ul></article></section>
+    <section className={styles.plans} style={{ maxWidth: "460px", gridTemplateColumns: "1fr" }} aria-label="Plano de assinatura"><article className={styles.planCard} style={{ "--delay": "0ms" }}><span>PLANO ÚNICO</span><h2>CandTech Negócio</h2><strong className={styles.planPrice}>R$ {SUBSCRIPTION_PRICING.firstMonth / 100} no primeiro mês</strong><small className={styles.setupPrice}>R$ {SUBSCRIPTION_PRICING.monthly / 100}/mês a partir do segundo mês, sem taxa adicional</small><p>Preço fixo por empresa, sem cobrança adicional por funcionário convidado.</p><ul>{features.map((feature) => <li key={feature}>{feature}</li>)}</ul></article></section>
     <section className={styles.billingSection}>
       <div className={styles.billingIntro}><span>PIX SEGURO</span><h2>Pagamento com conferência humana</h2><p>Ao gerar o código, uma solicitação aparece na central administrativa. O administrador pode liberar o acesso depois de confirmar o recebimento no banco; o comprovante é opcional.</p><div className={styles.paymentPreview}><div><b>1. Gere</b><small>Copia e Cola</small></div><div><b>2. Pague</b><small>No seu banco</small></div><div><b>3. Aguarde</b><small>Confirmação manual</small></div></div></div>
       {!user && status === "ready" ? <div className={styles.signInCard}><span>PRIMEIRO PASSO</span><h3>Entre para gerar seu Pix</h3><p>A cobrança ficará vinculada somente à conta autenticada.</p><a href="/?cadastro=1">Criar minha conta</a><small>Já tem conta? <a href="/?entrar=1">Entrar</a></small></div> : <div className={styles.form}>

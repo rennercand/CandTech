@@ -43,7 +43,7 @@ Depois dessas escolhas: configurar cópia consistente de PostgreSQL, copiar os o
 
 ## 4. Liberar um cliente após Pix manual
 
-1. Faça o atendimento inicial, explique o escopo do piloto, o valor inicial de R$ 180 e as renovações de R$ 60.
+1. Faça o atendimento inicial, explique o escopo do piloto, o valor inicial de R$ 120 e as renovações de R$ 80.
 2. O cliente cadastra a própria conta e confirma o e-mail; não peça a senha dele.
 3. Na central privada, entre com sua conta administrativa e MFA, localize a cobrança pelo cliente e confira valor/referência.
 4. Confirme o recebimento no extrato do banco. Um comprovante ou QR gerado não prova o recebimento.

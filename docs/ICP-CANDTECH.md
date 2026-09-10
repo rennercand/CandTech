@@ -30,9 +30,9 @@ A CandTech é um ERP web simples para pequenas empresas organizarem operação, 
 ## Hipóteses a validar com 5 a 10 empresas
 
 - o proprietário consegue concluir cadastro, primeira configuração e rotina principal com pouca ajuda;
-- a organização semanal economiza tempo suficiente para justificar R$ 60/mês;
+- a organização semanal economiza tempo suficiente para justificar R$ 80/mês;
 - estoque, pedidos e visão financeira são usados de forma recorrente;
-- a implantação de R$ 120 cobre o acompanhamento inicial sem criar atrito excessivo;
+- o primeiro mês de R$ 120 cobre o acompanhamento inicial sem criar atrito excessivo;
 - dúvidas e falhas do piloto podem ser atendidas com o canal e capacidade atuais.
 
 ## Métricas do piloto

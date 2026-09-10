@@ -6,7 +6,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 
 **Produção:** [www.candtech.com.br](https://www.candtech.com.br/)
 
-**Estado atual:** ERP web funcional com autenticação por e-mail e MFA TOTP obrigatório para proprietários/equipe administrativa, workspace multiempresa, estoque e livro financeiro relacionais, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix BR Code com QR Code, comprovante privado e conferência manual. O primeiro Pix soma R$ 60 da mensalidade e R$ 120 da implantação; depois de aprovado, as renovações são de R$ 60. A ativação obrigatória permanece controlada por `BILLING_ENFORCEMENT_ENABLED`.
+**Estado atual:** ERP web funcional com autenticação por e-mail e MFA TOTP obrigatório para proprietários/equipe administrativa, workspace multiempresa, estoque e livro financeiro relacionais, equipe por cargos, documentos jurídicos, integração Google Drive e assinatura por Pix BR Code com QR Code, comprovante privado e conferência manual. O primeiro mês custa R$ 120, sem taxa adicional; depois de aprovado, as renovações são de R$ 80. A ativação obrigatória permanece controlada por `BILLING_ENFORCEMENT_ENABLED`.
 
 ## Funcionalidades
 
@@ -46,7 +46,7 @@ Aplicação web para análise e organização financeira, construída com Next.j
 - Valores de entrada exibidos com sinal positivo e verde; saídas e gastos com sinal negativo e vermelho.
 - Pré-nota de produto em PDF para conferência comercial, explicitamente sem validade fiscal.
 - Cadastro de conta pessoal ou empresarial; a cobrança utiliza apenas o nome e o e-mail já existentes na conta.
-- Página de assinatura em `/assinar` com plano de R$ 60/mês e implantação única de R$ 120, Pix Copia e Cola individual, comprovante privado e confirmação exclusiva do administrador.
+- Página de assinatura em `/assinar` com primeiro mês de R$ 120 e renovações de R$ 80/mês, Pix Copia e Cola individual, comprovante privado e confirmação exclusiva do administrador.
 - Identificação de cobrança reduzida ao nome e e-mail já existentes na conta, sem duplicar tipo de pessoa, telefone, CPF/CNPJ, cartão, senha ou conta bancária.
 - Política própria de copyright, propriedade intelectual e uso da marca para logotipo, ícone, imagens e telas, sem reivindicar conteúdo de clientes ou ativos licenciados de terceiros.
 - Estoque relacional por empresa com produtos, variações, fornecedores, pedidos, entradas auditáveis e desfazimento.
@@ -182,8 +182,8 @@ Para testar a cobrança por Pix, configure somente no servidor:
 PIX_KEY=sua-chave-pix
 PIX_RECEIVER_NAME=NOME DO TITULAR
 PIX_RECEIVER_CITY=MAIRINQUE
-PIX_MONTHLY_AMOUNT_CENTS=6000
-PIX_SETUP_AMOUNT_CENTS=12000
+# Preços em lib/subscription-pricing.js: primeiro mês 12000; renovações 8000.
+# Não há taxa adicional de implantação.
 PIX_PAYMENT_TTL_HOURS=72
 BLOB_READ_WRITE_TOKEN=
 CRON_SECRET=gere-um-segredo-longo-e-aleatorio
@@ -287,7 +287,7 @@ executam DDL durante uma requisição:
 - `monitoring_events`: resumos técnicos sem segredos, agrupados por tipo de falha;
 - `support_tickets`: mensagens do suporte vinculadas ao usuário e respostas administrativas.
 - `staff_access`: módulos administrativos concedidos a contas verificadas, sem guardar ou criar senhas;
-- `billing_profiles`: estado da assinatura e `setup_paid_at`, que impede cobrar novamente a implantação;
+- `billing_profiles`: estado da assinatura e `setup_paid_at`, que impede cobrar novamente o preço do primeiro mês;
 - `pix_payment_requests`: cobranças Pix e estado da revisão manual;
 - `pix_payment_receipts`: metadados e hash dos comprovantes; o conteúdo fica no armazenamento privado.
 - `audit_events`: trilha append-only com autor, conta afetada, organização, origem, versão, objeto e antes/depois minimizado.

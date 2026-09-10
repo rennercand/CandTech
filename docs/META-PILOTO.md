@@ -19,7 +19,7 @@ Estoque e alertas, clientes, vendas/serviços, financeiro, equipe com permissõe
 - [x] Confirmar CI e deploy da correção de dependências no domínio oficial: commit `60bcf83`, READY em 09/09/2026. Cada entrega posterior exige nova validação.
 - [ ] Conferir na central privada ausência de bloqueios de configuração, incluindo assinatura obrigatória e credencial de banco sem DDL.
 - [ ] Confirmar entrega real de verificação de e-mail, recuperação e convite com contas de teste autorizadas.
-- [ ] Validar o ciclo comercial: primeira cobrança R$ 180, conferência no banco pelo responsável, ativação e próxima cobrança R$ 60; comprovante sozinho não autoriza aprovação. Não gerar pagamento real sem decisão do responsável.
+- [ ] Validar o ciclo comercial: primeira cobrança R$ 120, conferência no banco pelo responsável, ativação e próxima cobrança R$ 80; comprovante sozinho não autoriza aprovação. Não gerar pagamento real sem decisão do responsável.
 - [ ] Restaurar backup de Neon e arquivos privados em ambiente isolado, registrar integridade e tempo de recuperação. Exportação de conta não substitui esse teste.
 - [ ] Testar concorrência real de estoque no PostgreSQL isolado, sem usar dados de clientes.
 - [ ] Definir responsável pelo suporte/incidentes, contato, condições comerciais, identificação do controlador e revisão dos textos aplicáveis.

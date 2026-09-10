@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getAdministratorAccess, isMonitoringAccessKey } from "@/lib/admin-access";
 import MonitoringPortal from "../../admin/monitoramento/portal";
-import SystemOverviewPanel from "../../admin/monitoramento/system-overview-panel";
 import { hasVerifiedMfa } from "@/lib/mfa-access";
 
 export const metadata = {
@@ -23,8 +22,6 @@ export default async function MonitoringPage({ params }) {
   if (!access.isStaff) notFound();
   if (!hasVerifiedMfa(user)) redirect("/?entrar=1&mfa=1");
 
-  return <>
-    {access.canViewSystemOverview && <SystemOverviewPanel />}
-    <MonitoringPortal administratorName={user.name} permissions={access} />
-  </>;
+  // O portal monta a visão geral uma única vez, com permissões e navegação.
+  return <MonitoringPortal administratorName={user.name} permissions={access} />;
 }

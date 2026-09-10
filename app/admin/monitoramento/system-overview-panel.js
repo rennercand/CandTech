@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AccountBackupsPanel from "./account-backups-panel";
 
-export default function SystemOverviewPanel({ permissions, onNavigate }) {
+export default function SystemOverviewPanel({ permissions = {}, onNavigate }) {
   const [overview, setOverview] = useState(null);
   const [state, setState] = useState({ loading: true, error: "" });
 

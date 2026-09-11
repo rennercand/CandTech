@@ -148,12 +148,13 @@ test("configuração Pix informa a causa sem revelar o conteúdo da chave", () =
   }
 });
 
-test("QR Code Pix é gerado localmente a partir do mesmo Copia e Cola", async () => {
+test("gerador legado de QR Code continua disponível para compatibilidade", async () => {
   const payload = buildPixPayload({ key: "financeiro@example.com", receiverName: "CandTech", receiverCity: "Mairinque", amountCents: 12000, txid: "CT123456" });
   const dataUrl = await QRCode.toDataURL(payload, { width: 280 });
   const page = readFileSync(join(projectRoot, "app", "assinar", "page.js"), "utf8");
 
   assert.match(dataUrl, /^data:image\/png;base64,/);
-  assert.match(page, /QRCode\.toDataURL\(payment\.pixCode/);
+  assert.doesNotMatch(page, /QRCode|payment\.pixCode|navigator\.clipboard|type="file"/);
+  assert.match(page, /Falar com o suporte pelo WhatsApp/);
   assert.doesNotMatch(page, /api\.qrserver|chart\.googleapis|quickchart/);
 });

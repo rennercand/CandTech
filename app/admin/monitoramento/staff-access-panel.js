@@ -67,7 +67,7 @@ export default function StaffAccessPanel() {
       <fieldset><legend>Permissões</legend>
         <label><input type="checkbox" checked={form.canMonitor} onChange={(event) => setForm({ ...form, canMonitor: event.target.checked })}/>Incidentes e saúde do sistema</label>
         <label><input type="checkbox" checked={form.canSupport} onChange={(event) => setForm({ ...form, canSupport: event.target.checked })}/>Ler e responder chamados</label>
-        <label><input type="checkbox" checked={form.canBilling} onChange={(event) => setForm({ ...form, canBilling: event.target.checked })}/>Conferir Pix e liberar assinatura</label>
+        <label><input type="checkbox" checked={form.canBilling} onChange={(event) => setForm({ ...form, canBilling: event.target.checked })}/>Conferir pagamentos e liberar assinatura</label>
       </fieldset>
       <button disabled={state.saving}>{state.saving ? "Salvando…" : "Conceder ou atualizar"}</button>
     </form>

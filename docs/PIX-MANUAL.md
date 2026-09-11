@@ -1,4 +1,18 @@
-# Operação da assinatura por Pix
+# Operação da assinatura pelo suporte
+
+## Fluxo vigente
+
+A página `/assinar` direciona o cliente ao WhatsApp ou e-mail do suporte. Não gera nem exibe QR Code, Copia e Cola ou envio de comprovantes. Os contatos estão disponíveis inclusive sem login e sem uma chave Pix configurada.
+
+O proprietário pode registrar uma solicitação de pagamento ou renovação. A rota histórica `/api/pix` mantém a identificação da cobrança, os preços e a integração com a central, mas retorna `pixCode: null` e não depende de `PIX_KEY`. Solicitações repetidas reutilizam a pendência existente.
+
+A equipe combina com o cliente um meio de pagamento aceito pela instituição recebedora e confere o recebimento antes de aprovar na central. O contato ou a criação da solicitação nunca ativa a assinatura. A renovação mantém os dias restantes conforme a regra já existente.
+
+O prazo histórico da solicitação permanece em 72 horas por padrão. Se a referência estiver expirada, o proprietário registra uma nova solicitação e o suporte confere qualquer recebimento anterior antes de orientar outro pagamento.
+
+Dados, identificadores e comprovantes anteriores continuam preservados. Os nomes internos Pix e as rotas de comprovantes legados permanecem para compatibilidade; a geração de código foi retirada da jornada pública. Abaixo está a documentação histórica do fluxo Pix, que não descreve mais a página de contratação atual.
+
+## Histórico do Pix (substituído pelo atendimento)
 
 ## Regra comercial
 

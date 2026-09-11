@@ -83,7 +83,7 @@ test("rotas de comprovante exigem sessão do titular e administrador", () => {
   const subscribe = readFileSync(new URL("../app/assinar/page.js", import.meta.url), "utf8");
   assert.match(upload, /getSession\(request, \{ allowInactiveSubscription: true \}\)/);
   assert.match(upload, /getOwnedPixPaymentForReceipt\(\{ id: paymentId, userId: user\.id \}\)/);
-  assert.match(subscribe, /access: "private"/);
+  assert.doesNotMatch(subscribe, /uploadReceipt|type="file"/);
   assert.match(upload, /maximumSizeInBytes: PIX_RECEIPT_MAX_BYTES/);
   assert.match(upload, /blob\.generate-client-token/);
   assert.match(upload, /validatePixReceipt/);

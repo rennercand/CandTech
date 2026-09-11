@@ -35,7 +35,7 @@ const viewCopy = {
   overview: { kicker: "OPERAÇÃO CANDTECH", title: "Visão do sistema", description: "Uso, capacidade e saúde da plataforma em uma visão privada." },
   events: { kicker: "CONFIABILIDADE", title: "Incidentes", description: "Falhas atuais, alertas e acompanhamento técnico da produção." },
   tickets: { kicker: "ATENDIMENTO", title: "Suporte", description: "Mensagens dos clientes e respostas da equipe interna." },
-  payments: { kicker: "COBRANÇA", title: "Cobrança Pix", description: "Conferência manual, comprovantes opcionais e liberação de assinatura." },
+  payments: { kicker: "COBRANÇA", title: "Pagamentos", description: "Conferência manual, comprovantes opcionais e liberação de assinatura." },
   staff: { kicker: "ACESSO INTERNO", title: "Equipe interna", description: "Permissões operacionais da equipe CandTech." },
   audit: { kicker: "GOVERNANÇA", title: "Auditoria", description: "Histórico paginado das operações críticas da plataforma." },
 };
@@ -95,7 +95,7 @@ export default function MonitoringPortal({ administratorName, permissions }) {
         {permissions.canViewSystemOverview && <button className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><Icon type="overview"/>Visão do sistema</button>}
         {permissions.canMonitor && <button className={view === "events" ? "active" : ""} onClick={() => setView("events")}><Icon type="pulse"/>Incidentes{data.totals.criticalEvents ? <span className="monitor-count">{data.totals.criticalEvents}</span> : null}</button>}
         {permissions.canSupport && <button className={view === "tickets" ? "active" : ""} onClick={() => setView("tickets")}><Icon type="inbox"/>Suporte{data.totals.openTickets ? <span className="monitor-count">{data.totals.openTickets}</span> : null}</button>}
-        {permissions.canBilling && <button className={view === "payments" ? "active" : ""} onClick={() => setView("payments")}><Icon type="payment"/>Cobrança Pix{data.totals.reviewPayments ? <span className="monitor-count">{data.totals.reviewPayments}</span> : null}</button>}
+        {permissions.canBilling && <button className={view === "payments" ? "active" : ""} onClick={() => setView("payments")}><Icon type="payment"/>Pagamentos{data.totals.reviewPayments ? <span className="monitor-count">{data.totals.reviewPayments}</span> : null}</button>}
         {permissions.canManageStaff && <button className={view === "staff" ? "active" : ""} onClick={() => setView("staff")}><Icon type="users"/>Equipe interna</button>}
         {permissions.isRoot && <button className={view === "audit" ? "active" : ""} onClick={() => setView("audit")}><Icon type="audit"/>Auditoria</button>}
       </nav>
@@ -137,7 +137,7 @@ export default function MonitoringPortal({ administratorName, permissions }) {
         </article>)}</div>
       </section>}
 
-      {permissions.canBilling && view === "payments" && <section className="monitor-panel"><div className="monitor-panel-heading"><div><h2>Conferência manual de Pix</h2><p>O comprovante é opcional. Você pode liberar o acesso assim que confirmar o recebimento diretamente no banco.</p></div><span>{filteredPayments.length} registro(s)</span></div>
+      {permissions.canBilling && view === "payments" && <section className="monitor-panel"><div className="monitor-panel-heading"><div><h2>Conferência manual de pagamentos</h2><p>O comprovante é opcional. Você pode liberar o acesso assim que confirmar o recebimento diretamente no banco.</p></div><span>{filteredPayments.length} registro(s)</span></div>
         <div className="monitor-payment-filters" aria-label="Filtrar pagamentos"><button className={paymentFilter === "all" ? "active" : ""} onClick={() => setPaymentFilter("all")}>Todos</button><button className={paymentFilter === "pending" ? "active" : ""} onClick={() => setPaymentFilter("pending")}>Aguardando confirmação</button><button className={paymentFilter === "payment_review" ? "active" : ""} onClick={() => setPaymentFilter("payment_review")}>Comprovante recebido</button><button className={paymentFilter === "approved" ? "active" : ""} onClick={() => setPaymentFilter("approved")}>Aprovados</button><button className={paymentFilter === "rejected" ? "active" : ""} onClick={() => setPaymentFilter("rejected")}>Recusados</button><button className={paymentFilter === "expired" ? "active" : ""} onClick={() => setPaymentFilter("expired")}>Expirados</button></div>
         <div className="monitor-ticket-list">{!filteredPayments.length ? <div className="monitor-empty"><Icon type="payment"/><strong>Nenhum pagamento neste filtro</strong></div> : filteredPayments.map((payment) => {
           const payerName = payment.customer?.name || "Nome não informado";
